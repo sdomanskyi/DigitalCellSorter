@@ -127,7 +127,7 @@ class GeneNameConverter:
                     entrez = q['entrezgene']
                     try:
                         retireds = q['retired']
-                        if type(retireds) is int or type(retireds) is long:
+                        if type(retireds) is int:
                             retireds = [retireds]
                         else:
                             retireds = list(retireds)

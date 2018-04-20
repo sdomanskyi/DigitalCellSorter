@@ -1,9 +1,7 @@
 
-% matplotlib inline
 from importlib import reload
 import sys
-sys.path.insert(1, '../tools/')
-import os
+#sys.path.insert(1, '../tools/')
 import copy
 cdc = copy.deepcopy
 import numpy as np
@@ -17,8 +15,9 @@ from matplotlib import cm
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from sklearn.cluster import AgglomerativeClustering
-import GeneNameConverter; reload(GeneNameConverter)
-import MakeMarkerDict; reload(MakeMarkerDict)
+from tools import GeneNameConverter, MakeMarkerDict
+reload(GeneNameConverter)
+reload(MakeMarkerDict)
 from scipy.cluster.hierarchy import linkage, dendrogram
 
 
@@ -28,8 +27,9 @@ print ('\n================\nPackages loaded!\n================')
 class DigitalCellSorter:
     # Load raw data
     def __init__(self, dataName):
-        dir_expr = '/'.join(['../data',dataName,'matrix.mtx'])
-        dir_geneNames = '/'.join(['../data',dataName,'genes.tsv'])
+        self.dataName = dataName
+        dir_expr = '/'.join(['data',dataName,'matrix.mtx'])
+        dir_geneNames = '/'.join(['data',dataName,'genes.tsv'])
         with open(dir_expr) as myfile:
             ijv = myfile.readlines()
         header = ijv[:3]
@@ -42,13 +42,13 @@ class DigitalCellSorter:
         print ('\n======================\nDone loading raw data!\n======================')
         
         
-    def Process(sigma_over_mean_sigma=0.3, n_clusters=11, n_components_pca=100, zscore_cutoff=0.3, saveDir=None):
+    def Process(self, sigma_over_mean_sigma=0.3, n_clusters=11, n_components_pca=100, zscore_cutoff=0.3, saveDir=None):
         #sigma_over_mean_sigma = 0.3 # theta from the paper
         #n_clusters = 11 # number of clusters
         #n_components_pca = 100 # number of principal components to keep for clustering
         #zscore_cutoff = 0.3 # zeta from the paper
         np.random.seed(0)
-        gnc = GeneNameConverter.GeneNameConverter(dictDir='../tools/pickledGeneConverterDict/ensembl_hugo_entrez_alias_dict.pythdat')
+        gnc = GeneNameConverter.GeneNameConverter(dictDir='tools/pickledGeneConverterDict/ensembl_hugo_entrez_alias_dict.pythdat')
         
         print ('Pre-filter size: %s genes, %s cells' % self.df_expr.shape)
         #Keep only cells with at least one expressed gene
@@ -83,7 +83,7 @@ class DigitalCellSorter:
         
         
         try:
-            if savedName != dataName: asdf
+            if savedName != self.dataName: asdf
             print ('\n====================\nAlready transformed!\n====================')
         except NameError:
             
@@ -92,7 +92,7 @@ class DigitalCellSorter:
             # X_pca_2D = PCA(n_components=2).fit_transform(X_pca.T).T
             print ('Performing tSNE projection from %s to %s features...' % (n_components_pca,2))
             X_tsne = TSNE(n_components=2).fit_transform(X_pca.T).T
-            savedName = cdc( dataName )
+            savedName = cdc( self.dataName )
             print ('\n==================\nDone transforming!\n==================')
         
         
@@ -110,7 +110,7 @@ class DigitalCellSorter:
         ##############################################################################################
         # Get dictionary to map from markers to cell types
         ##############################################################################################
-        markerDict,hugo_cd_dict = MakeMarkerDict.MakeMarkerDict('../geneLists/cd_marker_handbook.xlsx',gnc=gnc)
+        markerDict,hugo_cd_dict = MakeMarkerDict.MakeMarkerDict('geneLists/cd_marker_handbook.xlsx',gnc=gnc)
 
         print ('\n=========================\nDone loading marker data!\n=========================')
         
@@ -220,7 +220,7 @@ class DigitalCellSorter:
                        df_votingResults.loc[instance,'Predicted cell type'] + ' #' + str(counter).zfill(len(str(len(instances))))
 
 
-        if saveDir is not None: df_votingResults.to_excel('%s/%s_voting.xlsx'%(saveDir,dataName))
+        if saveDir is not None: df_votingResults.to_excel('%s/%s_voting.xlsx'%(saveDir,self.dataName))
 
         print ('\n============\nDone voting!\n============')
 
@@ -273,7 +273,7 @@ class DigitalCellSorter:
         ax.set_ylim([-0.5,X_markers_cluster_means_transpose.shape[0]-0.5])
 
         fig.tight_layout()
-        if saveDir is not None: fig.savefig('%s/%s_voting.png'%(saveDir,dataName),dpi=100)
+        if saveDir is not None: fig.savefig('%s/%s_voting.png'%(saveDir,self.dataName),dpi=100)
 
         print ('\n================================\nDone plotting marker expression!\n================================')
         
@@ -319,7 +319,7 @@ class DigitalCellSorter:
         ax.set_ylim(YLIM)
 
         fig.tight_layout() 
-        if saveDir is not None: fig.savefig('%s/%s_clusters.png'%(saveDir,dataName),dpi=300)
+        if saveDir is not None: fig.savefig('%s/%s_clusters.png'%(saveDir,self.dataName),dpi=300)
             
             
             
@@ -330,7 +330,7 @@ class DigitalCellSorter:
         df_labeled = cdc(self.df_expr)
         df_labeled.loc['_TRUE_LABEL'] = [df_votingResults['Predicted cell type'][i] for i in cellClusterIndexLabel]
         df_labeled = df_labeled.sort_values(df_labeled.last_valid_index(),axis=1)
-        fileName = '%s/%s_expression_labeled.tar.gz' % (saveDir,dataName)
+        fileName = '%s/%s_expression_labeled.tar.gz' % (saveDir,self.dataName)
         print ('Saving %s...' % fileName.split('/')[-1])
         df_labeled.to_csv(fileName, compression='gzip')
         print ('Final array size written to disk: %s genes, %s cells' % df_labeled.shape)
@@ -366,7 +366,6 @@ class DigitalCellSorter:
                 ax.plot(np.nan,np.nan,'*',markersize=15,c=cm.seismic(1.0),label=label)
                 circleIndices = np.where(self.df_expr.loc[marker].values==0)[0] # cells that don't have this marker
                 starIndices = np.where(self.df_expr.loc[marker].values>0)[0] # cells that have this marker
-                print (starIndices)
                 starIndices = starIndices[np.argsort(self.df_expr.loc[marker].values[starIndices])]
                 args1 = [X_tsne[0,circleIndices],
                          X_tsne[1,circleIndices]]
@@ -403,4 +402,6 @@ class DigitalCellSorter:
                 ax.set_ylim(YLIM)
                 ax.legend(loc='best',numpoints=1,fontsize=12)
                 ax.set_xticks([]); ax.set_yticks([]); fig.tight_layout()
-                if saveDir is not None: fig.savefig('%s/marker_subplots/%s_%s_%s.png' % (saveDir,dataName,hugo_cd_dict[marker],marker),dpi=300)
+                if saveDir is not None: 
+                    fig.savefig('%s/marker_subplots/%s_%s_%s.png' % (saveDir,self.dataName,hugo_cd_dict[marker],marker),dpi=300)
+                    print ('\n=========================\nDone Saving marker subplot %s_%s labeled data!\n=========================' % (hugo_cd_dict[marker],marker))

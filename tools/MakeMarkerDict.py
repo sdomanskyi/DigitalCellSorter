@@ -10,7 +10,8 @@ Created on Tue Feb 06 09:43:38 2018
 
 import pandas as pd
 import numpy as np
-import GeneNameConverter
+from .GeneNameConverter import GeneNameConverter
+#import GeneNameConverter
 
 
 def MakeMarkerDict(geneListDir,gnc=None):
