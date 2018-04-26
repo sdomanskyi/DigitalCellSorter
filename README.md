@@ -15,14 +15,13 @@ pip3 install 'package name'
 
 ### Input Data Format
 
-Input data are located in data/ folder. Each set of data should be an individual subfolder with a name you specify. In our example, we use data from data/aml035pre/ as input.
+Your data should be converted to a pandas dataframe as input to the main function. The dataframe has genes as rows and cells as columns, and each grid is the expression of that gene in the cell. 
 
-
-Your data should be in the same directory hierarchy in order for the code to work. 
+In our example, we use data from data/aml035pre/ and do the conversion in demo.py. 
 
 ### Other Data
 
--geneLists/cd_marker_handbook.xlsx: an excel with marker information. Rows are markers and columns are cell types. A '+' sign means that the gene is a marker for that cell type.
+geneLists/cd_marker_handbook.xlsx: an excel with marker information. Rows are markers and columns are cell types. A '+' sign means that the gene is a marker for that cell type.
 
 ## Method
 
@@ -50,36 +49,36 @@ The main class for cell sorting functions and producing output images is Digital
 
 - marker_subplot: whether to make subplots on markers, default is True
 
-The Process function will produce the following outputs. Below are outputs produced using our sample data.
+The Process function will produce the following outputs. Below are what they are and some sample outputs produced using our sample data.
  
-- dataName_clusters.png: shows the clustering of cells and identified cell type of each cluster. 
+- dataName_clusters.png: an image that shows the clustering of cells and identified cell type of each cluster. 
 
- <img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/aml035pre_clusters.png" align="left" height="600" width="600" >
+ <img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/aml035pre_clusters.png" align="center" height="500" width="500" >
  
-
 - dataName_voting.png: a heatmap that shows all markers and their expression levels in the clusters
 
-<img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/aml035pre_voting.png" align="left" height="600" width="1200" >
+<img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/aml035pre_voting.png" align="center">
 
-- dataName_voting.xlsx: an excel that shows the voting results
+- dataName_voting.xlsx: an excel sheet that shows the voting results
 
 - dataName_expression_labeled.tar.gz: a zip file that contains processed expression data
 
-- marker_subplots: a directory that contains subplots of each marker and their expression levels in the clusters
+- marker_subplots: a directory that contains subplots of each marker and their expression levels in the clusters. For example below is the subplot of CD33, a myeloid marker.
 
+<img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/marker_subplots/aml035pre_CD33_CD33.png" align="center" height="500" width="500" >
 
 ## Demo
 
 ### Usage
 
-We've made an example execution file demo.py that shows how to use the DigitalCellSorter. The data set we are analyzing, the healthy and AML data from 10X, are in MatrixMarket IJV format (genes.tsv and matrix.mtx), so it first converts them to a pandas dataframe as input for Process function. Then it creates a DigitalCellSorter class and calls its Process function, which does all the projection, clustering, identification and image producing.
+We've made an example execution file demo.py that shows how to use DigitalCellSorter. The data set we are analyzing, the healthy and AML data from 10X, are in MatrixMarket IJV format (genes.tsv and matrix.mtx under data/aml350pre/), so it first converts them to a pandas dataframe as input for Process function. Then it creates a DigitalCellSorter class and calls its Process function, which does all the projection, clustering, identification and image producing.
 
 You can run it using 
 
 ```
 python demo.py
 ```
-Note that you would also need to convert your data to a pandas dataframe. You can also customize the parameters in Process function. For example, you can change it to
+Note that to use your own data, you would also need to convert them to a pandas dataframe. You can also customize the parameters in Process function as listed above. For example, you can change it to
 
 ```
 dcs.Process(n_clusters=10, n_components_pca=50, saveDir='demo_output/', marker_subplot = False)
@@ -91,9 +90,7 @@ To see our example work, you just need to download everything, go to the directo
 python demo.py
 ```
 
-For other purposes, you can add your own data data/ folder, change the function call in run.py then run the same command.
-
 ### Output
 
-All the outputs are saved in demo/output directory. 
+All the outputs are saved in demo/output/ directory. 
 
