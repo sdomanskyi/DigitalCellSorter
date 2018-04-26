@@ -1,6 +1,7 @@
 
 from importlib import reload
 import sys
+import os
 #sys.path.insert(1, '../tools/')
 import copy
 cdc = copy.deepcopy
@@ -25,86 +26,298 @@ from scipy.cluster.hierarchy import linkage, dendrogram
 print ('\n================\nPackages loaded!\n================')
 
 class DigitalCellSorter:
-    # Load raw data
-    def __init__(self, dataName):
-        self.dataName = dataName
-        dir_expr = '/'.join(['data',dataName,'matrix.mtx'])
-        dir_geneNames = '/'.join(['data',dataName,'genes.tsv'])
-        with open(dir_expr) as myfile:
-            ijv = myfile.readlines()
-        header = ijv[:3]
-        ijv = np.vstack([np.int_(i.strip('\n').split(' ')) for i in ijv[3:]])
-        ijv[:,:2] -= 1 # -1 for first two columns
-        imax,jmax = np.int_(header[-1].split(' ')[:2])
-        self.df_expr = np.zeros([imax,jmax])
-        self.df_expr[ijv[:,0],ijv[:,1]] = ijv[:,2]
-        self.df_expr = pd.DataFrame(self.df_expr,index=pd.read_csv(dir_geneNames,delimiter='\t',header=None).values[:,1])
-        print ('\n======================\nDone loading raw data!\n======================')
-        
-        
-    def Process(self, sigma_over_mean_sigma=0.3, n_clusters=11, n_components_pca=100, zscore_cutoff=0.3, saveDir=None):
-        #sigma_over_mean_sigma = 0.3 # theta from the paper
-        #n_clusters = 11 # number of clusters
-        #n_components_pca = 100 # number of principal components to keep for clustering
-        #zscore_cutoff = 0.3 # zeta from the paper
-        np.random.seed(0)
-        gnc = GeneNameConverter.GeneNameConverter(dictDir='tools/pickledGeneConverterDict/ensembl_hugo_entrez_alias_dict.pythdat')
-        
-        print ('Pre-filter size: %s genes, %s cells' % self.df_expr.shape)
+    # Normalize df_expr data
+    # Params - df_expr: expression data
+    #          sigma_over_sigma: threshold when keeping only genes with large enough standard deviation
+    #          gnc: gene name converter
+    def Normalize(self, df_expr, sigma_over_mean_sigma, gnc):
+        print ('Pre-filter size: %s genes, %s cells' % df_expr.shape)
         #Keep only cells with at least one expressed gene
-        self.df_expr = self.df_expr[self.df_expr.columns[np.sum(self.df_expr,axis=0)>0]]
+        df_expr = df_expr[df_expr.columns[np.sum(df_expr,axis=0)>0]]
         #Keep only genes expressed in at least one cell
-        self.df_expr = self.df_expr.iloc[(np.sum(self.df_expr,axis=1)>0).values,:]
-        print ('Post-filter size: %s genes, %s cells' % self.df_expr.shape)
+        df_expr = df_expr.iloc[(np.sum(df_expr,axis=1)>0).values,:]
+        print ('Post-filter size: %s genes, %s cells' % df_expr.shape)
 
         #Scale all cells
-        median = np.median(np.sum(self.df_expr,axis=0))*1.0 # sum of all columns/cells
-        self.df_expr = self.df_expr.apply(lambda q: q*median/np.sum(q),axis=0)
+        median = np.median(np.sum(df_expr,axis=0))*1.0 # sum of all columns/cells
+        df_expr = df_expr.apply(lambda q: q*median/np.sum(q),axis=0)
 
         #Replace zeros with minimum value
-        MIN = np.min(self.df_expr.values[self.df_expr.values>0])
-        self.df_expr = self.df_expr.replace(0,MIN)
+        MIN = np.min(df_expr.values[df_expr.values>0])
+        df_expr = df_expr.replace(0,MIN)
 
         #Take log2 of expression
-        self.df_expr = np.log2(self.df_expr)
-        self.df_expr -= np.min(self.df_expr.values)
+        df_expr = np.log2(df_expr)
+        df_expr -= np.min(df_expr.values)
 
         #Keep only those genes with large enough standard deviation
-        self.df_expr = self.df_expr.iloc[np.where(np.std(self.df_expr,axis=1)/np.mean(np.std(self.df_expr.values))>sigma_over_mean_sigma)[0]]
-        print ('Post-sigma cut size: %s genes, %s cells' % self.df_expr.shape)
+        df_expr = df_expr.iloc[np.where(np.std(df_expr,axis=1)/np.mean(np.std(df_expr.values))>sigma_over_mean_sigma)[0]]
+        print ('Post-sigma cut size: %s genes, %s cells' % df_expr.shape)
 
         #Convert gene names from aliases to hugos when possible
-        self.df_expr.index = gnc.Convert(list(self.df_expr.index),'alias','hugo',returnUnknownString=False)
+        df_expr.index = gnc.Convert(list(df_expr.index),'alias','hugo',returnUnknownString=False)
 
         #Sort rows by gene name for the heck of it
-        self.df_expr = self.df_expr.sort_index()
+        df_expr = df_expr.sort_index()
 
         print ('\n=========================\nDone processing raw data!\n=========================')
+        return df_expr
+    
+    # Project df_expr to lower dimensions
+    # Params - df_expr: expression data
+    #          n_components_pca: number of components for PCA dimension reduction
+    def Project(self, df_expr, n_components_pca):
+        print ('Performing PC projection from %s to %s features...' % (df_expr.shape[0],n_components_pca))
+        X_pca = PCA(n_components=n_components_pca).fit_transform(df_expr.values.T).T
+        # X_pca_2D = PCA(n_components=2).fit_transform(X_pca.T).T
+        print ('Performing tSNE projection from %s to %s features...' % (n_components_pca,2))
+        X_tsne = TSNE(n_components=2).fit_transform(X_pca.T).T
         
-        
-        try:
-            if savedName != self.dataName: asdf
-            print ('\n====================\nAlready transformed!\n====================')
-        except NameError:
-            
-            print ('Performing PC projection from %s to %s features...' % (self.df_expr.shape[0],n_components_pca))
-            X_pca = PCA(n_components=n_components_pca).fit_transform(self.df_expr.values.T).T
-            # X_pca_2D = PCA(n_components=2).fit_transform(X_pca.T).T
-            print ('Performing tSNE projection from %s to %s features...' % (n_components_pca,2))
-            X_tsne = TSNE(n_components=2).fit_transform(X_pca.T).T
-            savedName = cdc( self.dataName )
-            print ('\n==================\nDone transforming!\n==================')
-        
-        
-        ##############################################################################################
-        # Cluster
-        ##############################################################################################
-
-        ac = AgglomerativeClustering(n_clusters=n_clusters)
-        cellClusterIndexLabel = ac.fit(X_pca.T).labels_
+        print ('\n==================\nDone transforming!\n==================')
+        return X_pca, X_tsne
+    
+    # Cluster df_expr
+    # Params - X_pca: expression data after pca
+    #          n_clusters: number of clusters
+    #          clustering_f: clustering function, if not provided then AgglomerativeClustering is used, otherwise should have .fit method and same input and output
+    def Cluster(self, X_pca, n_clusters, clustering_f=None):
+        if clustering_f is None:
+            ac = AgglomerativeClustering(n_clusters=n_clusters)
+            cellClusterIndexLabel = ac.fit(X_pca.T).labels_
+        else:
+            cellClusterIndexLabel = clustering_f.fit(X_pca.T).labels_
         possible_cluster_labels = np.sort(np.unique(cellClusterIndexLabel))
 
         print ('\n================\nDone clustering!\n================')
+        return cellClusterIndexLabel, possible_cluster_labels
+    
+    # Save processed data to a zip file
+    # Params - df_expr: expression data
+    #          df_votingResults: voting result dataframe
+    #          cellClusterIndexLabel: cluster labels for all cells
+    #          dataName: name used in output files
+    #          saveDir: directory for output files
+    def SaveProcessedData(self, df_expr, df_votingResults, cellClusterIndexLabel, dataName, saveDir):
+        df_labeled = cdc(df_expr)
+        df_labeled.loc['_TRUE_LABEL'] = [df_votingResults['Predicted cell type'][i] for i in cellClusterIndexLabel]
+        df_labeled = df_labeled.sort_values(df_labeled.last_valid_index(),axis=1)
+        fileName = '%s/%s_expression_labeled.tar.gz' % (saveDir,dataName)
+        print ('Saving %s...' % fileName.split('/')[-1])
+        df_labeled.to_csv(fileName, compression='gzip')
+        print ('Final array size written to disk: %s genes, %s cells' % df_labeled.shape)
+        print ('\n=========================\nDone saving labeled data!\n=========================')
+        
+        
+    # Produce image on genes and their expression on all clusters
+    # Params - df_votingResults: voting result dataframe
+    #          X_markers_cluster_means: Y_mc, mean expression of all markers in all clusters
+    #          df_markers: markers and their expression data
+    #          df_marker_hits: Z_mc, build from Y_mc
+    #          dataName: name used in output files
+    #          saveDir: directory for output files
+    def MakeMarkerExpressionPlot(self, df_votingResults, X_markers_cluster_means, df_markers, df_marker_hits, dataName, saveDir):
+        # Y_mc
+        X_markers_cluster_means_transpose = X_markers_cluster_means.T
+
+        # normalization
+        for i in range(X_markers_cluster_means_transpose.shape[1]):
+            X_markers_cluster_means_transpose[:,i] -= np.min(X_markers_cluster_means_transpose[:,i])
+            X_markers_cluster_means_transpose[:,i] /= np.max(X_markers_cluster_means_transpose[:,i])
+
+
+        Z = linkage(X_markers_cluster_means_transpose, 'ward')
+        ORDER = dendrogram(Z,no_plot=True,get_leaves=True)['leaves']
+
+        Z = linkage(X_markers_cluster_means_transpose.T, 'ward')
+        ORDER2 = dendrogram(Z,no_plot=True,get_leaves=True)['leaves']
+
+        X_markers_cluster_means_sorted = X_markers_cluster_means_transpose[ORDER,:][:,ORDER2]
+
+        X_marker_hits = df_marker_hits.values.T[ORDER,:][:,ORDER2]
+
+        fig,ax = plt.subplots(
+            figsize=\
+              np.float_(X_markers_cluster_means_transpose.shape[::-1])/\
+                        np.max(X_markers_cluster_means_transpose.shape)*20.0+2.0
+        )
+        ax.imshow(X_markers_cluster_means_sorted,cmap='Blues',interpolation='None')
+        ax.set_aspect('auto')
+
+        i_list,j_list = np.where(X_marker_hits.T>0)
+        ax.plot(i_list,j_list,'k*',mec='w')
+
+        ax.set_xticks(range(X_markers_cluster_means_transpose.shape[1]))
+        ax.set_yticks(range(X_markers_cluster_means_transpose.shape[0]))
+
+        xtickslabels = np.array(df_markers.index[ORDER2])
+
+        ax.set_xticklabels(xtickslabels,rotation=90)
+        ax.set_yticklabels([df_votingResults['Predicted cell type'][i]+' ('+str(i)+')' for i in ORDER])#,rotation=24,ha='right',va='top')
+
+        ax.set_xlim([-0.5,X_markers_cluster_means_transpose.shape[1]-0.5])
+        ax.set_ylim([-0.5,X_markers_cluster_means_transpose.shape[0]-0.5])
+
+        fig.tight_layout()
+        if saveDir is not None: fig.savefig('%s/%s_voting.png'%(saveDir,dataName),dpi=100)
+
+        print ('\n================================\nDone plotting marker expression!\n================================')
+
+    
+    # Produce subplots on each marker and its expression on all clusters
+    # Params - df_expr: expression data
+    #          df_votingResults: voting result dataframe
+    #          X_tsne: expression data after tSNE projection
+    #          markers: list of markers
+    #          cellClusterIndexLabel: cluster labels for all cells
+    #          hugo_cd_dict: dictionary that converts gene names from aliases to hugos
+    #          dataName: name used in output files
+    #          saveDir: directory for output files
+    def MakeMarkerSubplot(self, df_expr, df_votingResults, X_tsne, markers, cellClusterIndexLabel, hugo_cd_dict, dataName, saveDir):
+        # max column is where max is
+        maxs = np.max(X_tsne,axis=1)
+        mins = np.min(X_tsne,axis=1)
+        maxDiffs = maxs - mins
+        deltas = maxDiffs*0.05
+        XLIM = [mins[0]-deltas[0],maxs[0]+deltas[0]]
+        YLIM = [mins[1]-deltas[1],maxs[1]+deltas[1]]
+
+        directory = '%s/marker_subplots/' % saveDir
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+        q = int(np.ceil(np.sqrt(len(markers))))
+
+        fig,ax = plt.subplots(figsize=(8,8))
+
+        for counter,marker in enumerate(markers):
+                ax.cla()
+                if hugo_cd_dict[marker] == marker:
+                    label = marker
+                else:
+                    label = '%s (%s)' % (hugo_cd_dict[marker],marker)
+                ax.plot(np.nan,np.nan,'*',markersize=15,c=cm.seismic(1.0),label=label)
+                circleIndices = np.where(df_expr.loc[marker].values==0)[0] # cells that don't have this marker
+                starIndices = np.where(df_expr.loc[marker].values>0)[0] # cells that have this marker
+                starIndices = starIndices[np.argsort(df_expr.loc[marker].values[starIndices])]
+                args1 = [X_tsne[0,circleIndices],
+                         X_tsne[1,circleIndices]]
+                kwargs1 = {'marker':'o',
+                           'c':'b',
+                           'alpha':0.1,
+                           's':6*3,
+                           'linewidth':0,}
+                args2 = [X_tsne[0,starIndices],
+                         X_tsne[1,starIndices]]
+                kwargs2 = {'marker':'*',
+                           'c':cm.seismic(df_expr.loc[marker].values[starIndices]/np.max(df_expr.loc[marker].values[starIndices])),
+                           's':30*4,
+                           'linewidth':0.0,}
+                ax.scatter(*args1,**kwargs1)
+                ax.scatter(*args2,**kwargs2)
+                for label in set(cellClusterIndexLabel):
+                    # cells with this label
+                    X_tsne_cluster = X_tsne[:,cellClusterIndexLabel==label]
+                    x_mean = np.mean(X_tsne_cluster[0,:])
+                    y_mean = np.mean(X_tsne_cluster[1,:])
+                    ax.text(x_mean,y_mean,
+                            (df_votingResults['Predicted cell type'][label]).
+                                replace('-','-\n').replace(' ','\n').
+                                replace('T\n','T ').replace('B\n','B ').
+                                replace('\n#',' #').replace('/','/\n').
+                                replace('NK\n','NK ').replace('Stem\n','Stem '),
+                            fontsize=10,
+                            ha='center',va='center',#alpha=0.75,
+                            ).set_path_effects([path_effects.Stroke(linewidth=3, foreground='white'),path_effects.Normal()])
+                    radius = np.sqrt(X_tsne_cluster.shape[1])*300.0
+                    ax.scatter(x_mean,y_mean,s=radius*1,facecolors='none',edgecolors='k')
+                ax.set_xlim(XLIM)
+                ax.set_ylim(YLIM)
+                ax.legend(loc='best',numpoints=1,fontsize=12)
+                ax.set_xticks([]); ax.set_yticks([]); fig.tight_layout()
+                if saveDir is not None: 
+                    fig.savefig('%s/marker_subplots/%s_%s_%s.png' % (saveDir,dataName,hugo_cd_dict[marker],marker),dpi=300)
+                    print ('\n=========================\nDone Saving marker subplot %s_%s labeled data!\n=========================' % (hugo_cd_dict[marker],marker))
+                    
+                    
+    # Produce plot on clusters
+    # Params - df_votingResults: voting result dataframe
+    #          X_tsne: expression data after tSNE projection
+    #          cellClusterIndexLabel: cluster labels for all cells
+    #          dataName: name used in output files
+    #          saveDir: directory for output files
+    def MakeClusterPlot(self, df_votingResults, X_tsne, cellClusterIndexLabel, dataName, saveDir):
+        fig,ax = plt.subplots(figsize=(8,8))
+        for label in set(cellClusterIndexLabel):
+            # cells in that cluster, 2*number of cells
+            X_tsne_cluster = X_tsne[:,cellClusterIndexLabel==label]
+            # X_tsne_cluster = X_pca_2D[:,cellClusterIndexLabel==label]
+
+            ax.plot(X_tsne_cluster[0,:],X_tsne_cluster[1,:],'o',
+                    color=cm.jet(label*1.0/len(set(cellClusterIndexLabel))),mew=0.5,alpha=0.3,markeredgecolor='k')
+            x_mean = np.mean(X_tsne_cluster[0,:])
+            y_mean = np.mean(X_tsne_cluster[1,:])
+            # draw the line to the centroid
+            for i in range(X_tsne_cluster.shape[1]):
+                ax.plot([x_mean,X_tsne_cluster[0,i]],[y_mean,X_tsne_cluster[1,i]],'k-',alpha=0.03,zorder=-np.inf)
+            ax.text(x_mean,y_mean,
+                            df_votingResults['Predicted cell type'][label].
+                                replace('-','-\n').replace(' ','\n').
+                                replace('T\n','T ').replace('B\n','B ').
+                                replace('\n#',' #').replace('/','/\n').
+                                replace('NK\n','NK ').replace('Stem\n','Stem '),
+                    fontsize=10,
+                    ha='center',va='center',
+                    ).set_path_effects([path_effects.Stroke(linewidth=3, foreground='white'),path_effects.Normal()])
+
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+
+        maxs = np.max(X_tsne,axis=1)
+        mins = np.min(X_tsne,axis=1)
+        maxDiffs = maxs - mins
+        deltas = maxDiffs*0.05
+        XLIM = [mins[0]-deltas[0],maxs[0]+deltas[0]]
+        YLIM = [mins[1]-deltas[1],maxs[1]+deltas[1]]
+        ax.set_xlim(XLIM)
+        ax.set_ylim(YLIM)
+
+        fig.tight_layout() 
+        if saveDir is not None: fig.savefig('%s/%s_clusters.png'%(saveDir,dataName),dpi=300)
+            
+
+    # Main function
+    # Params - df_expr: expression data
+    #          dataName: name used in output files
+    #          sigma_over_mean_sigma: threshold when keeping only genes with large enough standard deviation
+    #          n_clusters: number of clusters
+    #          n_components_pca: number of pca components
+    #          zscore_cutoff: zscore cutoff when calculating Z_mc
+    #          saveDir: directory for output files, if None then output not saved
+    #          marker_expression_plot: whether to produce marker expression plot
+    #          tSNE_cluster_plot: whether to produce cluster plot
+    #          save_processed_data: whether to save processed data
+    #          marker_subplot: whether to make subplots on markers
+    def Process(self, df_expr, dataName, sigma_over_mean_sigma=0.3, n_clusters=11, n_components_pca=100, zscore_cutoff=0.3, saveDir=None, marker_expression_plot=True, tSNE_cluster_plot=True, save_processed_data=True, marker_subplot=True):
+        np.random.seed(0)
+        gnc = GeneNameConverter.GeneNameConverter(dictDir='tools/pickledGeneConverterDict/ensembl_hugo_entrez_alias_dict.pythdat')
+        
+        if not os.path.exists(saveDir):
+            os.makedirs(saveDir)
+            
+        df_expr = self.Normalize(df_expr, sigma_over_mean_sigma, gnc)
+        
+        try:
+            if savedName != dataName: asdf
+            print ('\n====================\nAlready transformed!\n====================')
+        except NameError:
+            X_pca, X_tsne = self.Project(df_expr, n_components_pca)
+            savedName = cdc(dataName)
+  
+        ##############################################################################################
+        # Cluster
+        ##############################################################################################
+        cellClusterIndexLabel, possible_cluster_labels = self.Cluster(X_pca, n_clusters)
         
         
         ##############################################################################################
@@ -118,8 +331,7 @@ class DigitalCellSorter:
         ##############################################################################################
         # Build marker/cell type weight matrix
         ##############################################################################################
-
-        markers = np.intersect1d(self.df_expr.index,list(markerDict.keys()))
+        markers = np.intersect1d(df_expr.index,list(markerDict.keys()))
         cellTypes = np.sort(np.unique([item for sublist in markerDict.values() for item in sublist]))
 
         #This is the marker/cell type matrix (M^T)_mk (the transpose of M_km as defined in the paper)
@@ -140,8 +352,7 @@ class DigitalCellSorter:
         ##############################################################################################
         # Compute mean expression of each marker in each cluster
         ##############################################################################################
-
-        df_markers = self.df_expr.loc[markers]
+        df_markers = df_expr.loc[markers]
         X_markers = df_markers.values
 
         means = []
@@ -161,7 +372,6 @@ class DigitalCellSorter:
         ##############################################################################################
         # Vote on cell type
         ##############################################################################################
-
         def f(x,zscore_cutoff):
             return (scipy.stats.zscore(x) > zscore_cutoff)*1
 
@@ -220,7 +430,7 @@ class DigitalCellSorter:
                        df_votingResults.loc[instance,'Predicted cell type'] + ' #' + str(counter).zfill(len(str(len(instances))))
 
 
-        if saveDir is not None: df_votingResults.to_excel('%s/%s_voting.xlsx'%(saveDir,self.dataName))
+        if saveDir is not None: df_votingResults.to_excel('%s/%s_voting.xlsx'%(saveDir,dataName))
 
         print ('\n============\nDone voting!\n============')
 
@@ -230,178 +440,24 @@ class DigitalCellSorter:
         ##############################################################################################
         # Plot mean marker expression for each cluster
         ##############################################################################################
-        # Y_mc.T
-        X_markers_cluster_means_transpose = X_markers_cluster_means.T
-
-        # i: marker
-        # normalization
-        for i in range(X_markers_cluster_means_transpose.shape[1]):
-            X_markers_cluster_means_transpose[:,i] -= np.min(X_markers_cluster_means_transpose[:,i])
-            X_markers_cluster_means_transpose[:,i] /= np.max(X_markers_cluster_means_transpose[:,i])
-
-        
-        Z = linkage(X_markers_cluster_means_transpose, 'ward')
-        ORDER = dendrogram(Z,no_plot=True,get_leaves=True)['leaves']
-
-        Z = linkage(X_markers_cluster_means_transpose.T, 'ward')
-        ORDER2 = dendrogram(Z,no_plot=True,get_leaves=True)['leaves']
-
-        X_markers_cluster_means_sorted = X_markers_cluster_means_transpose[ORDER,:][:,ORDER2]
-
-        X_marker_hits = df_marker_hits.values.T[ORDER,:][:,ORDER2]
-
-        fig,ax = plt.subplots(
-            figsize=\
-              np.float_(X_markers_cluster_means_transpose.shape[::-1])/\
-                        np.max(X_markers_cluster_means_transpose.shape)*20.0+2.0
-        )
-        ax.imshow(X_markers_cluster_means_sorted,cmap='Blues',interpolation='None')
-        ax.set_aspect('auto')
-
-        i_list,j_list = np.where(X_marker_hits.T>0)
-        ax.plot(i_list,j_list,'k*',mec='w')
-
-        ax.set_xticks(range(X_markers_cluster_means_transpose.shape[1]))
-        ax.set_yticks(range(X_markers_cluster_means_transpose.shape[0]))
-
-        xtickslabels = np.array(df_markers.index[ORDER2])
-
-        ax.set_xticklabels(xtickslabels,rotation=90)
-        ax.set_yticklabels([df_votingResults['Predicted cell type'][i]+' ('+str(i)+')' for i in ORDER])#,rotation=24,ha='right',va='top')
-
-        ax.set_xlim([-0.5,X_markers_cluster_means_transpose.shape[1]-0.5])
-        ax.set_ylim([-0.5,X_markers_cluster_means_transpose.shape[0]-0.5])
-
-        fig.tight_layout()
-        if saveDir is not None: fig.savefig('%s/%s_voting.png'%(saveDir,self.dataName),dpi=100)
-
-        print ('\n================================\nDone plotting marker expression!\n================================')
-        
+        if marker_expression_plot:
+            self.MakeMarkerExpressionPlot(df_votingResults, X_markers_cluster_means, df_markers, df_marker_hits, dataName, saveDir)
         
         ##############################################################################################
         # tSNE picture of final clustering and cell types
         ##############################################################################################
-
-        fig,ax = plt.subplots(figsize=(8,8))
-        for label in set(cellClusterIndexLabel):
-            # cells in that cluster, 2*number of cells
-            X_tsne_cluster = X_tsne[:,cellClusterIndexLabel==label]
-            # X_tsne_cluster = X_pca_2D[:,cellClusterIndexLabel==label]
-
-            ax.plot(X_tsne_cluster[0,:],X_tsne_cluster[1,:],'o',
-                    color=cm.jet(label*1.0/len(set(cellClusterIndexLabel))),mew=0.5,alpha=0.3,markeredgecolor='k')
-            x_mean = np.mean(X_tsne_cluster[0,:])
-            y_mean = np.mean(X_tsne_cluster[1,:])
-            # draw the line to the centroid
-            for i in range(X_tsne_cluster.shape[1]):
-                ax.plot([x_mean,X_tsne_cluster[0,i]],[y_mean,X_tsne_cluster[1,i]],'k-',alpha=0.03,zorder=-np.inf)
-            ax.text(x_mean,y_mean,
-                            df_votingResults['Predicted cell type'][label].
-                                replace('-','-\n').replace(' ','\n').
-                                replace('T\n','T ').replace('B\n','B ').
-                                replace('\n#',' #').replace('/','/\n').
-                                replace('NK\n','NK ').replace('Stem\n','Stem '),
-                    fontsize=10,
-                    ha='center',va='center',
-                    ).set_path_effects([path_effects.Stroke(linewidth=3, foreground='white'),path_effects.Normal()])
-
-        ax.set_xticks([])
-        ax.set_yticks([])
-
-
-        maxs = np.max(X_tsne,axis=1)
-        mins = np.min(X_tsne,axis=1)
-        maxDiffs = maxs - mins
-        deltas = maxDiffs*0.05
-        XLIM = [mins[0]-deltas[0],maxs[0]+deltas[0]]
-        YLIM = [mins[1]-deltas[1],maxs[1]+deltas[1]]
-        ax.set_xlim(XLIM)
-        ax.set_ylim(YLIM)
-
-        fig.tight_layout() 
-        if saveDir is not None: fig.savefig('%s/%s_clusters.png'%(saveDir,self.dataName),dpi=300)
-            
-            
-            
+        if tSNE_cluster_plot:
+            self.MakeClusterPlot(df_votingResults, X_tsne, cellClusterIndexLabel, dataName, saveDir)
+           
         ##############################################################################################
         # Save labelled expression data to disk
         ##############################################################################################
-
-        df_labeled = cdc(self.df_expr)
-        df_labeled.loc['_TRUE_LABEL'] = [df_votingResults['Predicted cell type'][i] for i in cellClusterIndexLabel]
-        df_labeled = df_labeled.sort_values(df_labeled.last_valid_index(),axis=1)
-        fileName = '%s/%s_expression_labeled.tar.gz' % (saveDir,self.dataName)
-        print ('Saving %s...' % fileName.split('/')[-1])
-        df_labeled.to_csv(fileName, compression='gzip')
-        print ('Final array size written to disk: %s genes, %s cells' % df_labeled.shape)
-        print ('\n=========================\nDone saving labeled data!\n=========================')
-        
-        
+        if save_processed_data:
+            self.SaveProcessedData(df_expr, df_votingResults, cellClusterIndexLabel, dataName, saveDir)
         
         ##############################################################################################
         # Make a bunch of tSNE plots showing relative expression of different markers
         ##############################################################################################
-        # max column is where max is
-        maxs = np.max(X_tsne,axis=1)
-        mins = np.min(X_tsne,axis=1)
-        maxDiffs = maxs - mins
-        deltas = maxDiffs*0.05
-        XLIM = [mins[0]-deltas[0],maxs[0]+deltas[0]]
-        YLIM = [mins[1]-deltas[1],maxs[1]+deltas[1]]
-
-        directory = '%s/marker_subplots/' % saveDir
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-
-        q = int(np.ceil(np.sqrt(len(markers))))
-
-        fig,ax = plt.subplots(figsize=(8,8))
-
-        for counter,marker in enumerate(markers):
-                ax.cla()
-                if hugo_cd_dict[marker] == marker:
-                    label = marker
-                else:
-                    label = '%s (%s)' % (hugo_cd_dict[marker],marker)
-                ax.plot(np.nan,np.nan,'*',markersize=15,c=cm.seismic(1.0),label=label)
-                circleIndices = np.where(self.df_expr.loc[marker].values==0)[0] # cells that don't have this marker
-                starIndices = np.where(self.df_expr.loc[marker].values>0)[0] # cells that have this marker
-                starIndices = starIndices[np.argsort(self.df_expr.loc[marker].values[starIndices])]
-                args1 = [X_tsne[0,circleIndices],
-                         X_tsne[1,circleIndices]]
-                kwargs1 = {'marker':'o',
-                           'c':'b',
-                           'alpha':0.1,
-                           's':6*3,
-                           'linewidth':0,}
-                args2 = [X_tsne[0,starIndices],
-                         X_tsne[1,starIndices]]
-                kwargs2 = {'marker':'*',
-                           'c':cm.seismic(self.df_expr.loc[marker].values[starIndices]/np.max(self.df_expr.loc[marker].values[starIndices])),
-                           's':30*4,
-                           'linewidth':0.0,}
-                ax.scatter(*args1,**kwargs1)
-                ax.scatter(*args2,**kwargs2)
-                for label in set(cellClusterIndexLabel):
-                    # cells with this label
-                    X_tsne_cluster = X_tsne[:,cellClusterIndexLabel==label]
-                    x_mean = np.mean(X_tsne_cluster[0,:])
-                    y_mean = np.mean(X_tsne_cluster[1,:])
-                    ax.text(x_mean,y_mean,
-                            (df_votingResults['Predicted cell type'][label]).
-                                replace('-','-\n').replace(' ','\n').
-                                replace('T\n','T ').replace('B\n','B ').
-                                replace('\n#',' #').replace('/','/\n').
-                                replace('NK\n','NK ').replace('Stem\n','Stem '),
-                            fontsize=10,
-                            ha='center',va='center',#alpha=0.75,
-                            ).set_path_effects([path_effects.Stroke(linewidth=3, foreground='white'),path_effects.Normal()])
-                    radius = np.sqrt(X_tsne_cluster.shape[1])*300.0
-                    ax.scatter(x_mean,y_mean,s=radius*1,facecolors='none',edgecolors='k')
-                ax.set_xlim(XLIM)
-                ax.set_ylim(YLIM)
-                ax.legend(loc='best',numpoints=1,fontsize=12)
-                ax.set_xticks([]); ax.set_yticks([]); fig.tight_layout()
-                if saveDir is not None: 
-                    fig.savefig('%s/marker_subplots/%s_%s_%s.png' % (saveDir,self.dataName,hugo_cd_dict[marker],marker),dpi=300)
-                    print ('\n=========================\nDone Saving marker subplot %s_%s labeled data!\n=========================' % (hugo_cd_dict[marker],marker))
+        if marker_subplot:
+            self.MakeMarkerSubplot(df_expr, df_votingResults, X_tsne, markers, cellClusterIndexLabel, hugo_cd_dict, dataName, saveDir)
+            
