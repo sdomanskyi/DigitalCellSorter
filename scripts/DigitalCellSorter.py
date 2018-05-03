@@ -101,7 +101,7 @@ class DigitalCellSorter:
     #          dataName: name used in output files
     #          saveDir: directory for output files
     # Return - votingResults: a dictionary in form of {clusterLabel: predicted cellType}
-    def Vote(self, df_markers_cluster_centroids, markerDict, zscore_cutoff, cellClusterIndexLabel, dataName=None, saveDir=None, votingScheme=None):
+    def Vote(self, df_markers_cluster_centroids, markerDict, zscore_cutoff, cellClusterIndexLabel, votingScheme, dataName=None, saveDir=None):
         # use the voting scheme from the paper if no other scheme is given
         if votingScheme is None:
             votingResults = self.DCSVotingScheme(df_markers_cluster_centroids, markerDict, zscore_cutoff, cellClusterIndexLabel, dataName, saveDir)
@@ -413,7 +413,7 @@ class DigitalCellSorter:
     #          tSNE_cluster_plot: whether to produce cluster plot
     #          save_processed_data: whether to save processed data
     #          marker_subplot: whether to make subplots on markers
-    def Process(self, df_expr, dataName, sigma_over_mean_sigma=0.3, n_clusters=11, n_components_pca=100, zscore_cutoff=0.3, saveDir=None, marker_expression_plot=True, tSNE_cluster_plot=True, save_processed_data=True, marker_subplot=True):
+    def Process(self, df_expr, dataName, sigma_over_mean_sigma=0.3, n_clusters=11, n_components_pca=100, zscore_cutoff=0.3, saveDir=None, marker_expression_plot=True, tSNE_cluster_plot=True, save_processed_data=True, marker_subplot=True, votingScheme=None):
         np.random.seed(0)
         gnc = GeneNameConverter.GeneNameConverter(dictDir='tools/pickledGeneConverterDict/ensembl_hugo_entrez_alias_dict.pythdat')
         
@@ -471,7 +471,7 @@ class DigitalCellSorter:
         ##############################################################################################
         # Vote on cell type
         ##############################################################################################
-        votingResults = self.Vote(df_markers_cluster_centroids, markerDict, zscore_cutoff, cellClusterIndexLabel, dataName, saveDir)
+        votingResults = self.Vote(df_markers_cluster_centroids, markerDict, zscore_cutoff, cellClusterIndexLabel, votingScheme, dataName, saveDir)
         
         
         ##############################################################################################
