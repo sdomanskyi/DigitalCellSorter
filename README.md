@@ -15,28 +15,21 @@ pip3 install 'package name'
 
 ### Input Data Format
 
-Input data are located in data/ folder. Each set of data should be an individual subfolder with a name you specify. In our example, we use data from data/aml035pre/ as input. This subfolder contains two required data files:
+Your data should be converted to a pandas dataframe as input to the main function. The dataframe has genes as rows and cells as columns, and each grid is the expression of that gene in the cell. 
 
-- genes.tsv: a tsv file where the second column of each row is the gene name. 
-
-- matrix.mtx: #TODO
-
-Your data should be in the same directory hierarchy in order for the code to work. 
+In our example, we use data from data/aml035pre/ and do the conversion in demo.py. 
 
 ### Other Data
 
--geneLists/cd_marker_handbook.xlsx: an excel with marker information. Rows are markers and columns are cell types. A '+' sign means that the gene is a marker for that cell type.
+geneLists/cd_marker_handbook.xlsx: an excel with marker information. Rows are markers and columns are cell types. A '+' sign means that the gene is a marker for that cell type.
 
-## Running the tests
+## Method
 
-The main class for cell sorting functions and producing output images is DigitalCellSorter located in scripts/DigitalCellSorter.py. The __init__ method takes in dataName, which is the subfolder name in data/ containing your input data. It processes the raw data. The Process function does all the clustering, identification and image producing.
+The main class for cell sorting functions and producing output images is DigitalCellSorter located in scripts/DigitalCellSorter.py. It takes the following parameters that you can customize.
 
-The example execution file is run.py. It creates a DigitalCellSorter class and calls its Process function. You can run it using 
+- df_expr: expression data in panda dataframe format
 
-```
-python run.py
-```
-Note that you can customize the parameters in Process function. 
+- dataName: name used in output files
 
 - sigma_over_mean_sigma: threshold when keeping only genes with large enough standard deviation, default is 0.3.
 
@@ -48,16 +41,56 @@ Note that you can customize the parameters in Process function.
 
 - saveDir: directory to save all outputs, default is None
 
-You can change them by changing the parameters in the call to Process in run.py. For example, you can change it to
+- marker_expression_plot: whether to produce marker expression plot, default is True
+
+- tSNE_cluster_plot: whether to produce cluster plot, default is True
+
+- save_processed_data: whether to save processed data, default is True
+
+- marker_subplot: whether to make subplots on markers, default is True
+
+The Process function will produce the following outputs. Below are what they are and some sample outputs produced using our sample data.
+ 
+- dataName_clusters.png: an image that shows the clustering of cells and identified cell type of each cluster. 
+
+ <img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/aml035pre_clusters.png" align="center" height="500" width="500" >
+ 
+- dataName_voting.png: a heatmap that shows all markers and their expression levels in the clusters
+
+<img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/aml035pre_voting.png" align="center">
+
+- dataName_voting.xlsx: an excel sheet that shows the voting results
+
+- dataName_expression_labeled.tar.gz: a zip file that contains processed expression data
+
+- marker_subplots: a directory that contains subplots of each marker and their expression levels in the clusters. For example below is the subplot of CD33, a myeloid marker.
+
+<img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/marker_subplots/aml035pre_CD33_CD33.png" align="center" height="500" width="500" >
+
+## Demo
+
+### Usage
+
+We've made an example execution file demo.py that shows how to use DigitalCellSorter. The data set we are analyzing, the healthy and AML data from 10X, are in MatrixMarket IJV format (genes.tsv and matrix.mtx under data/aml350pre/), so it first converts them to a pandas dataframe as input for Process function. Then it creates a DigitalCellSorter class and calls its Process function, which does all the projection, clustering, identification and image producing.
+
+You can run it using 
 
 ```
-dcs.Process(n_clusters=10, n_components_pca=50, saveDir='dcs_output/')
+python demo.py
+```
+Note that to use your own data, you would also need to convert them to a pandas dataframe. You can also customize the parameters in Process function as listed above. For example, you can change it to
+
+```
+dcs.Process(n_clusters=10, n_components_pca=50, saveDir='demo_output/', marker_subplot = False)
 ```
 
 To see our example work, you just need to download everything, go to the directory then run 
 
 ```
-python run.py
+python demo.py
 ```
 
-For other purposes, you can add your own data data/ folder, change the function call in run.py then run the same command.
+### Output
+
+All the outputs are saved in demo/output/ directory. 
+
