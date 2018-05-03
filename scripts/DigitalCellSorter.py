@@ -26,38 +26,39 @@ from scipy.cluster.hierarchy import linkage, dendrogram
 print ('\n================\nPackages loaded!\n================')
 
 class DigitalCellSorter:
+    
     # Normalize df_expr data
     # Params - df_expr: expression data
     #          sigma_over_sigma: threshold when keeping only genes with large enough standard deviation
     #          gnc: gene name converter
     def Normalize(self, df_expr, sigma_over_mean_sigma, gnc):
         print ('Pre-filter size: %s genes, %s cells' % df_expr.shape)
-        #Keep only cells with at least one expressed gene
+        # Keep only cells with at least one expressed gene
         df_expr = df_expr[df_expr.columns[np.sum(df_expr,axis=0)>0]]
         #Keep only genes expressed in at least one cell
         df_expr = df_expr.iloc[(np.sum(df_expr,axis=1)>0).values,:]
         print ('Post-filter size: %s genes, %s cells' % df_expr.shape)
 
-        #Scale all cells
+        # Scale all cells
         median = np.median(np.sum(df_expr,axis=0))*1.0 # sum of all columns/cells
         df_expr = df_expr.apply(lambda q: q*median/np.sum(q),axis=0)
 
-        #Replace zeros with minimum value
+        # Replace zeros with minimum value
         MIN = np.min(df_expr.values[df_expr.values>0])
         df_expr = df_expr.replace(0,MIN)
 
-        #Take log2 of expression
+        # Take log2 of expression
         df_expr = np.log2(df_expr)
         df_expr -= np.min(df_expr.values)
 
-        #Keep only those genes with large enough standard deviation
+        # Keep only those genes with large enough standard deviation
         df_expr = df_expr.iloc[np.where(np.std(df_expr,axis=1)/np.mean(np.std(df_expr.values))>sigma_over_mean_sigma)[0]]
         print ('Post-sigma cut size: %s genes, %s cells' % df_expr.shape)
 
-        #Convert gene names from aliases to hugos when possible
+        # Convert gene names from aliases to hugos when possible
         df_expr.index = gnc.Convert(list(df_expr.index),'alias','hugo',returnUnknownString=False)
 
-        #Sort rows by gene name for the heck of it
+        # Sort rows by gene name for the heck of it
         df_expr = df_expr.sort_index()
 
         print ('\n=========================\nDone processing raw data!\n=========================')
@@ -91,15 +92,124 @@ class DigitalCellSorter:
         print ('\n================\nDone clustering!\n================')
         return cellClusterIndexLabel, possible_cluster_labels
     
+    # Produce cluster voting results
+    # Params - df_markers_cluster_centroids: Y_mc
+    #          markerDict: markers data
+    #          zscore_cutoff: zscore cutoff when calculating Z_mc
+    #          votingScheme: voting function. If None then our voting function from the paper will be used. 
+    #          NOTE: If you want to use your own custom voting function, make sure the output has the same format as out DCSVotingScheme function as below. You can modify inputs if needed. 
+    #          dataName: name used in output files
+    #          saveDir: directory for output files
+    # Return - votingResults: a dictionary in form of {clusterLabel: predicted cellType}
+    def Vote(self, df_markers_cluster_centroids, markerDict, zscore_cutoff, cellClusterIndexLabel, dataName=None, saveDir=None, votingScheme=None):
+        # use the voting scheme from the paper if no other scheme is given
+        if votingScheme is None:
+            votingResults = self.DCSVotingScheme(df_markers_cluster_centroids, markerDict, zscore_cutoff, cellClusterIndexLabel, dataName, saveDir)
+        else:
+            votingResults = votingScheme(df_markers_cluster_centroids, markerDict, dataName, saveDir)
+        return votingResults
+    
+    # Produce cluster voting results and write it to an excel file is saveDir is given
+    # Params - df_markers_cluster_centroids: Y_mc
+    #          markerDict: markers data
+    #          zscore_cutoff: zscore cutoff when calculating Z_mc
+    #          dataName: name used in output files
+    #          saveDir: directory for output files
+    # Return - votingResults: a dictionary in form of {clusterLabel: predicted cellType}
+    def DCSVotingScheme(self, df_markers_cluster_centroids, markerDict, zscore_cutoff, cellClusterIndexLabel, dataName=None, saveDir=None):
+        def f(x,zscore_cutoff):
+            return (scipy.stats.zscore(x) > zscore_cutoff)*1
+        
+        markers = np.intersect1d(df_markers_cluster_centroids.index,list(markerDict.keys()))
+        cellTypes = np.sort(np.unique([item for sublist in markerDict.values() for item in sublist]))
+        
+        # Build marker/cell type weight matrix
+        # This is the marker/cell type matrix (M^T)_mk (the transpose of M_km as defined in the paper)
+        df_marker_cellType = pd.DataFrame(np.zeros([len(markers),len(cellTypes)]),index=markers,columns=cellTypes)
+        for marker in markers:
+            for cellType in markerDict[marker]:
+                df_marker_cellType.loc[marker,cellType] = 1
+
+        # Normalize columns (cell types) so that the absolute number of known markers in a given cell type is irrelevant
+        df_marker_cellType = df_marker_cellType.apply(lambda q: q/np.sum(q),axis=0)
+
+        # Normalize rows (markers) by the number of cell types expressing that marker (i.e. the "specificity")
+        df_marker_cellType = df_marker_cellType.apply(lambda q:q/np.sum(q>0),axis=1)
+
+        print ('\n======================================\nDone building marker/cell type matrix!\n======================================')
+
+        # This is Z_mc
+        df_marker_hits = df_markers_cluster_centroids.apply(lambda q: f(q,zscore_cutoff),axis=1)
+
+        fig,ax = plt.subplots(figsize=(5,3));
+        ax.hist(np.sum(df_marker_hits,axis=0),10);
+        ax.set_xlabel('Number of markers passing z-score threshold');
+        ax.set_ylabel('Number of clusters');
+        # if saveDir is not None: fig.savefig(saveDir+'marker_count.pdf')
+
+
+        # This is the vote matrix V_kc
+        df_votes = df_marker_cellType.T.dot(df_marker_hits).apply(lambda q: q/np.sum(q),axis=0)
+
+        # This is the cell type vector T_c
+        argmaxes = np.argmax(df_votes.values,axis=0)
+
+        # This is the cell type vector T_c (with cell type names instead of integers)
+        cellTypes = pd.Series(df_votes.index[argmaxes],
+                              index = df_votes.columns)
+        
+        # This is analogous to the percentage of the popular vote in a first-past-the-post political system
+        scores = pd.Series([df_votes.iloc[i,j] for i,j in zip(argmaxes,range(len(argmaxes)))],
+                            index = df_votes.columns)
+
+        allMarkersList = [df_marker_hits.index[df_marker_hits[c]>0] 
+                          for c in df_votes.columns] # important markers in each cluster based on Zmc
+        supportingMarkersList = [np.intersect1d(allMarkers,df_marker_cellType.index[df_marker_cellType[c]>0]) 
+                                 for allMarkers,c in zip(allMarkersList,cellTypes)]
+        allMarkers = pd.Series([' // '.join(i) for i in allMarkersList],
+                               index = df_votes.columns)
+        supportingMarkers = pd.Series([' // '.join(i) for i in supportingMarkersList],
+                                      index = df_votes.columns)
+
+        # Build a table to save voting results to an excel file
+        df_votingResults = pd.DataFrame(index=list(range(df_markers_cluster_centroids.shape[1])))
+        df_votingResults['Cluster label'] = list(range(df_markers_cluster_centroids.shape[1]))
+        df_votingResults = df_votingResults.set_index('Cluster label')
+        df_votingResults['Winning score'] = scores
+        df_votingResults['# cells in cluster'] = [np.sum(cellClusterIndexLabel==label) for label in df_votingResults.index]
+        df_votingResults['Supporting markers'] = supportingMarkers
+        df_votingResults['All markers'] = allMarkers
+        df_scoresToAppend = df_votes.T
+        df_scoresToAppend.columns = ['%s score'%i for i in df_scoresToAppend.columns]
+        df_votingResults = pd.concat((df_votingResults,df_scoresToAppend),axis=1)
+
+
+        # Append numbers if cell types are repeated (e.g. "Erythrocyte #1', "Erythrocyte #2', ...)
+        for cellType in set(cellTypes):
+            instances = np.where(cellTypes.values==cellType)[0]
+            if len(instances)>1:
+                for counter,instance in enumerate(instances,1):
+                    cellTypes[instances[counter-1]] = \
+                       cellTypes[instances[counter-1]] + ' #' + str(counter).zfill(len(str(len(instances))))
+        df_votingResults['Predicted cell type'] = cellTypes
+        
+        # Build voting results dictionary with cluster labels as keys and predicted celltypes as values
+        votingResults = dict(zip(range(df_markers_cluster_centroids.shape[1]), cellTypes))
+    
+        if saveDir is not None: df_votingResults.to_excel('%s/%s_voting.xlsx'%(saveDir,dataName))
+
+        print ('\n============\nDone voting!\n============')
+        return votingResults
+    
     # Save processed data to a zip file
     # Params - df_expr: expression data
-    #          df_votingResults: voting result dataframe
+    #          votingResults: voting results dictionary
     #          cellClusterIndexLabel: cluster labels for all cells
     #          dataName: name used in output files
     #          saveDir: directory for output files
-    def SaveProcessedData(self, df_expr, df_votingResults, cellClusterIndexLabel, dataName, saveDir):
+    def SaveProcessedData(self, df_expr, votingResults, cellClusterIndexLabel, dataName, saveDir):
         df_labeled = cdc(df_expr)
-        df_labeled.loc['_TRUE_LABEL'] = [df_votingResults['Predicted cell type'][i] for i in cellClusterIndexLabel]
+        df_labeled.loc['_TRUE_LABEL'] = [list(votingResults.values())[i] for i in cellClusterIndexLabel]
         df_labeled = df_labeled.sort_values(df_labeled.last_valid_index(),axis=1)
         fileName = '%s/%s_expression_labeled.tar.gz' % (saveDir,dataName)
         print ('Saving %s...' % fileName.split('/')[-1])
@@ -109,14 +219,18 @@ class DigitalCellSorter:
         
         
     # Produce image on genes and their expression on all clusters
-    # Params - df_votingResults: voting result dataframe
+    # Params - votingResults: voting results dictionary
     #          X_markers_cluster_means: Y_mc, mean expression of all markers in all clusters
     #          df_markers: markers and their expression data
-    #          df_marker_hits: Z_mc, build from Y_mc
+    #          df_markers_cluster_centroids: Y_mc
+    #          zscore_cutoff: zscore cutoff when calculating Z_mc
     #          dataName: name used in output files
     #          saveDir: directory for output files
-    def MakeMarkerExpressionPlot(self, df_votingResults, X_markers_cluster_means, df_markers, df_marker_hits, dataName, saveDir):
-        # Y_mc
+    def MakeMarkerExpressionPlot(self, votingResults, X_markers_cluster_means, df_markers, df_markers_cluster_centroids, zscore_cutoff, dataName, saveDir):
+        def f(x,zscore_cutoff):
+            return (scipy.stats.zscore(x) > zscore_cutoff)*1
+        
+        # Y_mc.T
         X_markers_cluster_means_transpose = X_markers_cluster_means.T
 
         # normalization
@@ -133,6 +247,7 @@ class DigitalCellSorter:
 
         X_markers_cluster_means_sorted = X_markers_cluster_means_transpose[ORDER,:][:,ORDER2]
 
+        df_marker_hits = df_markers_cluster_centroids.apply(lambda q: f(q,zscore_cutoff),axis=1)
         X_marker_hits = df_marker_hits.values.T[ORDER,:][:,ORDER2]
 
         fig,ax = plt.subplots(
@@ -152,7 +267,7 @@ class DigitalCellSorter:
         xtickslabels = np.array(df_markers.index[ORDER2])
 
         ax.set_xticklabels(xtickslabels,rotation=90)
-        ax.set_yticklabels([df_votingResults['Predicted cell type'][i]+' ('+str(i)+')' for i in ORDER])#,rotation=24,ha='right',va='top')
+        ax.set_yticklabels([list(votingResults.values())[i]+' ('+str(i)+')' for i in ORDER])#,rotation=24,ha='right',va='top')
 
         ax.set_xlim([-0.5,X_markers_cluster_means_transpose.shape[1]-0.5])
         ax.set_ylim([-0.5,X_markers_cluster_means_transpose.shape[0]-0.5])
@@ -165,15 +280,14 @@ class DigitalCellSorter:
     
     # Produce subplots on each marker and its expression on all clusters
     # Params - df_expr: expression data
-    #          df_votingResults: voting result dataframe
+    #          votingResults: voting results dictionary
     #          X_tsne: expression data after tSNE projection
     #          markers: list of markers
     #          cellClusterIndexLabel: cluster labels for all cells
     #          hugo_cd_dict: dictionary that converts gene names from aliases to hugos
     #          dataName: name used in output files
     #          saveDir: directory for output files
-    def MakeMarkerSubplot(self, df_expr, df_votingResults, X_tsne, markers, cellClusterIndexLabel, hugo_cd_dict, dataName, saveDir):
-        # max column is where max is
+    def MakeMarkerSubplot(self, df_expr, votingResults, X_tsne, markers, cellClusterIndexLabel, hugo_cd_dict, dataName, saveDir):
         maxs = np.max(X_tsne,axis=1)
         mins = np.min(X_tsne,axis=1)
         maxDiffs = maxs - mins
@@ -220,7 +334,7 @@ class DigitalCellSorter:
                     x_mean = np.mean(X_tsne_cluster[0,:])
                     y_mean = np.mean(X_tsne_cluster[1,:])
                     ax.text(x_mean,y_mean,
-                            (df_votingResults['Predicted cell type'][label]).
+                            (list(votingResults.values())[label]).
                                 replace('-','-\n').replace(' ','\n').
                                 replace('T\n','T ').replace('B\n','B ').
                                 replace('\n#',' #').replace('/','/\n').
@@ -240,12 +354,12 @@ class DigitalCellSorter:
                     
                     
     # Produce plot on clusters
-    # Params - df_votingResults: voting result dataframe
+    # Params - df_votingResults: voting results dictionary
     #          X_tsne: expression data after tSNE projection
     #          cellClusterIndexLabel: cluster labels for all cells
     #          dataName: name used in output files
     #          saveDir: directory for output files
-    def MakeClusterPlot(self, df_votingResults, X_tsne, cellClusterIndexLabel, dataName, saveDir):
+    def MakeClusterPlot(self, votingResults, X_tsne, cellClusterIndexLabel, dataName, saveDir):
         fig,ax = plt.subplots(figsize=(8,8))
         for label in set(cellClusterIndexLabel):
             # cells in that cluster, 2*number of cells
@@ -260,7 +374,7 @@ class DigitalCellSorter:
             for i in range(X_tsne_cluster.shape[1]):
                 ax.plot([x_mean,X_tsne_cluster[0,i]],[y_mean,X_tsne_cluster[1,i]],'k-',alpha=0.03,zorder=-np.inf)
             ax.text(x_mean,y_mean,
-                            df_votingResults['Predicted cell type'][label].
+                            list(votingResults.values())[label].
                                 replace('-','-\n').replace(' ','\n').
                                 replace('T\n','T ').replace('B\n','B ').
                                 replace('\n#',' #').replace('/','/\n').
@@ -284,8 +398,9 @@ class DigitalCellSorter:
 
         fig.tight_layout() 
         if saveDir is not None: fig.savefig('%s/%s_clusters.png'%(saveDir,dataName),dpi=300)
-            
-
+        print ('\n================================\nDone plotting cluster image!\n================================')
+    
+        
     # Main function
     # Params - df_expr: expression data
     #          dataName: name used in output files
@@ -305,6 +420,9 @@ class DigitalCellSorter:
         if not os.path.exists(saveDir):
             os.makedirs(saveDir)
             
+        ##############################################################################################
+        # Normalize
+        ##############################################################################################
         df_expr = self.Normalize(df_expr, sigma_over_mean_sigma, gnc)
         
         try:
@@ -314,6 +432,7 @@ class DigitalCellSorter:
             X_pca, X_tsne = self.Project(df_expr, n_components_pca)
             savedName = cdc(dataName)
   
+
         ##############################################################################################
         # Cluster
         ##############################################################################################
@@ -329,29 +448,9 @@ class DigitalCellSorter:
         
         
         ##############################################################################################
-        # Build marker/cell type weight matrix
-        ##############################################################################################
-        markers = np.intersect1d(df_expr.index,list(markerDict.keys()))
-        cellTypes = np.sort(np.unique([item for sublist in markerDict.values() for item in sublist]))
-
-        #This is the marker/cell type matrix (M^T)_mk (the transpose of M_km as defined in the paper)
-        df_marker_cellType = pd.DataFrame(np.zeros([len(markers),len(cellTypes)]),index=markers,columns=cellTypes)
-        for marker in markers:
-            for cellType in markerDict[marker]:
-                df_marker_cellType.loc[marker,cellType] = 1
-
-        #Normalize columns (cell types) so that the absolute number of known markers in a given cell type is irrelevant
-        df_marker_cellType = df_marker_cellType.apply(lambda q: q/np.sum(q),axis=0)
-
-        #Normalize rows (markers) by the number of cell types expressing that marker (i.e. the "specificity")
-        df_marker_cellType = df_marker_cellType.apply(lambda q:q/np.sum(q>0),axis=1)
-
-        print ('\n======================================\nDone building marker/cell type matrix!\n======================================')
-
-        
-        ##############################################################################################
         # Compute mean expression of each marker in each cluster
         ##############################################################################################
+        markers = np.intersect1d(df_expr.index,list(markerDict.keys()))
         df_markers = df_expr.loc[markers]
         X_markers = df_markers.values
 
@@ -361,7 +460,7 @@ class DigitalCellSorter:
 
         X_markers_cluster_means = np.vstack(means).T
 
-        #This is the marker/centroid matrix Y_mc
+        # This is the marker/centroid matrix Y_mc
         df_markers_cluster_centroids = pd.DataFrame(X_markers_cluster_means,
                                                     index=markers,
                                                     columns=possible_cluster_labels)
@@ -372,92 +471,33 @@ class DigitalCellSorter:
         ##############################################################################################
         # Vote on cell type
         ##############################################################################################
-        def f(x,zscore_cutoff):
-            return (scipy.stats.zscore(x) > zscore_cutoff)*1
-
-        #This is Z_mc
-        df_marker_hits = df_markers_cluster_centroids.apply(lambda q: f(q,zscore_cutoff),axis=1)
-
-        fig,ax = plt.subplots(figsize=(5,3));
-        ax.hist(np.sum(df_marker_hits,axis=0),10);
-        ax.set_xlabel('Number of markers passing z-score threshold');
-        ax.set_ylabel('Number of clusters');
-        # if saveDir is not None: fig.savefig(saveDir+'marker_count.pdf')
-
-
-        #This is the vote matrix V_kc
-        df_votes = df_marker_cellType.T.dot(df_marker_hits).apply(lambda q: q/np.sum(q),axis=0)
-
-        #This is the cell type vector T_c
-        argmaxes = np.argmax(df_votes.values,axis=0)
-
-        #This is the cell type vector T_c (with cell type names instead of integers)
-        cellTypes = pd.Series(df_votes.index[argmaxes],
-                              index = df_votes.columns)
-
-        #This is analogous to the percentage of the popular vote in a first-past-the-post political system
-        scores = pd.Series([df_votes.iloc[i,j] for i,j in zip(argmaxes,range(len(argmaxes)))],
-                            index = df_votes.columns)
-
-        allMarkersList = [df_marker_hits.index[df_marker_hits[c]>0] 
-                          for c in df_votes.columns] # important markers in each cluster based on Zmc
-        supportingMarkersList = [np.intersect1d(allMarkers,df_marker_cellType.index[df_marker_cellType[c]>0]) 
-                                 for allMarkers,c in zip(allMarkersList,cellTypes)]
-        allMarkers = pd.Series([' // '.join(i) for i in allMarkersList],
-                               index = df_votes.columns)
-        supportingMarkers = pd.Series([' // '.join(i) for i in supportingMarkersList],
-                                      index = df_votes.columns)
-
-        df_votingResults = pd.DataFrame(index=possible_cluster_labels)
-        df_votingResults['Cluster label'] = possible_cluster_labels
-        df_votingResults = df_votingResults.set_index('Cluster label')
-        df_votingResults['Predicted cell type'] = cellTypes
-        df_votingResults['Winning score'] = scores
-        df_votingResults['# cells in cluster'] = [np.sum(cellClusterIndexLabel==label) for label in df_votingResults.index]
-        df_votingResults['Supporting markers'] = supportingMarkers
-        df_votingResults['All markers'] = allMarkers
-        df_scoresToAppend = df_votes.T
-        df_scoresToAppend.columns = ['%s score'%i for i in df_scoresToAppend.columns]
-        df_votingResults = pd.concat((df_votingResults,df_scoresToAppend),axis=1)
-
-
-        #Append numbers if cell types are repeated (e.g. "Erythrocyte #1', "Erythrocyte #2', ...)
-        for cellType in set(df_votingResults['Predicted cell type'].values):
-            instances = np.where(df_votingResults['Predicted cell type'].values==cellType)[0]
-            if len(instances)>1:
-                for counter,instance in enumerate(instances,1):
-                    df_votingResults.loc[instance,'Predicted cell type'] = \
-                       df_votingResults.loc[instance,'Predicted cell type'] + ' #' + str(counter).zfill(len(str(len(instances))))
-
-
-        if saveDir is not None: df_votingResults.to_excel('%s/%s_voting.xlsx'%(saveDir,dataName))
-
-        print ('\n============\nDone voting!\n============')
-
-        df_votingResults[df_votingResults.columns[:np.where(df_votingResults.columns=='Supporting markers')[0][0]]]
+        votingResults = self.Vote(df_markers_cluster_centroids, markerDict, zscore_cutoff, cellClusterIndexLabel, dataName, saveDir)
         
         
         ##############################################################################################
         # Plot mean marker expression for each cluster
         ##############################################################################################
         if marker_expression_plot:
-            self.MakeMarkerExpressionPlot(df_votingResults, X_markers_cluster_means, df_markers, df_marker_hits, dataName, saveDir)
+            self.MakeMarkerExpressionPlot(votingResults, X_markers_cluster_means, df_markers, df_markers_cluster_centroids, zscore_cutoff, dataName, saveDir)
+        
         
         ##############################################################################################
         # tSNE picture of final clustering and cell types
         ##############################################################################################
         if tSNE_cluster_plot:
-            self.MakeClusterPlot(df_votingResults, X_tsne, cellClusterIndexLabel, dataName, saveDir)
+            self.MakeClusterPlot(votingResults, X_tsne, cellClusterIndexLabel, dataName, saveDir)
            
+        
         ##############################################################################################
         # Save labelled expression data to disk
         ##############################################################################################
         if save_processed_data:
-            self.SaveProcessedData(df_expr, df_votingResults, cellClusterIndexLabel, dataName, saveDir)
+            self.SaveProcessedData(df_expr, votingResults, cellClusterIndexLabel, dataName, saveDir)
+        
         
         ##############################################################################################
         # Make a bunch of tSNE plots showing relative expression of different markers
         ##############################################################################################
         if marker_subplot:
-            self.MakeMarkerSubplot(df_expr, df_votingResults, X_tsne, markers, cellClusterIndexLabel, hugo_cd_dict, dataName, saveDir)
+            self.MakeMarkerSubplot(df_expr, votingResults, X_tsne, markers, cellClusterIndexLabel, hugo_cd_dict, dataName, saveDir)
             
