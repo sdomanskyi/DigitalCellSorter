@@ -7,7 +7,7 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Prerequisites
 
-The code runs in Python>=3.3 environment. It uses packages numpy, pandas, matplotlib, scikit-learn, scipy. One convenient way to install these packages is through pip. After pip is installed, you can install most packages by
+The code runs in Python>=3.3 environment. It uses packages numpy, pandas, matplotlib, scikit-learn, scipy, mygene, biopython, progressbar3. One convenient way to install these packages is through pip. After pip is installed, you can install most packages by
 
 ```
 pip3 install 'package name'
