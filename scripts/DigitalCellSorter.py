@@ -140,6 +140,7 @@ class DigitalCellSorter:
 
         # This is Z_mc
         df_marker_hits = df_markers_cluster_centroids.apply(lambda q: f(q,zscore_cutoff),axis=1)
+        df_marker_hits=pd.DataFrame.from_dict(dict(zip(df_marker_hits.index, df_marker_hits.values))).T
 
         fig,ax = plt.subplots(figsize=(5,3));
         ax.hist(np.sum(df_marker_hits,axis=0),10);
@@ -248,6 +249,8 @@ class DigitalCellSorter:
         X_markers_cluster_means_sorted = X_markers_cluster_means_transpose[ORDER,:][:,ORDER2]
 
         df_marker_hits = df_markers_cluster_centroids.apply(lambda q: f(q,zscore_cutoff),axis=1)
+        df_marker_hits=pd.DataFrame.from_dict(dict(zip(df_marker_hits.index, df_marker_hits.values))).T
+        
         X_marker_hits = df_marker_hits.values.T[ORDER,:][:,ORDER2]
 
         fig,ax = plt.subplots(
@@ -414,6 +417,7 @@ class DigitalCellSorter:
     #          save_processed_data: whether to save processed data
     #          marker_subplot: whether to make subplots on markers
     def Process(self, df_expr, dataName, sigma_over_mean_sigma=0.3, n_clusters=11, n_components_pca=100, zscore_cutoff=0.3, saveDir=None, marker_expression_plot=True, tSNE_cluster_plot=True, save_processed_data=True, marker_subplot=True, votingScheme=None):
+        print ("MARK")
         np.random.seed(0)
         gnc = GeneNameConverter.GeneNameConverter(dictDir='tools/pickledGeneConverterDict/ensembl_hugo_entrez_alias_dict.pythdat')
         
@@ -501,3 +505,4 @@ class DigitalCellSorter:
         if marker_subplot:
             self.MakeMarkerSubplot(df_expr, votingResults, X_tsne, markers, cellClusterIndexLabel, hugo_cd_dict, dataName, saveDir)
             
+        return cellClusterIndexLabel
