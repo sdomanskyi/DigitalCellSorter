@@ -21,7 +21,7 @@ In our example, we use data from data/aml035pre/ and do the conversion in demo.p
 
 ### Other Data
 
-geneLists/cd_marker_handbook.xlsx: an excel with marker information. Rows are markers and columns are cell types. A '+' sign means that the gene is a marker for that cell type.
+geneLists/cd_marker_handbook.xlsx: An excel sheet with marker data. Rows are markers and columns are cell types. A '+' sign means that the gene is a marker for that cell type.
 
 ## Method
 
@@ -49,7 +49,9 @@ The main class for cell sorting functions and producing output images is Digital
 
 - marker_subplot: whether to make subplots on markers, default is True
 
-The Process function will produce the following outputs. Below are what they are and some sample outputs produced using our sample data.
+- votingScheme: voting function to predict celltypes for each cluster, default is None. If it is None, then our cell sorting algorithm from the paper would be used. If you want to your own voting function, make sure it returns a dictionary with cluster labels as keys and predicted celltypes as values. You can modify code to change inputs to this function if needed. See the code and comments for more clarifications.
+
+The Process function will produce the following outputs. Below explains what they are and shows some sample outputs produced using our sample data.
  
 - dataName_clusters.png: an image that shows the clustering of cells and identified cell type of each cluster. 
 
