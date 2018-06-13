@@ -56,7 +56,7 @@ class DigitalCellSorter:
         print ('Post-sigma cut size: %s genes, %s cells' % df_expr.shape)
 
         # Convert gene names from aliases to hugos when possible
-        df_expr.index = gnc.Convert(list(df_expr.index),'alias','hugo',returnUnknownString=False)
+        #df_expr.index = gnc.Convert(list(df_expr.index),'alias','hugo',returnUnknownString=False)
 
         # Sort rows by gene name for the heck of it
         df_expr = df_expr.sort_index()
@@ -146,7 +146,7 @@ class DigitalCellSorter:
         ax.hist(np.sum(df_marker_hits,axis=0),10);
         ax.set_xlabel('Number of markers passing z-score threshold');
         ax.set_ylabel('Number of clusters');
-        # if saveDir is not None: fig.savefig(saveDir+'marker_count.pdf')
+        if saveDir is not None: fig.savefig(saveDir+'marker_count.pdf')
 
 
         # This is the vote matrix V_kc
@@ -158,6 +158,7 @@ class DigitalCellSorter:
         # This is the cell type vector T_c (with cell type names instead of integers)
         cellTypes = pd.Series(df_votes.index[argmaxes],
                               index = df_votes.columns)
+        cellTypes[df_votes.isnull().any()]='Unknown'
         
         # This is analogous to the percentage of the popular vote in a first-past-the-post political system
         scores = pd.Series([df_votes.iloc[i,j] for i,j in zip(argmaxes,range(len(argmaxes)))],
@@ -166,7 +167,7 @@ class DigitalCellSorter:
         allMarkersList = [df_marker_hits.index[df_marker_hits[c]>0] 
                           for c in df_votes.columns] # important markers in each cluster based on Zmc
         supportingMarkersList = [np.intersect1d(allMarkers,df_marker_cellType.index[df_marker_cellType[c]>0]) 
-                                 for allMarkers,c in zip(allMarkersList,cellTypes)]
+                                 if len(allMarkers)!=0 else [] for allMarkers,c in zip(allMarkersList,cellTypes)]
         allMarkers = pd.Series([' // '.join(i) for i in allMarkersList],
                                index = df_votes.columns)
         supportingMarkers = pd.Series([' // '.join(i) for i in supportingMarkersList],
@@ -446,7 +447,7 @@ class DigitalCellSorter:
         ##############################################################################################
         # Get dictionary to map from markers to cell types
         ##############################################################################################
-        markerDict,hugo_cd_dict = MakeMarkerDict.MakeMarkerDict('geneLists/cd_marker_handbook.xlsx',gnc=gnc)
+        markerDict,hugo_cd_dict = MakeMarkerDict.MakeMarkerDict('geneLists/cd_marker_handbook2.xlsx',gnc=gnc)
 
         print ('\n=========================\nDone loading marker data!\n=========================')
         
@@ -456,6 +457,7 @@ class DigitalCellSorter:
         ##############################################################################################
         markers = np.intersect1d(df_expr.index,list(markerDict.keys()))
         df_markers = df_expr.loc[markers]
+        df_markers=df_markers.groupby(level=0).mean()
         X_markers = df_markers.values
 
         means = []
