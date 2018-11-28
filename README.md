@@ -49,19 +49,19 @@ The main class for cell sorting functions and producing output images is Digital
 
 - ```votingScheme```: voting function to predict celltypes for each cluster, default is None. If it is None, then our cell sorting algorithm from the paper would be used. If you want to your own voting function, make sure it returns a dictionary with cluster labels as keys and predicted celltypes as values. You can modify code to change inputs to this function if needed. See the code and comments for more clarifications.
 
-- ```N_samples_for_distribution```: , default is 10000
+- ```N_samples_for_distribution```: number of samples to generate, default is 10000
 
-- ```SaveTransformedData```: , default is True
+- ```SaveTransformedData```: whether to save PCA and t-SNE transformed data, default is True
 
-- ```attemptLoadingSavedTransformedData```: , default is True
+- ```attemptLoadingSavedTransformedData```: if ```asdf``` file exist for ```dataName``` PCA and t-SNE transformed data will be loaded, default is True
 
-- ```SaveXpcaDataCSV```: , default is True
+- ```SaveXpcaDataCSV```: data necessary for ARI analysis, default is True
 
-- ```AvailableCPUsCount```: , default is 20
+- ```AvailableCPUsCount```: for speedup of noise distribution calculation use multiple cores, default is 20
 
-- ```clusterIndex```: , default is None
+- ```clusterIndex```: if provided, e.g. [1,5,6], subclustering will be performed, default is None
 
-- ```clusterName```: , default is None
+- ```clusterName```: for subclustering cell type of interest, default is None
 
 
 The Process function will produce the following outputs. Below explains what they are and shows some sample outputs produced using our sample data.
@@ -69,7 +69,11 @@ The Process function will produce the following outputs. Below explains what the
 - ```dataName_clusters2D.png```: an image that shows the clustering of cells and identified cell type of each cluster. 
 
  <img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/HCA_BM1_data/HCA_BM1_data_clusters2D.png" align="center" height="500" width="500" >
- 
+
+- ```dataName_matrix_voting.png```: z-scores of the voting results for each input cell type and each cluster, in addition this figure contains relative (%) and absolute (cell counts) cluster sizes 
+
+ <img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/HCA_BM1_data/HCA_BM1_data_matrix_voting.png" align="center" width="500" >
+
 - ```dataName_voting.png```: a heatmap that shows all markers and their expression levels in the clusters
 
 <img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/HCA_BM1_data/HCA_BM1_data_voting.png" align="center" height="1000">
@@ -78,11 +82,11 @@ The Process function will produce the following outputs. Below explains what the
 
 - ```dataName_expression_labeled.tar.gz.pklz```: a pickled zip file that contains processed and labelled expression data
 
-- ```dataName_matrix_voting.pdf```: z-scores of the voting results for each input cell type and each cluster, in addition this figure contains relative (%) and absolute (cell counts) cluster sizes
-
 - ```dataName_data_noise_dict.pdf```: noise distributions for each cell type and cluster
 
 - ```dataName_subclustering_stacked_barplot```: cell types relative fractions
+
+ <img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/HCA_BM1_data/HCA_BM1_data_subclustering_stacked_barplot_All_cell_clusters.png" align="center" height="400" >
 
 - ```marker_subplots```: a directory that contains subplots of each marker and their expression levels in the clusters. For example below is the subplot of CD33, a myeloid marker.
 
