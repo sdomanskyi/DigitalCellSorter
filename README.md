@@ -7,7 +7,7 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Prerequisites
 
-The code runs in Python>=3.3 environment. It uses packages numpy, pandas, matplotlib, scikit-learn, scipy, mygene, biopython, progressbar3. One convenient way to install these packages is through pip. After pip is installed, you can install most packages by
+The code runs in Python>=3.3 environment. It uses packages numpy, pandas, matplotlib, scikit-learn, scipy, mygene, biopython, progressbar3, pickle, xlrd, openpyxl, h5py, asdf, shutil, gzip, multiprocessing. One convenient way to install these packages is through pip. After pip is installed, you can install most packages by
 
 ```
 pip3 install 'package name'
@@ -78,7 +78,7 @@ We've made an example execution file demo.py that shows how to use DigitalCellSo
 You can run it using 
 
 ```
-python demo.py
+python DCS_demo_on_HCA_BM.py
 ```
 Note that to use your own data, you would also need to convert them to a pandas dataframe. You can also customize the parameters in Process function as listed above. For example, you can change it to
 
@@ -89,10 +89,10 @@ dcs.Process(n_clusters=10, n_components_pca=50, saveDir='demo_output/', marker_s
 To see our example work, you just need to download everything, go to the directory then run 
 
 ```
-python demo.py
+python DCS_demo_on_HCA_BM.py
 ```
 
 ### Output
 
-All the outputs are saved in demo/output/ directory. 
+All the outputs are saved in demo_output/ directory. 
 
