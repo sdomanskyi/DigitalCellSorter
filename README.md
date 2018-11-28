@@ -1,5 +1,5 @@
 # DigitalCellSorter
-Cell type clustering and identification in heterogeneous single cell RNA-seq data
+Identification of hematological cell types from heterogeneous single cell RNA-seq data.
 
 ## Getting Started
 
@@ -15,9 +15,9 @@ pip3 install 'package name'
 
 ### Input Data Format
 
-The input data is expected in Market Exchange Format (MEX), e.g. there should be three files ```matrix.mtx```, ```genes.tsv``` and ```barcodes.tsv```.
+The input data is expected in MatrixMarket IJV format, e.g. there should be three files ```matrix.mtx```, ```genes.tsv``` and ```barcodes.tsv```.
 
-In the demo folder "data" is intentionally left empty. The reader can download the file ```ica_bone_marrow_h5.h5``` from https://preview.data.humancellatlas.org/ (Raw Counts Matrix - Bone Marrow) and place in folder ```data```. The file is ~485Mb and contains all 378000 cells from 8 bone marrow donors. In our example, the MEX files are prepared automatically on the fly for each donor separately using ```ReadPrepareDataHCApreviewDataset.PrepareData()```. For detail see ```demo.py```.
+In the demo folder "data" is intentionally left empty. The reader can download the file ```ica_bone_marrow_h5.h5``` from https://preview.data.humancellatlas.org/ (Raw Counts Matrix - Bone Marrow) and place in folder ```data```. The file is ~485Mb and contains all 378000 cells from 8 bone marrow donors. In our example, the MatrixMarket files are prepared automatically on the fly for each donor separately using ```ReadPrepareDataHCApreviewDataset.PrepareData()```. For detail see ```demo.py```.
 
 The data is converted to a pandas dataframe as input to the main function. The dataframe has genes as rows and cells as columns, and each grid is the expression of that gene in the cell. 
 
@@ -57,7 +57,7 @@ The Process function will produce the following outputs. Below explains what the
  
 - dataName_clusters.png: an image that shows the clustering of cells and identified cell type of each cluster. 
 
- <img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/aml035pre_clusters.png" align="center" height="500" width="500" >
+ <img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/HCA_BM1_data/HCA_BM1_data_clusters2D.pdf" align="center" height="500" width="500" >
  
 - dataName_voting.png: a heatmap that shows all markers and their expression levels in the clusters
 
@@ -69,7 +69,7 @@ The Process function will produce the following outputs. Below explains what the
 
 - marker_subplots: a directory that contains subplots of each marker and their expression levels in the clusters. For example below is the subplot of CD33, a myeloid marker.
 
-<img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/marker_subplots/aml035pre_CD33_CD33.png" align="center" height="500" width="500" >
+<img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/HCA_BM1_data/marker_subplots/HCA_BM1_data_CD33_CD33.pdf" align="center" height="500" width="500" >
 
 ## Demo
 
@@ -96,5 +96,5 @@ python DCS_demo_on_HCA_BM.py
 
 ### Output
 
-All the outputs are saved in demo_output/ directory. 
+All the outputs are saved in ```demo_output/``` directory. 
 
