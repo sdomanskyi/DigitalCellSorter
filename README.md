@@ -49,6 +49,21 @@ The main class for cell sorting functions and producing output images is Digital
 
 - ```votingScheme```: voting function to predict celltypes for each cluster, default is None. If it is None, then our cell sorting algorithm from the paper would be used. If you want to your own voting function, make sure it returns a dictionary with cluster labels as keys and predicted celltypes as values. You can modify code to change inputs to this function if needed. See the code and comments for more clarifications.
 
+- ```N_samples_for_distribution```: , default is 10000
+
+- ```SaveTransformedData```: , default is True
+
+- ```attemptLoadingSavedTransformedData```: , default is True
+
+- ```SaveXpcaDataCSV```: , default is True
+
+- ```AvailableCPUsCount```: , default is 20
+
+- ```clusterIndex```: , default is None
+
+- ```clusterName```: , default is None
+
+
 The Process function will produce the following outputs. Below explains what they are and shows some sample outputs produced using our sample data.
  
 - ```dataName_clusters2D.png```: an image that shows the clustering of cells and identified cell type of each cluster. 
