@@ -25,45 +25,45 @@ The input data is expected in MatrixMarket IJV format, i.e. for each dataset of 
 
 The main class for cell sorting functions and producing output images is DigitalCellSorter located in scripts/DigitalCellSorter.py. It takes the following parameters that you can customize.
 
-- df_expr: expression data in panda dataframe format
+- ```df_expr```: expression data in panda dataframe format
 
-- dataName: name used in output files
+- ```dataName```: name used in output files
 
-- sigma_over_mean_sigma: threshold when keeping only genes with large enough standard deviation, default is 0.3.
+- ```sigma_over_mean_sigma```: threshold when keeping only genes with large enough standard deviation, default is 0.3.
 
-- n_clusters: number of clusters, default is 11
+- ```n_clusters```: number of clusters, default is 8
 
-- n_components_pca: number of principal components to keep for clustering, default is 100
+- ```n_components_pca```: number of principal components to keep for clustering, default is 100
  
-- zscore_cutoff: zscore cutoff when calculating Zmc, default is 0.3
+- ```zscore_cutoff```: zscore cutoff when calculating Zmc, default is 0.3
 
-- saveDir: directory to save all outputs, default is None
+- ```saveDir```: directory to save all outputs, default is None
 
-- marker_expression_plot: whether to produce marker expression plot, default is True
+- ```marker_expression_plot```: whether to produce marker expression plot, default is True
 
-- tSNE_cluster_plot: whether to produce cluster plot, default is True
+- ```tSNE_cluster_plot```: whether to produce cluster plot, default is True
 
-- save_processed_data: whether to save processed data, default is True
+- ```save_processed_data```: whether to save processed data, default is True
 
-- marker_subplot: whether to make subplots on markers, default is True
+- ```marker_subplot```: whether to make subplots on markers, default is True
 
-- votingScheme: voting function to predict celltypes for each cluster, default is None. If it is None, then our cell sorting algorithm from the paper would be used. If you want to your own voting function, make sure it returns a dictionary with cluster labels as keys and predicted celltypes as values. You can modify code to change inputs to this function if needed. See the code and comments for more clarifications.
+- ```votingScheme```: voting function to predict celltypes for each cluster, default is None. If it is None, then our cell sorting algorithm from the paper would be used. If you want to your own voting function, make sure it returns a dictionary with cluster labels as keys and predicted celltypes as values. You can modify code to change inputs to this function if needed. See the code and comments for more clarifications.
 
 The Process function will produce the following outputs. Below explains what they are and shows some sample outputs produced using our sample data.
  
-- dataName_clusters2D.png: an image that shows the clustering of cells and identified cell type of each cluster. 
+- ```dataName_clusters2D.png```: an image that shows the clustering of cells and identified cell type of each cluster. 
 
  <img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/HCA_BM1_data/HCA_BM1_data_clusters2D.png" align="center" height="500" width="500" >
  
-- dataName_voting.png: a heatmap that shows all markers and their expression levels in the clusters
+- ```dataName_voting.png```: a heatmap that shows all markers and their expression levels in the clusters
 
 <img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/HCA_BM1_data/HCA_BM1_data_voting.png" align="center">
 
-- dataName_voting.xlsx: an excel sheet that shows the voting results, the p-values and z-scores of the voting results
+- ```dataName_voting.xlsx```: an excel sheet that shows the voting results, the p-values and z-scores of the voting results
 
-- dataName_expression_labeled.tar.gz.pklz: a pickled zip file that contains processed and labelled expression data
+- ```dataName_expression_labeled.tar.gz.pklz```: a pickled zip file that contains processed and labelled expression data
 
-- marker_subplots: a directory that contains subplots of each marker and their expression levels in the clusters. For example below is the subplot of CD33, a myeloid marker.
+- ```marker_subplots```: a directory that contains subplots of each marker and their expression levels in the clusters. For example below is the subplot of CD33, a myeloid marker.
 
 <img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/HCA_BM1_data/marker_subplots/HCA_BM1_data_CD33_CD33.png" align="center" height="500" width="500" >
 
