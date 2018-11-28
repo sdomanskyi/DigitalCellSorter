@@ -72,7 +72,7 @@ The Process function will produce the following outputs. Below explains what the
  
 - ```dataName_voting.png```: a heatmap that shows all markers and their expression levels in the clusters
 
-<img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/HCA_BM1_data/HCA_BM1_data_voting.png" align="center">
+<img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/HCA_BM1_data/HCA_BM1_data_voting.png" align="center" height="1000">
 
 - ```dataName_voting.xlsx```: an excel sheet that shows the voting results, the p-values and z-scores of the voting results
 
