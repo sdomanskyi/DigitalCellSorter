@@ -59,9 +59,9 @@ The main class for cell sorting functions and producing output images is Digital
 
 - ```AvailableCPUsCount```: for speedup of noise distribution calculation use multiple cores, default is 20
 
-- ```clusterIndex```: if provided, e.g. [1,5,6], subclustering will be performed, default is None
+- ```clusterIndex```: if provided, e.g. [3,5], subclustering will be performed, default is None
 
-- ```clusterName```: for subclustering cell type of interest, default is None
+- ```clusterName```: for subclustering cell type of interest, e.g. 'T cells', default is None
 
 
 The Process function will produce the following outputs. Below explains what they are and shows some sample outputs produced using our sample data.
@@ -72,7 +72,7 @@ The Process function will produce the following outputs. Below explains what the
 
 - ```dataName_matrix_voting.png```: z-scores of the voting results for each input cell type and each cluster, in addition this figure contains relative (%) and absolute (cell counts) cluster sizes 
 
- <img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/HCA_BM1_data/HCA_BM1_data_matrix_voting.png" align="center" width="500" >
+ <img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/HCA_BM1_data/HCA_BM1_data_matrix_voting.png" align="center" width="800" >
 
 - ```dataName_voting.png```: a heatmap that shows all markers and their expression levels in the clusters
 
