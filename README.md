@@ -15,13 +15,15 @@ pip3 install 'package name'
 
 ### Input Data Format
 
-Your data should be converted to a pandas dataframe as input to the main function. The dataframe has genes as rows and cells as columns, and each grid is the expression of that gene in the cell. 
+The input data is expected in Market Exchange Format (MEX), e.g. there should be three files ```matrix.mtx```, ```genes.tsv``` and ```barcodes.tsv```.
 
-In our example, we use data from data/aml035pre/ and do the conversion in demo.py. 
+In the demo folder "data" is intentionally left empty. The reader can download the file ```ica_bone_marrow_h5.h5``` from https://preview.data.humancellatlas.org/ (Raw Counts Matrix - Bone Marrow) and place in folder ```data```. The file is ~485Mb and contains all 378000 cells from 8 bone marrow donors. In our example, the MEX files are prepared automatically on the fly for each donor separately using ```ReadPrepareDataHCApreviewDataset.PrepareData()```. For detail see ```demo.py```.
+
+The data is converted to a pandas dataframe as input to the main function. The dataframe has genes as rows and cells as columns, and each grid is the expression of that gene in the cell. 
 
 ### Other Data
 
-geneLists/cd_marker_handbook.xlsx: An excel sheet with marker data. Rows are markers and columns are cell types. A '+' sign means that the gene is a marker for that cell type.
+geneLists/G_2_Human_cell_markers_BM.xlsx: An excel sheet with marker data. Rows are markers and columns are cell types. A '1' digit means that the gene is a marker for that cell type, and '0' otherwise.
 
 ## Method
 
