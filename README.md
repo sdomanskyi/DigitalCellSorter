@@ -57,7 +57,7 @@ The Process function will produce the following outputs. Below explains what the
  
 - dataName_clusters.png: an image that shows the clustering of cells and identified cell type of each cluster. 
 
- <img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/HCA_BM1_data/HCA_BM1_data_clusters2D.pdf" align="center" height="500" width="500" >
+ <img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/HCA_BM1_data/HCA_BM1_data_clusters2D.png" align="center" height="500" width="500" >
  
 - dataName_voting.png: a heatmap that shows all markers and their expression levels in the clusters
 
@@ -69,7 +69,7 @@ The Process function will produce the following outputs. Below explains what the
 
 - marker_subplots: a directory that contains subplots of each marker and their expression levels in the clusters. For example below is the subplot of CD33, a myeloid marker.
 
-<img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/HCA_BM1_data/marker_subplots/HCA_BM1_data_CD33_CD33.pdf" align="center" height="500" width="500" >
+<img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/HCA_BM1_data/marker_subplots/HCA_BM1_data_CD33_CD33.png" align="center" height="500" width="500" >
 
 ## Demo
 
