@@ -19,7 +19,7 @@ The input data is expected in MatrixMarket IJV format, i.e. for each dataset of 
 
 ### Other Data
 
-geneLists/G_2_Human_cell_markers_BM.xlsx: An excel sheet with marker data. Rows are markers and columns are cell types. '1' means that the gene is a marker for that cell type, and '0' otherwise.
+```geneLists/G_2_Human_cell_markers_BM.xlsx```: An excel sheet with marker data. Rows are markers and columns are cell types. '1' means that the gene is a marker for that cell type, and '0' otherwise.
 
 ## Method
 
@@ -71,11 +71,11 @@ The Process function will produce the following outputs. Below explains what the
 
 ### Usage
 
-We've made an example execution file demo.py that shows how to use DigitalCellSorter.
+We have made an example execution file ```demo.py``` that shows how to use DigitalCellSorter.
 
 In the demo, folder ```data``` is intentionally left empty. The reader can download the file ```ica_bone_marrow_h5.h5``` from https://preview.data.humancellatlas.org/ (Raw Counts Matrix - Bone Marrow) and place in folder ```data```. The file is ~485Mb and contains all 378000 cells from 8 bone marrow donors. In our example, the MatrixMarket IJV format files are prepared automatically on the fly for each donor separately using ```ReadPrepareDataHCApreviewDataset.PrepareData()```. For detail see ```demo.py```.
 
-The demo.py first converts the data to a ```pandas``` dataframe as input for Process function. Then it calls ```Process()``` function from ```DigitalCellSorter``` class, which does all the projection, clustering, identification and image producing.
+The demo.py first converts the data to a ```pandas``` dataframe as input for Process function. Then it calls ```Process()``` function from ```DigitalCellSorter``` class, which does all the projection, clustering, identification and images production.
 
 To see our example work, you just need to download everything, go to the directory then run
 
@@ -85,7 +85,10 @@ python DCS_demo_on_HCA_BM.py
 Note that to use your own data, you would also need to convert them to a ```pandas``` dataframe. You can also customize the parameters in ```Process()``` function as listed above. For example, you can change it to
 
 ```
-DigitalCellSorter.DigitalCellSorter().Process(n_clusters=10, n_components_pca=50, saveDir='demo_output/', marker_subplot = False)
+DigitalCellSorter.DigitalCellSorter().Process(n_clusters=10, 
+                                              n_components_pca=50, 
+                                              saveDir='demo_output/', 
+                                              marker_subplot = False)
 ```
 
 ### Output
