@@ -63,6 +63,12 @@ The Process function will produce the following outputs. Below explains what the
 
 - ```dataName_expression_labeled.tar.gz.pklz```: a pickled zip file that contains processed and labelled expression data
 
+- ```dataName_matrix_voting.pdf```: z-scores of the voting results for each input cell type and each cluster, in addition this figure contains relative (%) and absolute (cell counts) cluster sizes
+
+- ```dataName_data_noise_dict.pdf```: noise distributions for each cell type and cluster
+
+- ```dataName_subclustering_stacked_barplot```: cell types relative fractions
+
 - ```marker_subplots```: a directory that contains subplots of each marker and their expression levels in the clusters. For example below is the subplot of CD33, a myeloid marker.
 
 <img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/HCA_BM1_data/marker_subplots/HCA_BM1_data_CD33_CD33.png" align="center" height="500" width="500" >
