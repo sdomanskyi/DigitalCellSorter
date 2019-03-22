@@ -25,6 +25,8 @@ from scipy.cluster.hierarchy import linkage, dendrogram
 import pickle
 import gzip
 
+import fitsne
+
 import asdf
 import multiprocessing
 
@@ -158,6 +160,7 @@ class DigitalCellSorter:
         make_n_components=2
         print ('Performing tSNE projection from %s to %s features...' % (n_components_pca,make_n_components))
         X_tsne2 = TSNE(n_components=make_n_components).fit_transform(X_pca.T).T
+        #X_tsne2 = fitsne.FItSNE(np.array(X_pca.T, order='C')).T
         getElapsedTime(startTime)
 
         print ('\n==================\nDone transforming!\n==================')
@@ -230,11 +233,11 @@ class DigitalCellSorter:
                 for cellType in markerDict[marker]:
                     df_marker_cellType.loc[marker,cellType] = +1
 
-        ## Normalize columns (cell types) so that the absolute number of known markers in a given cell type is irrelevant
-        #df_marker_cellType = df_marker_cellType.apply(lambda q: q/np.sum(q),axis=0)
+        # Normalize columns (cell types) so that the absolute number of known markers in a given cell type is irrelevant
+        df_marker_cellType = df_marker_cellType.apply(lambda q: q/np.sum(q),axis=0)
 
-        ## Normalize rows (markers) by the number of cell types expressing that marker (i.e. the "specificity")
-        #df_marker_cellType = df_marker_cellType.apply(lambda q:q/np.sum(q>0),axis=1)
+        # Normalize rows (markers) by the number of cell types expressing that marker (i.e. the "specificity")
+        df_marker_cellType = df_marker_cellType.apply(lambda q:q/np.sum(q>0),axis=1)
 
         df_marker_cellType.to_excel('%s/%s_marker-cell_type_weight_matrix.xlsx'%(saveDir,dataName))
 
@@ -507,13 +510,13 @@ class DigitalCellSorter:
     #          cellClusterIndexLabel: cluster labels for all cells
     #          dataName: name used in output files
     #          saveDir: directory for output files
-    def SaveProcessedData(self, df_expr, X_tsne2, votingResults, cellClusterIndexLabel, dataName, saveDir):
-        df_labeled = cdc(df_expr)
+    def SaveProcessedData(self, df_expr, X_tsne2, votingResults, cellClusterIndexLabel, dataName, saveDir, clusterName):
+        df_labeled = cdc(df_expr[0:1])
         df_labeled.loc['_X_coordinate_tSNE'] = [str(X_tsne2[0,i]) for i in range(X_tsne2[0,:].shape[0])]
         df_labeled.loc['_Y_coordinate_tSNE'] = [str(X_tsne2[1,i]) for i in range(X_tsne2[1,:].shape[0])]
         df_labeled.loc['_TRUE_LABEL'] = [list(votingResults.values())[i] for i in cellClusterIndexLabel]
         df_labeled = df_labeled.sort_values(df_labeled.last_valid_index(),axis=1)
-        fileName = '%s/%s_expression_labeled.tar.gz' % (saveDir,dataName)
+        fileName = '../%s_expression_labeled%s.tar.gz' % (dataName,("" if clusterName==None else clusterName))
         print ('Saving %s...' % fileName.split('/')[-1])
 
         temp_file = gzip.open(fileName + '.pklz','wb')
@@ -596,7 +599,7 @@ class DigitalCellSorter:
         for i in range(0,len(xtickslabels),2):
             xtickslabels[i] += " ─────────"
 
-        ax.set_xticklabels(xtickslabels,rotation=90, fontsize=10)
+        ax.set_xticklabels(xtickslabels,rotation=90, fontsize=7)
         ax.set_yticklabels([list(votingResults.values())[i]+' ('+str(i)+')' for i in ORDER], rotation=45, fontsize=10) #,rotation=24,ha='right',va='top')
         #ax.set_yticklabels(['Cluster '+str(i) for i in ORDER], rotation=45, fontsize=10)
 
@@ -886,17 +889,15 @@ class DigitalCellSorter:
                 saveDir=None, marker_expression_plot=True, tSNE_cluster_plot=True, 
                 save_processed_data=True, marker_subplot=True, votingScheme=None,
                 N_samples_for_distribution = 10000,
-                SaveTransformedData = True,
-                attemptLoadingSavedTransformedData = True,
+                SaveTransformedData = False,
+                attemptLoadingSavedTransformedData = False,
                 SaveXpcaDataCSV = True,
                 AvailableCPUsCount = 20,
                 clusterIndex=None,
                 clusterName=None):
 
-        startTime = getStartTime()
-
-        print ("MARK")
         np.random.seed(0)
+
         gnc = GeneNameConverter.GeneNameConverter(dictDir='tools/pickledGeneConverterDict/ensembl_hugo_entrez_alias_dict.pythdat')
         
         if not os.path.exists(saveDir):
@@ -907,32 +908,25 @@ class DigitalCellSorter:
         ##############################################################################################
         startTime = getStartTime()
         df_expr = self.Normalize(df_expr, sigma_over_mean_sigma, gnc, saveDir, dataName, clusterIndex)
-
         getElapsedTime(startTime)
 
         savedDataExists = False
         
-        if attemptLoadingSavedTransformedData: 
+        if attemptLoadingSavedTransformedData and (clusterIndex==None): 
             try:
-                asdf_file = asdf.open(saveDir + dataName + '.asdf') #all_array_compression='zlib'
+                asdf_file = asdf.open('../' + dataName + '.asdf') #all_array_compression='zlib'
                 savedDataExists = True
                 print('\nLoading transformed data...\n')
             except OSError:
                 print('\nWARNING: No saved data file could be openned...\n')
 
         if savedDataExists: 
+            startTime = getStartTime()
             X_pca = copy.deepcopy(asdf_file.tree['X_pca'])
             X_tsne2 = copy.deepcopy(asdf_file.tree['X_tsne2'])
-            cellClusterIndexLabel = copy.deepcopy(asdf_file.tree['cellClusterIndexLabel'])
-            possible_cluster_labels = copy.deepcopy(asdf_file.tree['possible_cluster_labels'])
+            getElapsedTime(startTime)
 
-            print ('\n====================\nLoaded transformed data!\n====================')
-
-            #override saved data
-            ##############################################################################################
-            # Cluster
-            ##############################################################################################
-            cellClusterIndexLabel, possible_cluster_labels = self.Cluster(X_pca, n_clusters)
+            print ('\n====================\nLoaded t-SNE data!\n====================')
         else:
 
             ##############################################################################################
@@ -942,27 +936,26 @@ class DigitalCellSorter:
 
             
             ##############################################################################################
-            # Cluster
-            ##############################################################################################
-            cellClusterIndexLabel, possible_cluster_labels = self.Cluster(X_pca, n_clusters)
-
-
-            ##############################################################################################
             # Save transformed data
             ##############################################################################################
             if SaveTransformedData:
                 tree = {
                         'X_pca': X_pca,
                         'X_tsne2': X_tsne2,
-                        'cellClusterIndexLabel': cellClusterIndexLabel,
-                        'possible_cluster_labels': possible_cluster_labels
                     }
 
                 asdf_file = asdf.AsdfFile(tree)
-                asdf_file.write_to(saveDir + dataName + '.asdf')
+                asdf_file.write_to('../' + dataName + '.asdf')
 
+        ##############################################################################################
+        # Cluster
+        ##############################################################################################
+        startTime = getStartTime()
+        cellClusterIndexLabel, possible_cluster_labels = self.Cluster(X_pca, n_clusters)
+        getElapsedTime(startTime)
 
-        if SaveXpcaDataCSV and (clusterIndex==None):
+        if SaveXpcaDataCSV:
+
             def p_save(fileName, data):
                 if not os.path.exists(saveDir + '/X_pca/'):
                     os.makedirs(saveDir + '/X_pca/')
@@ -972,18 +965,20 @@ class DigitalCellSorter:
                 temp_file.close()
                 return
 
-            p_save(saveDir + "/X_pca/X_pca_%s.csv" %(dataName) + '.pklz', X_pca.T)
+            p_save(saveDir + "/X_pca/X_pca_%s%s.csv" %(dataName, "" if clusterName==None else clusterName) + '.pklz', X_pca.T)
 
-            for cluster in list(possible_cluster_labels):
-                p_save(saveDir + "/X_pca/X_pca_%s_cluster_%s.csv" %(dataName, cluster) + '.pklz', X_pca.T[cellClusterIndexLabel==cluster])
+            if clusterName==None:
+                for cluster in list(possible_cluster_labels):
+                    p_save(saveDir + "/X_pca/X_pca_%s_cluster_%s.csv" %(dataName, cluster) + '.pklz', X_pca.T[cellClusterIndexLabel==cluster])
 
-            for cluster in list(possible_cluster_labels):
-                df = pd.DataFrame(data=cellClusterIndexLabel)
-                df = df.iloc[np.where(df==cluster)]
+                for cluster in list(possible_cluster_labels):
+                    df = pd.DataFrame(data=cellClusterIndexLabel)
+                    df = df.iloc[np.where(df==cluster)]
 
-                p_save(saveDir + "/X_pca/INDEX_%s_cluster_%s.csv" %(dataName, cluster) + '.pklz', list(df.index))
+                    p_save(saveDir + "/X_pca/INDEX_%s_cluster_%s.csv" %(dataName, cluster) + '.pklz', list(df.index))
                 
             print ('\n=========================\nDone saving X_pca (%s-component) data!\n=========================' %(n_components_pca))
+
 
         ##############################################################################################
         # Get dictionary to map from markers to cell types
@@ -1007,9 +1002,6 @@ class DigitalCellSorter:
                 for i in range(len(df_MarkerCellType_NEW.index)):
                     df_MarkerCellType_NEW.values[i][j] = 1*(df_MarkerCellType.filter(items=setTypes).values[i].any())
         
-            ##drop markers overlapping between cell types
-            #df_MarkerCellType_NEW = df_MarkerCellType_NEW.iloc[(np.sum(df_MarkerCellType_NEW,axis=1)<2).values,:]
-
             dummy,dummy2,temp_hugo_cd_dict = MakeMarkerDict.MakeMarkerDict(geneListFileName,gnc=gnc)
 
             #drop non-expressed genes
@@ -1021,7 +1013,7 @@ class DigitalCellSorter:
             columns = df_MarkerCellType_NEW.columns
             columnsToDrop = []
             for i in range(len(columns)):
-                if df_MarkerCellType_NEW[columns[i]].sum() <= 3: #3 #0
+                if df_MarkerCellType_NEW[columns[i]].sum() <= 3:
                     columnsToDrop.append(columns[i])
             df_MarkerCellType_NEW = df_MarkerCellType_NEW.drop(columns=columnsToDrop)
 
@@ -1032,7 +1024,7 @@ class DigitalCellSorter:
 
             expression_per_gene_sorted = pd.Series(data=np.sum(df_expr, axis=1), index=df_expr.index).iloc[[gene in expressed_genes for gene in df_expr.index]].sort_values(ascending=False)
             
-            limit_of_markers_per_cellType = 20
+            limit_of_markers_per_cellType = 100000
             markers_to_keep = []
 
             chosen_subsets = []
@@ -1064,6 +1056,7 @@ class DigitalCellSorter:
             df_MarkerCellType_NEW.to_excel(newName)
 
             return newName
+        
         markerDict,markerDictnegative,hugo_cd_dict = MakeMarkerDict.MakeMarkerDict(makeMergedList(geneListFileName),gnc=gnc)
         
         print ('\n=========================\nDone loading marker data!\n=========================')
@@ -1093,9 +1086,11 @@ class DigitalCellSorter:
         ##############################################################################################
         # Vote on cell type
         ##############################################################################################
+        startTime = getStartTime()
         votingResults, supportingMarkersList = self.Vote(df_markers_cluster_centroids, X_markers, markerDict, 
                                                          markerDictnegative, geneListFileName, zscore_cutoff, cellClusterIndexLabel, 
                                                          N_samples_for_distribution, votingScheme, dataName, saveDir, AvailableCPUsCount)
+        getElapsedTime(startTime)
         
         
         ##############################################################################################
@@ -1113,13 +1108,20 @@ class DigitalCellSorter:
             startTime = getStartTime()
             self.MakeClusterPlot(votingResults, X_tsne2, cellClusterIndexLabel, dataName, saveDir)
             getElapsedTime(startTime)
+           
+        ##############################################################################################
+        # Make stacked barplot
+        ##############################################################################################  
+        startTime = getStartTime()
+        self.make_stacked_bar_plot_subclustering(saveDir, dataName, clusterIndex, clusterName)
+        getElapsedTime(startTime)
         
         ##############################################################################################
         # Save labelled expression data to disk
         ##############################################################################################
         if save_processed_data:
             startTime = getStartTime()
-            self.SaveProcessedData(df_expr, X_tsne2, votingResults, cellClusterIndexLabel, dataName, saveDir)
+            self.SaveProcessedData(df_expr, X_tsne2, votingResults, cellClusterIndexLabel, dataName, saveDir, clusterName)
             getElapsedTime(startTime)
         
         ##############################################################################################
@@ -1129,10 +1131,5 @@ class DigitalCellSorter:
             startTime = getStartTime()
             self.MakeMarkerSubplot(df_expr, votingResults, X_tsne2, markers, cellClusterIndexLabel, hugo_cd_dict, dataName, saveDir, AvailableCPUsCount)
             getElapsedTime(startTime)
-           
-        ##############################################################################################
-        # Make stacked barplot for a requested cluster
-        ##############################################################################################  
-        self.make_stacked_bar_plot_subclustering(saveDir, dataName, clusterIndex, clusterName)
 
         return cellClusterIndexLabel

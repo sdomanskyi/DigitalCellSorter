@@ -64,7 +64,7 @@ def PrepareData(filename, saveFolderName, patient, useAllData=True, cellsLimitTo
 
         if useAllData:
             readOnlyNumberOfCells = -1 #use all data
-            print("\nUsing data from all %s cells" % patientIndex[patient - 1][-1])
+            #print("\nUsing data from all %s cells" % patientIndex[patient - 1][-1])
         else:
             readOnlyNumberOfCells = cellsLimitToUse #barcodes.shape[0]
             print("\nLimiting data to %s cells" % readOnlyNumberOfCells) 
