@@ -7,32 +7,38 @@ import os
 
 if __name__ == '__main__':
 
-    patient = 1
+    typeToProcess = 'BM' #'PBMC' 'BM'
+
+    if typeToProcess=='BM':
+        patient = 1
+        dataName = 'HCA_BM%s_data' % (patient)
+        prepareData = True
+        AllData=True
+    elif typeToProcess=='PBMC':
+        dataName = 'filtered_matrices_mex'
+        prepareData = False
+
     n_clusters = 8
-    AllData=True
-    AvailableCPUsCount = 27
+
+    AvailableCPUsCount = 11
     data_Folder = 'data'
-    N_samples_for_distribution = 10000 #10000
-    attemptLoadingSavedTransformedData = True
+    N_samples_for_distribution = 10000
     cellTypeNameForSubclustering = None #None  'B cells'  'T cells'
-    SaveTransformedData = True if cellTypeNameForSubclustering == None else False
-    SaveXpcaDataCSV = True if cellTypeNameForSubclustering == None else False
 
     if cellTypeNameForSubclustering == 'B cells':
-        clusterIndex = [1]
-        geneListToUse = 'geneLists/G_9_BM_B_cells_subtypes.xlsx'
+        clusterIndex = [0]
+        geneListToUse = 'geneLists/CIBERSORT_B_SUB.xlsx'
     elif cellTypeNameForSubclustering == 'T cells':
-        clusterIndex = [3,5]
-        geneListToUse = 'geneLists/G_10_BM_T_cells_subtypes.xlsx'
+        clusterIndex = [2,6,7]
+        geneListToUse = 'geneLists/CIBERSORT_T_SUB.xlsx'
     else:
         clusterIndex = None
-        geneListToUse = 'geneLists/G_2_Human_cell_markers_BM.xlsx'
+        geneListToUse = 'geneLists/CIBERSORT.xlsx'
     
-    HCA.PrepareData('data/ica_bone_marrow_h5.h5', data_Folder, patient, useAllData=AllData, cellsLimitToUse=1000)
-                    
-    dataName = 'HCA_BM%s_data' % (patient)
-
-    print('\n======================\nDone preparing raw data: %s!\n======================'%(dataName))
+    if prepareData:
+        HCA.PrepareData('data/ica_bone_marrow_h5.h5', data_Folder, patient, useAllData=AllData, cellsLimitToUse=1000)
+        
+        print('\n======================\nDone preparing raw data: %s!\n======================'%(dataName))
 
     print("\nLoading data of " + dataName)
     dir_expr = '/'.join(['data',dataName,'matrix.mtx'])
@@ -53,18 +59,16 @@ if __name__ == '__main__':
     df_expr = pd.DataFrame(df_expr,index=pd.read_csv(dir_geneNames,delimiter='\t',header=None).values[:,1])
     print('\n======================\nDone loading raw data!\n======================')
 
-    pathToRemove = data_Folder + '/' + dataName
-    if os.path.exists(pathToRemove):
-        shutil.rmtree(pathToRemove)
+    if prepareData:
+        pathToRemove = data_Folder + '/' + dataName
+        if os.path.exists(pathToRemove):
+            shutil.rmtree(pathToRemove)
 
     DigitalCellSorter.DigitalCellSorter().Process(df_expr, 
                                                     dataName, 
                                                     saveDir = 'demo_output/' + dataName + '/', 
                                                     geneListFileName = geneListToUse,
                                                     N_samples_for_distribution = N_samples_for_distribution,
-                                                    SaveTransformedData = SaveTransformedData,
-                                                    attemptLoadingSavedTransformedData = attemptLoadingSavedTransformedData,
-                                                    SaveXpcaDataCSV = SaveXpcaDataCSV,
                                                     AvailableCPUsCount = AvailableCPUsCount,
                                                     clusterIndex=clusterIndex,
                                                     clusterName=cellTypeNameForSubclustering,
