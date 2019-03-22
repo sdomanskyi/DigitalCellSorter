@@ -19,7 +19,7 @@ The input data is expected in MatrixMarket IJV format, i.e. for each dataset of 
 
 ### Other Data
 
-```geneLists/G_2_Human_cell_markers_BM.xlsx```: An excel sheet with marker data. Rows are markers and columns are cell types. '1' means that the gene is a marker for that cell type, and '0' otherwise.
+```geneLists/CIBERSORT.xlsx```: An excel sheet with marker data. Rows are markers and columns are cell types. '1' means that the gene is a marker for that cell type, and '0' otherwise.
 
 ## Method
 
@@ -52,8 +52,6 @@ The main class for cell sorting functions and producing output images is Digital
 - ```N_samples_for_distribution```: number of samples to generate, default is 10000
 
 - ```SaveTransformedData```: whether to save PCA and t-SNE transformed data, default is True
-
-- ```attemptLoadingSavedTransformedData```: if ```asdf``` file exist for ```dataName``` PCA and t-SNE transformed data will be loaded, default is True
 
 - ```SaveXpcaDataCSV```: data necessary for ARI analysis, default is True
 
