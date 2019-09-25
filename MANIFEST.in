@@ -1,0 +1,5 @@
+include MANIFEST.in
+include LICENSE.txt
+include README.rst
+graft DigitalCellSorter
+graft DigitalCellSorter_LICENSES
