@@ -15,7 +15,7 @@ if __name__ == '__main__':
     DCS.geneListFileName = os.path.join('geneLists', 'CIBERSORT.xlsx')
     DCS.process(df_expr)
 
-    DCSsub = DigitalCellSorter.DigitalCellSorter(dataName = dataName, nClusters = 10, doQualityControl = False, nSamplesDistribution= 1000 if os.name == 'nt' else 10000)
+    DCSsub = DigitalCellSorter.DigitalCellSorter(dataName = dataName, nClusters = 10, doQualityControl = False, nSamplesDistribution= 1000)
 
     DCSsub.subclusteringName = 'T cell'
     DCSsub.saveDir = os.path.join('output', dataName, 'subclustering T cell', '')
