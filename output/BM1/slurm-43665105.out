@@ -1,0 +1,440 @@
+Will use momentum during exaggeration phase
+Computing input similarities...
+Using perplexity, so normalizing input data (to prevent numerical problems)
+Using perplexity, not the manually set kernel width.  K (number of nearest neighbors) and sigma (bandwidth) parameters are going to be ignored.
+Using ANNOY for knn search, with parameters: n_trees 50 and search_k -1
+Going to allocate memory. N: 48000, K: 90, N*K = 4320000
+Building Annoy tree...
+Done building tree. Beginning nearest neighbor search... 
+parallel (40 threads):
+[>                                                           ] 0% 0.009s[==>                                                         ] 3% 0.189s[=====>                                                      ] 8% 0.409s[==========>                                                 ] 16% 0.745s[==============>                                             ] 24% 1.08s[===================>                                        ] 32% 1.44s[========================>                                   ] 40% 1.774s[============================>                               ] 47% 2.086s[=================================>                          ] 55% 2.401s[=====================================>                      ] 62% 2.721s[==========================================>                 ] 70% 3.04s[=================================================>          ] 81% 3.551s[===========================================================>] 99% 4.429sRemoved 64 duplicated items in the index of size 33694
+['AKR1C3' 'ANXA8' 'ATRIP' 'BHLHE40' 'BLOC1S5' 'C10orf67' 'C11orf71'
+ 'C17orf100' 'CAPS' 'CC2D2B' 'CCDC7' 'CCND2-AS1' 'CFAP99' 'CGB5' 'CRHR1'
+ 'CTB-41I6.1' 'CYB561D2' 'DDTL' 'DLGAP2' 'DRICH1' 'ECSCR' 'ELF1' 'FAM138A'
+ 'FAM231C' 'FAM25G' 'FBF1' 'FCAR' 'HCG15' 'HNRNPU' 'IGHV2-70' 'LCOR'
+ 'LINC00313' 'LINC00452' 'LINC00864' 'LINC01297' 'LINC01422' 'LINC01481'
+ 'LOC105372352' 'MATR3' 'MEG8' 'MIA2' 'MTRNR2L1' 'PABPC1L2B-AS1' 'PCOTH'
+ 'PGM5-AS1' 'PIK3R3' 'PPP1R3F' 'PRICKLE2-AS1' 'PRICKLE4' 'RABL6'
+ 'RAET1E-AS1' 'RGS5' 'SEMA3F-AS1' 'SERPINA3' 'SLITRK2' 'SMIM11A' 'SPATA13'
+ 'TBC1D26' 'TIMM10B' 'TMBIM4' 'TMEM256-PLSCR3' 'TRAF3IP2-AS1']
+Replaced missing values with zeros. Data size: 33630 genes, 48000 cells
+Removed all-zero cells. Data size: 33630 genes, 48000 cells
+Removed all-zero genes. Data size: 23991 genes, 48000 cells
+--> Total elapsed time: 1.6 min 
+
+Calculating quality control measures (count depth, number of genes, fraction of mitochondrial genes) for each cell
+--> Total elapsed time: 3.1 min 
+
+Rescaling all cells by "sum of values = 2136.0".
+Log-transforming data.
+Removed all-zero genes. Data size: 23985 genes, 48000 cells
+Removed constant genes. Data size: 11732 genes, 48000 cells
+--> Total elapsed time: 5.5 min 
+
+ComBat transformation
+Only one batch provided. Batch correction is unnecessary
+Preparing xpca, pcs, tsne of df_expr
+Performing PC projection from 11732 to 200 features...
+Explained variance: 27.68 %
+Performing tSNE projection from 200 to 2 features...
+Recording xpca, pcs, tsne of df_expr
+--> Total elapsed time: 6.1 min 
+
+output/BM1/QC_plots/BM1_count_depth 	std: 5263.96 	median: 2136.0 	mean: 3086.65
+output/BM1/QC_plots/BM1_number_of_genes 	std: 784.52 	median: 717.0 	mean: 797.26
+output/BM1/QC_plots/BM1_fraction_of_mitochondrialGenes 	std: 0.03 	median: 0.1 	mean: 0.1
+Removed low quality cells. Data size: 11732 genes, 34910 cells
+Performing PC projection from 11732 to 200 features...
+Explained variance: 21.14 %
+--> Total elapsed time: 6.4 min 
+
+Calculating clustering of PCA data
+--> Total elapsed time: 8.8 min 
+
+Selected genes from the marker list. DataFrame shape: (341, 34910)
+--> Total elapsed time: 8.9 min 
+
+Generating null distribution
+/mnt/home/domansk6/anaconda3/lib/python3.7/site-packages/pandas/core/frame.py:4034: SettingWithCopyWarning:
+
+
+A value is trying to be set on a copy of a slice from a DataFrame
+
+See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
+
+/mnt/home/domansk6/Projects/DCS_for_IEEE/BM/scripts/DigitalCellSorter.py:1712: FutureWarning:
+
+
+Passing list-likes to .loc or [] with any missing label will raise
+KeyError in the future, you can use .reindex() as an alternative.
+
+See the documentation here:
+https://pandas.pydata.org/pandas-docs/stable/indexing.html#deprecate-loc-reindex-listlike
+
+/mnt/home/domansk6/anaconda3/lib/python3.7/site-packages/pandas/core/indexing.py:190: SettingWithCopyWarning:
+
+
+A value is trying to be set on a copy of a slice from a DataFrame
+
+See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
+
+
+Symmetrizing...
+Using current time as random seed...
+Randomly initializing the solution.
+Y[0] = -0.000027
+Exaggerating Ps by 12.000000
+Input similarities computed (sparsity = 0.003025)!
+Learning embedding...
+Using FIt-SNE approximation.
+Iteration 50 (50 iterations in 1.04 seconds), cost 6.724315
+Iteration 100 (50 iterations in 0.88 seconds), cost 6.715243
+Iteration 150 (50 iterations in 0.88 seconds), cost 6.449373
+Iteration 200 (50 iterations in 0.88 seconds), cost 5.492112
+Iteration 250 (50 iterations in 0.90 seconds), cost 5.262012
+Unexaggerating Ps by 12.000000
+Iteration 300 (50 iterations in 0.90 seconds), cost 4.455641
+Iteration 350 (50 iterations in 0.90 seconds), cost 4.147748
+Iteration 400 (50 iterations in 0.88 seconds), cost 3.964991
+Iteration 450 (50 iterations in 0.89 seconds), cost 3.836722
+Iteration 500 (50 iterations in 0.88 seconds), cost 3.769039
+Iteration 550 (50 iterations in 0.90 seconds), cost 3.683290
+Iteration 600 (50 iterations in 0.88 seconds), cost 3.637649
+Iteration 650 (50 iterations in 0.91 seconds), cost 3.584169
+Iteration 700 (50 iterations in 0.90 seconds), cost 3.555849
+Iteration 750 (50 iterations in 0.95 seconds), cost 3.511936
+Iteration 800 (50 iterations in 1.05 seconds), cost 3.477417
+Iteration 850 (50 iterations in 1.08 seconds), cost 3.447591
+Iteration 900 (50 iterations in 1.12 seconds), cost 3.420624
+Iteration 950 (50 iterations in 1.16 seconds), cost 3.394846
+Iteration 1000 (50 iterations in 1.19 seconds), cost 3.379663
+Will use momentum during exaggeration phase
+Computing input similarities...
+Using perplexity, so normalizing input data (to prevent numerical problems)
+Using perplexity, not the manually set kernel width.  K (number of nearest neighbors) and sigma (bandwidth) parameters are going to be ignored.
+Using ANNOY for knn search, with parameters: n_trees 50 and search_k -1
+Going to allocate memory. N: 18335, K: 90, N*K = 1650150
+Building Annoy tree...
+Done building tree. Beginning nearest neighbor search... 
+parallel (40 threads):
+[>                                                           ] 1% 0.033s[============>                                               ] 21% 0.386s[============================>                               ] 48% 0.845s[============================================>               ] 73% 1.285s[=======================================================>    ] 92% 1.605s[===========================================================>] 99% 1.795sElapsed time: 1.5 min
+
+Processing voting results
+Recording voting results to: output/BM1/BM1_voting.xlsx
+{0: 'Monocytes/Macrophages #0', 1: 'B cell #0', 2: 'B cell #1', 3: 'Unknown #0', 4: 'T cell #0', 5: 'Monocytes/Macrophages #1', 6: 'T cell #1', 7: 'Unknown #1', 8: 'B cell #2', 9: 'T cell #2', 10: 'Monocytes/Macrophages #2', 11: 'Granulocyte #0', 12: 'Monocytes/Macrophages #3', 13: 'T cell #3', 14: 'NK cell #0', 15: 'B cell #3', 16: 'Unknown #2', 17: 'Unknown #3', 18: 'Unknown #4', 19: 'B cell #4'}
+--> Total elapsed time: 9.5 min 
+
+New marker cell type shape: (6, 11732)
+New marker cell type shape: (6, 11732)
+New marker cell type shape: (6, 11732)
+Candidates of B cell: 100
+Candidates of Granulocyte: 100
+Candidates of Monocytes/Macrophages: 100
+Candidates of NK cell: 100
+Candidates of T cell: 100
+Candidates of Unknown: 100
+Recording voting results to: output/BM1/new_markers.xlsx
+Overlapping markers of NK cell: 4 (64)
+Overlapping markers of T cell: 7 (127)
+Overlapping markers of B cell: 9 (80)
+Overlapping markers of Monocytes/Macrophages: 4 (81)
+Overlapping markers of Granulocyte: 3 (82)
+Making null distributions plot
+--> Total elapsed time: 9.9 min 
+
+Making voting results matrix plot
+--> Total elapsed time: 9.9 min 
+
+Making marker expression plot
+--> Total elapsed time: 9.9 min 
+
+Making tSNE plots of QC
+--> Total elapsed time: 12.5 min 
+
+Making tSNE plot by clusters
+['Cluster #0' 'Cluster #1' 'Cluster #10' 'Cluster #11' 'Cluster #12'
+ 'Cluster #13' 'Cluster #14' 'Cluster #15' 'Cluster #16' 'Cluster #17'
+ 'Cluster #18' 'Cluster #19' 'Cluster #2' 'Cluster #3' 'Cluster #4'
+ 'Cluster #5' 'Cluster #6' 'Cluster #7' 'Cluster #8' 'Cluster #9']
+--> Total elapsed time: 12.5 min 
+
+Making tSNE plot by patients
+['BM1']
+--> Total elapsed time: 12.5 min 
+
+Making tSNE plot by clusters "True" labels
+['B cell #0' 'B cell #1' 'B cell #2' 'B cell #3' 'B cell #4'
+ 'Granulocyte #0' 'Monocytes/Macrophages #0' 'Monocytes/Macrophages #1'
+ 'Monocytes/Macrophages #2' 'Monocytes/Macrophages #3' 'NK cell #0'
+ 'T cell #0' 'T cell #1' 'T cell #2' 'T cell #3' 'Unknown #0' 'Unknown #1'
+ 'Unknown #2' 'Unknown #3' 'Unknown #4']
+--> Total elapsed time: 12.6 min 
+
+
+=================================
+Done saving subclustering plot: !
+=================================
+--> Total elapsed time: 12.6 min 
+
+Selected 18335 cells of type: T cell
+Removed 64 duplicated items in the index of size 33694
+['AKR1C3' 'ANXA8' 'ATRIP' 'BHLHE40' 'BLOC1S5' 'C10orf67' 'C11orf71'
+ 'C17orf100' 'CAPS' 'CC2D2B' 'CCDC7' 'CCND2-AS1' 'CFAP99' 'CGB5' 'CRHR1'
+ 'CTB-41I6.1' 'CYB561D2' 'DDTL' 'DLGAP2' 'DRICH1' 'ECSCR' 'ELF1' 'FAM138A'
+ 'FAM231C' 'FAM25G' 'FBF1' 'FCAR' 'HCG15' 'HNRNPU' 'IGHV2-70' 'LCOR'
+ 'LINC00313' 'LINC00452' 'LINC00864' 'LINC01297' 'LINC01422' 'LINC01481'
+ 'LOC105372352' 'MATR3' 'MEG8' 'MIA2' 'MTRNR2L1' 'PABPC1L2B-AS1' 'PCOTH'
+ 'PGM5-AS1' 'PIK3R3' 'PPP1R3F' 'PRICKLE2-AS1' 'PRICKLE4' 'RABL6'
+ 'RAET1E-AS1' 'RGS5' 'SEMA3F-AS1' 'SERPINA3' 'SLITRK2' 'SMIM11A' 'SPATA13'
+ 'TBC1D26' 'TIMM10B' 'TMBIM4' 'TMEM256-PLSCR3' 'TRAF3IP2-AS1']
+Replaced missing values with zeros. Data size: 33630 genes, 18335 cells
+Removed all-zero cells. Data size: 33630 genes, 18335 cells
+Removed all-zero genes. Data size: 20574 genes, 18335 cells
+--> Total elapsed time: 13.1 min 
+
+Rescaling all cells by "sum of values = 2765.0".
+Log-transforming data.
+Removed all-zero genes. Data size: 20574 genes, 18335 cells
+Removed constant genes. Data size: 9004 genes, 18335 cells
+--> Total elapsed time: 13.7 min 
+
+ComBat transformation
+Only one batch provided. Batch correction is unnecessary
+Preparing xpca, pcs, tsne of df_expr
+Performing PC projection from 9004 to 200 features...
+Explained variance: 19.74 %
+Performing tSNE projection from 200 to 2 features...
+Recording xpca, pcs, tsne of df_expr
+--> Total elapsed time: 14.0 min 
+
+Calculating clustering of PCA data
+--> Total elapsed time: 14.6 min 
+
+Selected genes from the marker list. DataFrame shape: (113, 18335)
+--> Total elapsed time: 14.6 min 
+
+Generating null distribution
+/mnt/home/domansk6/anaconda3/lib/python3.7/site-packages/pandas/core/frame.py:4034: SettingWithCopyWarning:
+
+
+A value is trying to be set on a copy of a slice from a DataFrame
+
+See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
+
+
+Symmetrizing...
+Using current time as random seed...
+Randomly initializing the solution.
+Y[0] = -0.000027
+Exaggerating Ps by 12.000000
+Input similarities computed (sparsity = 0.009162)!
+Learning embedding...
+Using FIt-SNE approximation.
+Iteration 50 (50 iterations in 0.54 seconds), cost 5.570689
+Iteration 100 (50 iterations in 0.54 seconds), cost 5.557771
+Iteration 150 (50 iterations in 0.55 seconds), cost 5.183085
+Iteration 200 (50 iterations in 0.54 seconds), cost 5.206348
+Iteration 250 (50 iterations in 0.55 seconds), cost 5.213055
+Unexaggerating Ps by 12.000000
+Iteration 300 (50 iterations in 0.55 seconds), cost 4.511601
+Iteration 350 (50 iterations in 0.55 seconds), cost 4.311070
+Iteration 400 (50 iterations in 0.55 seconds), cost 4.192075
+Iteration 450 (50 iterations in 0.55 seconds), cost 4.185869
+Iteration 500 (50 iterations in 0.55 seconds), cost 4.160291
+Iteration 550 (50 iterations in 0.55 seconds), cost 4.132496
+Iteration 600 (50 iterations in 0.55 seconds), cost 4.144873
+Iteration 650 (50 iterations in 0.55 seconds), cost 4.112248
+Iteration 700 (50 iterations in 0.55 seconds), cost 4.094139
+Iteration 750 (50 iterations in 0.55 seconds), cost 4.083915
+Iteration 800 (50 iterations in 0.55 seconds), cost 4.111271
+Iteration 850 (50 iterations in 0.55 seconds), cost 4.095476
+Iteration 900 (50 iterations in 0.55 seconds), cost 4.100510
+Iteration 950 (50 iterations in 0.55 seconds), cost 4.085170
+Iteration 1000 (50 iterations in 0.55 seconds), cost 4.096133
+Will use momentum during exaggeration phase
+Computing input similarities...
+Using perplexity, so normalizing input data (to prevent numerical problems)
+Using perplexity, not the manually set kernel width.  K (number of nearest neighbors) and sigma (bandwidth) parameters are going to be ignored.
+Using ANNOY for knn search, with parameters: n_trees 50 and search_k -1
+Going to allocate memory. N: 7654, K: 90, N*K = 688860
+Building Annoy tree...
+Done building tree. Beginning nearest neighbor search... 
+parallel (40 threads):
+[>                                                           ] 0% 0.023s[===================>                                        ] 32% 0.189s[===========================================================>] 99% 0.546sElapsed time: 0.7 min
+
+Processing voting results
+Recording voting results to: output/BM1/subclustering T cell/BM1_voting.xlsx
+{0: 'T cells gamma delta #0', 1: 'T cells regulatory (Tregs) #0', 2: 'T cells CD4 naive #0', 3: 'T cells CD4 naive #1', 4: 'T cells gamma delta #1', 5: 'T cells gamma delta #2', 6: 'T cells CD4 memory resting #0', 7: 'Unknown #0', 8: 'T cells CD4 memory resting #1', 9: 'T cells regulatory (Tregs) #1'}
+--> Total elapsed time: 15.0 min 
+
+New marker cell type shape: (5, 9004)
+New marker cell type shape: (5, 9004)
+New marker cell type shape: (5, 9004)
+Candidates of T cells CD4 memory resting: 100
+Candidates of T cells CD4 naive: 100
+Candidates of T cells gamma delta: 100
+Candidates of T cells regulatory (Tregs): 100
+Candidates of Unknown: 100
+Recording voting results to: output/BM1/subclustering T cell/new_markers.xlsx
+Overlapping markers of T cells CD4 memory resting: 3 (53)
+Overlapping markers of T cells CD4 naive: 1 (42)
+Overlapping markers of T cells gamma delta: 0 (41)
+Overlapping markers of T cells regulatory (Tregs): 3 (38)
+Making null distributions plot
+--> Total elapsed time: 15.2 min 
+
+Making voting results matrix plot
+--> Total elapsed time: 15.2 min 
+
+Making marker expression plot
+--> Total elapsed time: 15.3 min 
+
+Making tSNE plot by clusters
+['Cluster #0' 'Cluster #1' 'Cluster #2' 'Cluster #3' 'Cluster #4'
+ 'Cluster #5' 'Cluster #6' 'Cluster #7' 'Cluster #8' 'Cluster #9']
+--> Total elapsed time: 15.3 min 
+
+Making tSNE plot by patients
+['BM1']
+--> Total elapsed time: 15.3 min 
+
+Making tSNE plot by clusters "True" labels
+['T cells CD4 memory resting #0' 'T cells CD4 memory resting #1'
+ 'T cells CD4 naive #0' 'T cells CD4 naive #1' 'T cells gamma delta #0'
+ 'T cells gamma delta #1' 'T cells gamma delta #2'
+ 'T cells regulatory (Tregs) #0' 'T cells regulatory (Tregs) #1'
+ 'Unknown #0']
+--> Total elapsed time: 15.4 min 
+
+
+=================================
+Done saving subclustering plot: T cell!
+=================================
+--> Total elapsed time: 15.4 min 
+
+Selected 7654 cells of type: B cell
+Removed 64 duplicated items in the index of size 33694
+['AKR1C3' 'ANXA8' 'ATRIP' 'BHLHE40' 'BLOC1S5' 'C10orf67' 'C11orf71'
+ 'C17orf100' 'CAPS' 'CC2D2B' 'CCDC7' 'CCND2-AS1' 'CFAP99' 'CGB5' 'CRHR1'
+ 'CTB-41I6.1' 'CYB561D2' 'DDTL' 'DLGAP2' 'DRICH1' 'ECSCR' 'ELF1' 'FAM138A'
+ 'FAM231C' 'FAM25G' 'FBF1' 'FCAR' 'HCG15' 'HNRNPU' 'IGHV2-70' 'LCOR'
+ 'LINC00313' 'LINC00452' 'LINC00864' 'LINC01297' 'LINC01422' 'LINC01481'
+ 'LOC105372352' 'MATR3' 'MEG8' 'MIA2' 'MTRNR2L1' 'PABPC1L2B-AS1' 'PCOTH'
+ 'PGM5-AS1' 'PIK3R3' 'PPP1R3F' 'PRICKLE2-AS1' 'PRICKLE4' 'RABL6'
+ 'RAET1E-AS1' 'RGS5' 'SEMA3F-AS1' 'SERPINA3' 'SLITRK2' 'SMIM11A' 'SPATA13'
+ 'TBC1D26' 'TIMM10B' 'TMBIM4' 'TMEM256-PLSCR3' 'TRAF3IP2-AS1']
+Replaced missing values with zeros. Data size: 33630 genes, 7654 cells
+Removed all-zero cells. Data size: 33630 genes, 7654 cells
+Removed all-zero genes. Data size: 19886 genes, 7654 cells
+--> Total elapsed time: 15.6 min 
+
+Rescaling all cells by "sum of values = 2076.0".
+Log-transforming data.
+Removed all-zero genes. Data size: 19879 genes, 7654 cells
+Removed constant genes. Data size: 10540 genes, 7654 cells
+--> Total elapsed time: 15.9 min 
+
+ComBat transformation
+Only one batch provided. Batch correction is unnecessary
+Preparing xpca, pcs, tsne of df_expr
+Performing PC projection from 10540 to 200 features...
+Explained variance: 22.47 %
+Performing tSNE projection from 200 to 2 features...
+Recording xpca, pcs, tsne of df_expr
+--> Total elapsed time: 16.2 min 
+
+Calculating clustering of PCA data
+--> Total elapsed time: 16.3 min 
+
+Selected genes from the marker list. DataFrame shape: (85, 7654)
+--> Total elapsed time: 16.3 min 
+
+Generating null distribution
+/mnt/home/domansk6/Projects/DCS_for_IEEE/BM/scripts/DigitalCellSorter.py:831: RuntimeWarning:
+
+More than 20 figures have been opened. Figures created through the pyplot interface (`matplotlib.pyplot.figure`) are retained until explicitly closed and may consume too much memory. (To control this warning, see the rcParam `figure.max_open_warning`).
+
+/mnt/home/domansk6/Projects/DCS_for_IEEE/BM/scripts/DigitalCellSorter.py:917: RuntimeWarning:
+
+More than 20 figures have been opened. Figures created through the pyplot interface (`matplotlib.pyplot.figure`) are retained until explicitly closed and may consume too much memory. (To control this warning, see the rcParam `figure.max_open_warning`).
+
+/mnt/home/domansk6/anaconda3/lib/python3.7/site-packages/pandas/core/frame.py:4034: SettingWithCopyWarning:
+
+
+A value is trying to be set on a copy of a slice from a DataFrame
+
+See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
+
+/mnt/home/domansk6/Projects/DCS_for_IEEE/BM/scripts/DigitalCellSorter.py:1122: RuntimeWarning:
+
+More than 20 figures have been opened. Figures created through the pyplot interface (`matplotlib.pyplot.figure`) are retained until explicitly closed and may consume too much memory. (To control this warning, see the rcParam `figure.max_open_warning`).
+
+/mnt/home/domansk6/Projects/DCS_for_IEEE/BM/scripts/DigitalCellSorter.py:757: RuntimeWarning:
+
+More than 20 figures have been opened. Figures created through the pyplot interface (`matplotlib.pyplot.figure`) are retained until explicitly closed and may consume too much memory. (To control this warning, see the rcParam `figure.max_open_warning`).
+
+/mnt/home/domansk6/Projects/DCS_for_IEEE/BM/scripts/DigitalCellSorter.py:658: RuntimeWarning:
+
+More than 20 figures have been opened. Figures created through the pyplot interface (`matplotlib.pyplot.figure`) are retained until explicitly closed and may consume too much memory. (To control this warning, see the rcParam `figure.max_open_warning`).
+
+/mnt/home/domansk6/Projects/DCS_for_IEEE/BM/scripts/DigitalCellSorter.py:449: RuntimeWarning:
+
+More than 20 figures have been opened. Figures created through the pyplot interface (`matplotlib.pyplot.figure`) are retained until explicitly closed and may consume too much memory. (To control this warning, see the rcParam `figure.max_open_warning`).
+
+/mnt/home/domansk6/Projects/DCS_for_IEEE/BM/scripts/DigitalCellSorter.py:831: RuntimeWarning:
+
+More than 20 figures have been opened. Figures created through the pyplot interface (`matplotlib.pyplot.figure`) are retained until explicitly closed and may consume too much memory. (To control this warning, see the rcParam `figure.max_open_warning`).
+
+/mnt/home/domansk6/Projects/DCS_for_IEEE/BM/scripts/DigitalCellSorter.py:917: RuntimeWarning:
+
+More than 20 figures have been opened. Figures created through the pyplot interface (`matplotlib.pyplot.figure`) are retained until explicitly closed and may consume too much memory. (To control this warning, see the rcParam `figure.max_open_warning`).
+
+Elapsed time: 0.4 min
+
+Processing voting results
+Recording voting results to: output/BM1/subclustering B cell/BM1_voting.xlsx
+{0: 'Unknown #0', 1: 'B cells naive #0', 2: 'Unknown #1', 3: 'B cells memory #0', 4: 'Unknown #2', 5: 'B cells naive #1', 6: 'Unknown #3', 7: 'B cells naive #2', 8: 'Plasma cells #0', 9: 'Unknown #4'}
+--> Total elapsed time: 16.5 min 
+
+New marker cell type shape: (4, 10540)
+New marker cell type shape: (4, 10540)
+New marker cell type shape: (4, 10540)
+Candidates of B cells memory: 100
+Candidates of B cells naive: 100
+Candidates of Plasma cells: 100
+Candidates of Unknown: 100
+Recording voting results to: output/BM1/subclustering B cell/new_markers.xlsx
+Overlapping markers of Plasma cells: 0 (33)
+Overlapping markers of B cells memory: 3 (53)
+Overlapping markers of B cells naive: 6 (52)
+Making null distributions plot
+--> Total elapsed time: 16.7 min 
+
+Making voting results matrix plot
+--> Total elapsed time: 16.7 min 
+
+Making marker expression plot
+--> Total elapsed time: 16.8 min 
+
+Making tSNE plot by clusters
+['Cluster #0' 'Cluster #1' 'Cluster #2' 'Cluster #3' 'Cluster #4'
+ 'Cluster #5' 'Cluster #6' 'Cluster #7' 'Cluster #8' 'Cluster #9']
+--> Total elapsed time: 16.8 min 
+
+Making tSNE plot by patients
+['BM1']
+--> Total elapsed time: 16.8 min 
+
+Making tSNE plot by clusters "True" labels
+['B cells memory #0' 'B cells naive #0' 'B cells naive #1'
+ 'B cells naive #2' 'Plasma cells #0' 'Unknown #0' 'Unknown #1'
+ 'Unknown #2' 'Unknown #3' 'Unknown #4']
+--> Total elapsed time: 16.8 min 
+
+
+=================================
+Done saving subclustering plot: B cell!
+=================================
+--> Total elapsed time: 16.8 min 
+
+

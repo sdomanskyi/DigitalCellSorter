@@ -54,7 +54,7 @@ class GeneNameConverter:
                 genes,
                 sourceType,
                 targetType,
-                onlineSearch = True,
+                onlineSearch = False,
                 aggressiveSearch = False,
                 returnUnknownString = True,
                 ):
