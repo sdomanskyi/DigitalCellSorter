@@ -1,4 +1,4 @@
-# DigitalCellSorter
+# Digital Cell Sorter
 Identification of hematological cell types from heterogeneous single cell RNA-seq data.
 
 ## Getting Started
@@ -7,15 +7,22 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Prerequisites
 
-The code runs in Python>=3.3 environment. It uses packages numpy, pandas, matplotlib, scikit-learn, scipy, mygene, biopython, progressbar3, pickle, xlrd, openpyxl, h5py, asdf, shutil, gzip, multiprocessing. One convenient way to install these packages is through pip. After pip is installed, you can install most packages by
+
+
+The code runs in Python>=3.7 environment. 
+
+It is highly recommended to install Anaconda.
+Installers are available at https://www.anaconda.com/distribution/
+
+It uses packages numpy, pandas, matplotlib, scikit-learn, scipy, mygene, fftw, pynndescent, networkx, python-louvain, fitsne, and multiple standard Python packages. All these packages are installed with installation of DigitalCellSorter:
 
 ```
-pip3 install 'package name'
+pip install DigitalCellSorter
 ```
 
 ### Input Data Format
 
-The input data is expected in MatrixMarket IJV format, i.e. for each dataset of interest there should be three files ```matrix.mtx```, ```genes.tsv``` and ```barcodes.tsv```. The data has to be converted to a pandas dataframe as input to the main function. The dataframe has genes as rows and cells as columns, and each grid is the expression of that gene in the cell. 
+The input data is expected in a format of pandas DataFrame provided as input to the ```process()``` function. The dataframe has genes as rows and ('patients/batchs', 'cells') as columns, and each grid is the expression of that gene in the cell. 
 
 ### Other Data
 
@@ -23,72 +30,95 @@ The input data is expected in MatrixMarket IJV format, i.e. for each dataset of 
 
 ## Method
 
-The main class for cell sorting functions and producing output images is DigitalCellSorter located in scripts/DigitalCellSorter.py. It takes the following parameters that you can customize.
+The main class for cell sorting functions and producing output images is DigitalCellSorter located in scrDigitalCellSorteripts/DigitalCellSorter.py. A class instance need to be created with:
+```DCS = DigitalCellSorter.DigitalCellSorter()``` 
 
-- ```df_expr```: expression data in panda dataframe format
+During the initialization the following parameters can be specified:
 
-- ```dataName```: name used in output files
+            ```dataName```: name used in output files, Default ''
 
-- ```sigma_over_mean_sigma```: threshold when keeping only genes with large enough standard deviation, default is 0.3.
+            ```geneListFileName```: marker cell type list name, Default None
 
-- ```n_clusters```: number of clusters, default is 8
+            ```mitochondrialGenes```: list of mitochondrial genes for quality conrol routine, Default None
 
-- ```n_components_pca```: number of principal components to keep for clustering, default is 100
+            ```sigmaOverMeanSigma```: threshold to consider a gene constant, Default 0.3
+
+            ```nClusters```: number of clusters, Default 5
+
+            ```nComponentsPCA```: number of pca components, Default 100
+
+            ```nSamplesDistribution```: number of random samples to generate, Default 10000
+
+            ```saveDir```: directory for output files, Default is current directory
+
+            ```makeMarkerSubplots```:  whether to make subplots on markers, Default True
+
+            ```makePlots```: whether to make all major plots, Default True
+
+            ```votingScheme```: voting shceme to use instead of the built-in, Default None
+
+            ```availableCPUsCount```: number of CPUs available, Default os.cpu_count()
+
+            ```zScoreCutoff```: zscore cutoff when calculating Z_mc, Default 0.3
+
+            ```clusterName```: parameter used in subclustering, Default None
+
+            ```doQualityControl```: whether to remove low quality cells, Default True
+
+            ```doBatchCorrection```: whether to correct data for batches, Default False
+
+These and other parameters can be modified after initialization using, e.g.:
+```DCS.toggleMakeStackedBarplot = False```
+```DCS.dataName = "someDataName"```
+
+
+
+The ```process()``` function will produce all necessary files for post-analysis of the data. The visualization tools include:
  
-- ```zscore_cutoff```: zscore cutoff when calculating Zmc, default is 0.3
+- ```makeMarkerExpressionPlot()```: an image that shows the clustering of cells and identified cell type of each cluster. 
 
-- ```saveDir```: directory to save all outputs, default is None
-
-- ```marker_expression_plot```: whether to produce marker expression plot, default is True
-
-- ```tSNE_cluster_plot```: whether to produce cluster plot, default is True
-
-- ```save_processed_data```: whether to save processed data, default is True
-
-- ```marker_subplot```: whether to make subplots on markers, default is True
-
-- ```votingScheme```: voting function to predict celltypes for each cluster, default is None. If it is None, then our cell sorting algorithm from the paper would be used. If you want to your own voting function, make sure it returns a dictionary with cluster labels as keys and predicted celltypes as values. You can modify code to change inputs to this function if needed. See the code and comments for more clarifications.
-
-- ```N_samples_for_distribution```: number of samples to generate, default is 10000
-
-- ```SaveTransformedData```: whether to save PCA and t-SNE transformed data, default is True
-
-- ```SaveXpcaDataCSV```: data necessary for ARI analysis, default is True
-
-- ```AvailableCPUsCount```: for speedup of noise distribution calculation use multiple cores, default is 20
-
-- ```clusterIndex```: if provided, e.g. [3,5], subclustering will be performed, default is None
-
-- ```clusterName```: for subclustering cell type of interest, e.g. 'T cells', default is None
+ <img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_voting.png" align="center" height="500" width="500" >
 
 
-The Process function will produce the following outputs. Below explains what they are and shows some sample outputs produced using our sample data.
- 
-- ```dataName_clusters2D.png```: an image that shows the clustering of cells and identified cell type of each cluster. 
+- ```makeMarkerSubplot()```: z-scores of the voting results for each input cell type and each cluster, in addition this figure contains relative (%) and absolute (cell counts) cluster sizes 
 
- <img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/HCA_BM1_data/HCA_BM1_data_clusters2D.png" align="center" height="500" width="500" >
+ <img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_clusters_by_patients.png" align="center" width="800" >
 
-- ```dataName_matrix_voting.png```: z-scores of the voting results for each input cell type and each cluster, in addition this figure contains relative (%) and absolute (cell counts) cluster sizes 
 
- <img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/HCA_BM1_data/HCA_BM1_data_matrix_voting.png" align="center" width="800" >
+- ```makeVotingResultsMatrixPlot()```: a heatmap that shows all markers and their expression levels in the clusters
 
-- ```dataName_voting.png```: a heatmap that shows all markers and their expression levels in the clusters
+<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_matrix_voting.png" align="center" height="1000">
 
-<img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/HCA_BM1_data/HCA_BM1_data_voting.png" align="center" height="1000">
 
-- ```dataName_voting.xlsx```: an excel sheet that shows the voting results, the p-values and z-scores of the voting results
+- ```makeHistogramNullDistributionPlot()```: a heatmap that shows all markers and their expression levels in the clusters
 
-- ```dataName_expression_labeled.tar.gz.pklz```: a pickled zip file that contains processed and labelled expression data
+<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_null_distributions.png" align="center" height="1000">
 
-- ```dataName_data_noise_dict.pdf```: noise distributions for each cell type and cluster
 
-- ```dataName_subclustering_stacked_barplot```: cell types relative fractions
+- ```makeTSNEplot()```: a heatmap that shows all markers and their expression levels in the clusters
 
- <img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/HCA_BM1_data/HCA_BM1_data_subclustering_stacked_barplot_All_cell_clusters.png" align="center" height="400" >
+<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_clusters_by_clusters_annotated.png" align="center" height="1000">
 
-- ```marker_subplots```: a directory that contains subplots of each marker and their expression levels in the clusters. For example below is the subplot of CD33, a myeloid marker.
 
-<img src="https://github.com/wangjiayin1010/DigitalCellSorter/blob/master/demo_output/HCA_BM1_data/marker_subplots/HCA_BM1_data_CD33_CD33.png" align="center" height="500" width="500" >
+- ```makeStackedBarplot()```: a heatmap that shows all markers and their expression levels in the clusters
+
+<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_subclustering_stacked_barplot_.png" align="center" height="1000">
+
+
+- ```makeQualityControlHistogramPlot()```: a heatmap that shows all markers and their expression levels in the clusters
+
+<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/QC_plots/BM1_fraction_of_mitochondrialGenes_histogram.png" align="center" height="1000">
+
+
+- ```makeSankeyDiagram()```: a heatmap that shows all markers and their expression levels in the clusters
+
+<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/Sankey_exampe.png" align="center" height="1000">
+
+
+- ```makePlotOfNewMarkers()```: a heatmap that shows all markers and their expression levels in the clusters
+
+<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/QC_plots/BM1_new_markers.png" align="center" height="1000">
+
 
 ## Demo
 
@@ -98,6 +128,12 @@ We have made an example execution file ```demo.py``` that shows how to use Digit
 
 In the demo, folder ```data``` is intentionally left empty. The reader can download the file ```ica_bone_marrow_h5.h5``` from https://preview.data.humancellatlas.org/ (Raw Counts Matrix - Bone Marrow) and place in folder ```data```. The file is ~485Mb and contains all 378000 cells from 8 bone marrow donors. In our example, the MatrixMarket IJV format files are prepared automatically on the fly for each donor separately using ```ReadPrepareDataHCApreviewDataset.PrepareData()```. For detail see ```demo.py```.
 
+
+
+
+
+
+
 The demo.py first converts the data to a ```pandas``` dataframe as input for Process function. Then it calls ```Process()``` function from ```DigitalCellSorter``` class, which does all the projection, clustering, identification and images production.
 
 To see our example work, you just need to download everything, go to the directory then run
@@ -105,16 +141,33 @@ To see our example work, you just need to download everything, go to the directo
 ```
 python DCS_demo_on_HCA_BM.py
 ```
-Note that to use your own data, you would also need to convert them to a ```pandas``` dataframe. You can also customize the parameters in ```Process()``` function as listed above. For example, you can change it to
+Note that to use your own data, you would also need to convert them to a ```pandas``` dataframe. You can also customize the parameters in ```process()``` function as listed above. For example, you can change it to
 
 ```
-DigitalCellSorter.DigitalCellSorter().Process(n_clusters=10, 
-                                              n_components_pca=50, 
-                                              saveDir='demo_output/', 
-                                              marker_subplot = False)
+    dataName = 'BM1'
+    HCAtool.PrepareDataOnePatient(os.path.join('data', 'ica_bone_marrow_h5.h5'), dataName, os.path.join('data', ''), useAllData=False, cellsLimitToUse=3000)
+    df_expr = pd.read_hdf(os.path.join('data', 'HCA_%s.h5'%(dataName)), key=dataName, mode='r')
+
+    DCS = DigitalCellSorter.DigitalCellSorter(nSamplesDistribution=1000, nClusters=20)
+    DCS.dataName = dataName
+    DCS.saveDir = os.path.join('output', dataName, '')
+    DCS.geneListFileName = os.path.join('geneLists', 'CIBERSORT.xlsx')
+    DCS.process(df_expr)
+
+    DCSsub = DigitalCellSorter.DigitalCellSorter(dataName=dataName, nClusters=10, doQualityControl=False, nSamplesDistribution=1000)
+
+    DCSsub.subclusteringName = 'T cell'
+    DCSsub.saveDir = os.path.join('output', dataName, 'subclustering T cell', '')
+    DCSsub.geneListFileName = os.path.join('geneLists', 'CIBERSORT_T_SUB.xlsx')
+    DCSsub.process(df_expr[DCS.getCells(celltype='T cell')])
+
+    DCSsub.subclusteringName = 'B cell'
+    DCSsub.saveDir = os.path.join('output', dataName, 'subclustering B cell', '')
+    DCSsub.geneListFileName = os.path.join('geneLists', 'CIBERSORT_B_SUB.xlsx')
+    DCSsub.process(df_expr[DCS.getCells(celltype='B cell')])
 ```
 
 ### Output
 
-All the outputs are saved in ```demo_output/``` directory. 
+All the output files are saved in ```output``` directory. 
 
