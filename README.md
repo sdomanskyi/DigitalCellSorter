@@ -93,7 +93,7 @@ These and other parameters can be modified after initialization using, e.g.:
 
 ### Gene Expression Data Format
 
-The input gene expression data is expected in one of the following formats:
+<details open><summary>The input gene expression data is expected in one of the following formats:</summary><p>
 
 1. Condensed matrix in a form ```('cell', 'gene', 'expression count')```, while cell and gene names may be supplied in the 
 additional lists, in ```tsv```, ```csv```, ```xlsx```, etc. format. 
@@ -114,6 +114,8 @@ second level containing cell barcodes for identification.
 the first level should be indicating patient, batch or expreriment where that cell was sequenced, the second level cell barcodes for 
 identification and the third level gene names.
 
+</p></details>
+
 Any of the data types outlined above need to be prepared/validated with a function ```prepare()```. 
 Let us demonstrate this on the input of type 1:
 
@@ -124,9 +126,9 @@ Let us demonstrate this on the input of type 1:
 
 ### Other Data
 
-```geneLists/CIBERSORT.xlsx```: An excel book with marker data. Rows are markers and columns are cell types. 
+```geneLists/markersDCS.xlsx```: An excel book with marker data. Rows are markers and columns are cell types. 
 '1' means that the gene is a marker for that cell type, and '0' otherwise.
-There is a gene marker file included in the package and used by Default (CIBERSORT LM22). 
+This gene marker file included in the package is used by Default. 
 If you use your own file it has to be prepared in the same format.
 
 ```geneLists/Human.MitoCarta2.0.xls```: An excel book with human mitochondrial genes, created within work 
@@ -136,7 +138,9 @@ Sarah E. Calvo, Karl R. Clauser, Vamsi K. Mootha, *Nucleic Acids Research*, Volu
 
 ## Functionality
 
-The main class for cell sorting functions and producing output images is DigitalCellSorter. The class includes tools for:
+The main class for cell sorting functions and producing output images is DigitalCellSorter
+
+<details open><summary>The class includes tools for:</summary><p>
 
   1. Pre-preprocessing single cell mRNA sequencing data (gene expression data)
      1. Cleaning: filling in missing values, zemoving all-zero genes and cells, converting gene index to a desired convention, etc.
@@ -161,8 +165,12 @@ The main class for cell sorting functions and producing output images is Digital
   8. Post-processing functions, e.g. extract cells of interest, find significantly expressed genes, 
 plot marker expression of the cells of interest, etc.
 
+</p></details>
 
-The ```process()``` function will produce all necessary files for post-analysis of the data. The visualization tools include:
+
+The ```process()``` function will produce all necessary files for post-analysis of the data. 
+
+<details open><summary>The visualization tools include:</summary><p>
  
 - ```makeMarkerExpressionPlot()```: a heatmap that shows all markers and their expression levels in the clusters, 
 in addition this figure contains relative (%) and absolute (cell counts) cluster sizes
@@ -239,6 +247,8 @@ number of counts measured, and a faraction of mitochondrial genes..
 	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_new_markers.png?raw=true" width="1000"/>
 </p>
 
+</p></details>
+
 
 ## Demo
 
@@ -306,6 +316,7 @@ We can reuse the ```DCSsub``` to analyze cell type 'B cell':
     DCSsub.process(df_expr[DCS.getCells(celltype='B cell')])
 
 For a complete script see:
+
 	python demo.py
 
 ### Output
