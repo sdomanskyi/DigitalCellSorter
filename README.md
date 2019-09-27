@@ -49,7 +49,7 @@ Create and instance of a ```DigitalCellSorter```, here, for simplicity, we use D
 	DCS = DigitalCellSorter.DigitalCellSorter()
 
 
-<details><summary>During the initialization the following parameters can be specified:</summary><p>
+<details><summary>During the initialization the following parameters can be specified (click me)</summary><p>
 
 ```dataName```: name used in output files, Default ''
 
@@ -166,64 +166,61 @@ The ```process()``` function will produce all necessary files for post-analysis 
  
 - ```makeMarkerExpressionPlot()```: a heatmap that shows all markers and their expression levels in the clusters, 
 in addition this figure contains relative (%) and absolute (cell counts) cluster sizes
- ![Marker-centroid expression](https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_voting.png?raw=true 
-"Marker-centroid expression"){:height=500 width=1000}
 
-- ```makeMarkerSubplot()```:  t-SNE layout of a single gene expression
- ![t-SNE layout colored by individual gene's expression](https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_clusters_by_patients.png?raw=true
-"t-SNE layout colored by individual gene's expression"){:height=600 width=600}
+ <img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_voting.png?raw=true" width="1000">
+
+
+- ```makeMarkerSubplot()```:  t-SNE layout colored by individual gene's expression
+
+ <img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_clusters_by_patients.png?raw=true" width="600">
+
 
 - ```makeVotingResultsMatrixPlot()```: z-scores of the voting results for each input cell type and each cluster, 
 in addition this figure contains relative (%) and absolute (cell counts) cluster sizes
- ![Matrix voting plot](https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_matrix_voting.png?raw=true 
-"Matrix voting plot"){:height=500 width=500}
+
+ <img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_matrix_voting.png?raw=true" height="800">
+
 
 - ```makeHistogramNullDistributionPlot()```: null distribution for each cluster and each cell type illustrating 
 the "machinery" of the Digital Cell Sorter
- ![Matrix voting plot](https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_null_distributions.png?raw=true
-"Matrix voting plot"){:height=1000 width=800}
+
+ <img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_null_distributions.png?raw=true" width="800">
+
 
 - ```makeQualityControlHistogramPlot()```: Quality control histogram plots
 
-![QC histogram plot](https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/QC_plots/BM1_number_of_genes_histogram.png?raw=true
-"QC histogram plot"){:height=250 width=250}
-![QC histogram plot](https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/QC_plots/BM1_count_depth_histogram.png?raw=true
-"QC histogram plot"){:height=250 width=250}
-![QC histogram plot](https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/QC_plots/BM1_fraction_of_mitochondrialGenes_histogram.png?raw=true
-"QC histogram plot"){:height=250 width=250}
+<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/QC_plots/BM1_number_of_genes_histogram.png?raw=true" width="250">
+<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/QC_plots/BM1_count_depth_histogram.png?raw=true" width="250">
+<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/QC_plots/BM1_fraction_of_mitochondrialGenes_histogram.png?raw=true" width="250">
+
 
 - ```makeTSNEplot()```: t-SNE layouts colored by number of unique genes expressed, 
 number of counts measured, and a faraction of mitochondrial genes..
 
- ![t-SNE plot](https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_clusters_by_number_of_genes.png?raw=true
-"t-SNE plot"){:height=250 width=250} 
-![t-SNE plot](https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_clusters_by_count_depth.png?raw=true
-"t-SNE plot"){:height=250 width=250} 
-![t-SNE plot](https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_clusters_by_fraction_of_mitochondrialGenes.png?raw=true
-"t-SNE plot"){:height=250 width=250}
+ <img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_clusters_by_number_of_genes.png?raw=true" width="250">
+<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_clusters_by_count_depth.png?raw=true" width="250">
+<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_clusters_by_fraction_of_mitochondrialGenes.png?raw=true" width="250">
 
-![t-SNE plot](https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_clusters_by_is_quality_cell.png?raw=true
-"t-SNE plot"){:height=600 width=600}
+<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_clusters_by_is_quality_cell.png?raw=true" width="600">
 
-![t-SNE plot](https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_clusters_by_clusters.png?raw=true
-"t-SNE plot"){:height=375 width=375} ![t-SNE plot](https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_clusters_by_patients.png?raw=true
-"t-SNE plot"){:height=375 width=375}
+<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_clusters_by_clusters.png?raw=true" width="375">
+<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_clusters_by_patients.png?raw=true" height="375">
+
 
 - ```makeStackedBarplot()```: plot with fractions of various cell types
 
-![t-SNE plot](https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_clusters_by_clusters_annotated.png?raw=true
-"t-SNE plot"){:height=500 width=500} ![Stacked barplot](https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_subclustering_stacked_barplot_.png?raw=true
-"Stacked barplot"){:height=1000 width=250}
+<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_clusters_by_clusters_annotated.png?raw=true" width="500">
+<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_subclustering_stacked_barplot_.png?raw=true" height="500">
+
 
 - ```makeSankeyDiagram()```: river plot to compare various results
 
-![Sankey diagram](https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/Sankey_exampe.png?raw=true
-"Sankey diagram"){:height=600 width=600}
+<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/Sankey_exampe.png?raw=true" width="750">
+
 
 - ```makePlotOfNewMarkers()```: genes significantly expressed in the annotated cell types
 
-![New markers](https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_new_markers.png?raw=true
-"New markers"){:height=750 width=750}
+<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_new_markers.png?raw=true" width="1000">
 
 
 ## Demo
