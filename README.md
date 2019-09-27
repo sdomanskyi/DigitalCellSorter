@@ -130,12 +130,8 @@ There is a gene marker file included in the package and used by Default (CIBERSO
 If you use your own file it has to be prepared in the same format.
 
 ```geneLists/Human.MitoCarta2.0.xls```: An excel book with human mitochondrial genes, created within work 
-[MitoCarta2.0: an updated inventory of mammalian mitochondrial proteins](https://doi.org/10.1093/nar/gkv1003 "MitoCarta2.0") 
-<<<<<<< HEAD
-Sarah E. Calvo, Karl R. Clauser, Vamsi K. Mootha, *Nucleic Acids Research*, Volume 44, Issue D1, 4 January 2016, Pages D1251–D1257.
-=======
+[MitoCarta2.0: an updated inventory of mammalian mitochondrial proteins](https://doi.org/10.1093/nar/gkv1003 "MitoCarta2.0")
 Sarah E. Calvo, Karl R. Clauser, Vamsi K. Mootha, *Nucleic Acids Research*, Volume 44, Issue D1, 4 January 2016, Pages D1251â€“D1257.
->>>>>>> 443456b06871968a6a268eecba8f8342e6bfc4e5
 
 
 ## Functionality
@@ -185,11 +181,7 @@ in addition this figure contains relative (%) and absolute (cell counts) cluster
 in addition this figure contains relative (%) and absolute (cell counts) cluster sizes
 
 <p align="middle">
-<<<<<<< HEAD
  <img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_matrix_voting.png?raw=true" height="700"/>
-=======
- <img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_matrix_voting.png?raw=true" height="600"/>
->>>>>>> 443456b06871968a6a268eecba8f8342e6bfc4e5
 </p>
 
 - ```makeHistogramNullDistributionPlot()```: null distribution for each cluster and each cell type illustrating 
@@ -319,8 +311,4 @@ For a complete script see:
 ### Output
 
 All the output files are saved in ```output``` directory. If you specify any other directory, the results will be generetaed in it.
-<<<<<<< HEAD
 If you do not provide any directory the results will appear in the root where the script was executed.
-=======
-If you do not provide any directory the results will appear in the root where the script was executed.
->>>>>>> 443456b06871968a6a268eecba8f8342e6bfc4e5
