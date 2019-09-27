@@ -6,13 +6,13 @@ from codecs import open
 from os import path
 here = path.abspath(path.dirname(__file__))
 # Get the long description from the README file
-with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
+with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description=f.read()
 
 setup(
     name='DigitalCellSorter',
     packages=find_packages(),
-    version='1.2.0',
+    version='1.2.4',
     description='Toolkit for dentification of hematological cell types from heterogeneous single cell RNA-seq data',
     long_description=long_description,
     include_package_data=True,
@@ -20,7 +20,7 @@ setup(
     author_email='s.domanskyi@gmail.com',
     license='MIT',
     url='https://github.com/sdomanskyi/DigitalCellSorter',
-    download_url='https://github.com/sdomanskyi/DigitalCellSorter/archive/1.2.0.tar.gz',
+    download_url='https://github.com/sdomanskyi/DigitalCellSorter/archive/1.2.4.tar.gz',
     keywords=['single cell RNA sequencing', 'cell type identification','biomarkers'],
     classifiers=[
         'License :: OSI Approved :: MIT License',
@@ -39,13 +39,12 @@ setup(
     install_requires=[
         'numpy>=1.16.4',
         'pandas>=0.24.2',
-        'pytables>=3.5.2',
+        'tables>=3.5.2',
         'scipy>=1.3.0',
         'matplotlib>=3.1.0',
         'scikit-learn>=0.21.2',
         'plotly>=4.1.1',
         'mygene>=3.1.0',
-        'fftw>=3.3.8',
         'pynndescent>=0.3.3',
         'networkx>=2.3',
         'python-louvain>=0.13',
