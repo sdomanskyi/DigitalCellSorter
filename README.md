@@ -235,7 +235,9 @@ number of counts measured, and a faraction of mitochondrial genes..
 </p>
 
 
-- ```makeSankeyDiagram()```: river plot to compare various results
+- ```makeSankeyDiagram()```: river plot to compare various results 
+
+[(see interactive version)](https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/Sankey_example.html?raw=true "Sankey interactive diagram")
 
 <p align="middle">
 	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/Sankey_example.png?raw=true" width="800"/>
