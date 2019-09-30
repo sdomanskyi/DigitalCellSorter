@@ -241,6 +241,35 @@ number of counts measured, and a faraction of mitochondrial genes..
 	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/Sankey_example.png?raw=true" width="800"/>
 </p>
 
+One way:
+
+<script>
+  $(function(){
+    var includes = $('[data-include]');
+    jQuery.each(includes, function(){
+      var file = 'docs/examples/Sankey_example.html';
+      $(this).load(file);
+    });
+  });
+</script>
+
+Another way:
+
+<html> 
+  <head> 
+    <script src="jquery.js"></script> 
+    <script> 
+    $(function(){
+      $("#includedContent").load("docs/examples/Sankey_example.html"); 
+    });
+    </script> 
+  </head> 
+
+  <body> 
+     <div id="includedContent"></div>
+  </body> 
+</html>
+
 
 - ```getAnomalyScoresPlot()```: plot with anomaly scores per cell
 
