@@ -91,7 +91,7 @@ class DigitalCellSorter:
         df_data = DCS.Clean(df_data)
     '''
 
-    gnc = GeneNameConverter.GeneNameConverter(dictDir=os.path.join('tools', 'pickledGeneConverterDict', 'ensembl_hugo_entrez_alias_dict.pythdat'))
+    gnc = GeneNameConverter.GeneNameConverter(dictDir=os.path.join('DigitalCellSorter', 'pickledGeneConverterDict', 'ensembl_hugo_entrez_alias_dict.pythdat'))
 
     def __init__(self, dataName='', geneListFileName=None, mitochondrialGenes=None,
                 sigmaOverMeanSigma=0.3, nClusters=5, nComponentsPCA=200, nSamplesDistribution=10000, 
@@ -514,6 +514,35 @@ class DigitalCellSorter:
 
         return None
     
+    def getIndividualGeneExpressionPlot(self, gene, hideClusterLabels=False, outlineClusters=True):
+
+        '''Produce individual gene expression plot on a tSNE layout
+
+        Args:
+            gene: gene of interest
+
+        Returns:
+            None
+        
+        Usage:
+            DCS = DigitalCellSorter.DigitalCellSorter()
+            DCS.getIndividualGeneExpressionPlot('CD4')
+        '''
+
+        df_markers_expr = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_expr', mode='r').xs(key=gene, axis=0, level=2).T
+        df_markers_expr.index = [gene]
+
+        df_tsne = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_tsne', mode='r')
+        df_markers_expr = df_markers_expr.reindex(df_tsne.columns, axis=1).fillna(0.)
+
+        labelled = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_markers_expr', mode='r').columns
+        df_markers_expr.columns = labelled.to_series().reset_index().set_index(['patient', 'cell'])['cluster'].loc[df_markers_expr.columns].reset_index().set_index(['patient', 'cell', 'cluster']).index
+
+        hugo_cd_dict = {gene: self.gnc.Convert([gene], 'hugo', 'alias', returnUnknownString=False)[0]}
+        self.makeMarkerSubplots(df_markers_expr, df_tsne.values, hugo_cd_dict, self.dataName, self.saveDir, NoFrameOnFigures=True, HideClusterLabels=hideClusterLabels, outlineClusters=outlineClusters)
+
+        return None
+
 
     # Vizualization functions of class ########################################################################################################################
     def makeMarkerExpressionPlot(self, dataName, saveDir):
@@ -630,7 +659,7 @@ class DigitalCellSorter:
 
         return
 
-    def makeMarkerSubplot(self, df, X_tsne, hugo_cd_dict, dataName, saveDir, NoFrameOnFigures=False, HideClusterLabels=False):
+    def makeMarkerSubplots(self, df, X_tsne, hugo_cd_dict, dataName, saveDir, NoFrameOnFigures=False, HideClusterLabels=False, outlineClusters=True):
 
         '''Produce subplots on each marker and its expression on all clusters
 
@@ -651,7 +680,7 @@ class DigitalCellSorter:
             DCS.MakeMarkerSubplot(df_markers_expr, tSNE, hugo_cd_dict, dataName, saveDir)
         '''
         
-        def MarkerSubplot(counter, marker, df, votingResults, X_tsne, cellClusterIndexLabel, hugo_cd_dict, dataName, saveDir, NoFrameOnFigures, HideClusterLabels, XLIM, YLIM, directory):
+        def MarkerSubplot(counter, marker, df, votingResults, X_tsne, cellClusterIndexLabel, hugo_cd_dict, dataName, saveDir, NoFrameOnFigures, HideClusterLabels, XLIM, YLIM, directory, circles):
 
             fig,ax = plt.subplots(figsize=(8,8))
 
@@ -693,21 +722,24 @@ class DigitalCellSorter:
                         fontsize=10,
                         ha='center',va='center',#alpha=0.75,
                         ).set_path_effects([path_effects.Stroke(linewidth=3, foreground='white'),path_effects.Normal()])
-                radius = np.sqrt(X_tsne2_cluster.shape[1]) * 300.0
-                ax.scatter(x_mean,y_mean,s=radius * 1,facecolors='none',edgecolors='k')
+
+                if circles:
+                    radius = np.sqrt(X_tsne2_cluster.shape[1]) * 300.0
+                    ax.scatter(x_mean,y_mean,s=radius * 1,facecolors='none',edgecolors='k')
             ax.set_xlim(XLIM)
             ax.set_ylim(YLIM)
             ax.legend(loc='upper right', frameon=False, fontsize=14) #loc='best',numpoints=1,fontsize=12
             ax.set_xticks([])
             ax.set_yticks([]) 
             if NoFrameOnFigures:
-                fig.patch.set_visible(False)
+                #fig.patch.set_visible(False)
                 ax.axis('off')
             fig.tight_layout()
             if saveDir is not None: 
                 #fig.savefig('%s/marker_subplots/%s_%s_%s.png' %
                 #(saveDir,dataName,marker,suffix.replace(',','_').replace('/','_')),dpi=150)
-                fig.savefig(os.path.join(saveDir, 'marker_subplots', '%s_%s_%s.pdf' % (dataName,marker,suffix.replace(',','_').replace('/','_'))))
+                #fig.savefig(os.path.join(saveDir, 'marker_subplots', '%s_%s_%s.pdf' % (dataName,marker,suffix.replace(',','_').replace('/','_'))))
+                fig.savefig(os.path.join(saveDir, 'marker_subplots', '%s_%s_%s.png' % (dataName,marker,suffix.replace(',','_').replace('/','_'))), dpi=300)
                 print(marker, end=", ", flush=True)
 
             plt.close(fig)
@@ -734,7 +766,7 @@ class DigitalCellSorter:
 
         for counter,marker in enumerate(df.index.values):
             MarkerSubplot(counter, marker, pd.DataFrame(data=np.reshape(np.array(df.loc[marker]), (1,len(df.loc[marker]))), columns=df.columns, index=[marker]), 
-                            votingResults, X_tsne, cellClusterIndexLabel, hugo_cd_dict, dataName, saveDir, NoFrameOnFigures, HideClusterLabels, XLIM, YLIM, directory)
+                            votingResults, X_tsne, cellClusterIndexLabel, hugo_cd_dict, dataName, saveDir, NoFrameOnFigures, HideClusterLabels, XLIM, YLIM, directory, outlineClusters)
 
         print('\nDone saving marker subplots!')
 
@@ -1884,7 +1916,7 @@ class DigitalCellSorter:
             df_markers_expr = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_markers_expr', mode='r')
             df_tsne = df_tsne[pd.MultiIndex.from_arrays([df_markers_expr.columns.get_level_values('patient'), df_markers_expr.columns.get_level_values('cell')])]
             hugo_cd_dict = dict(zip(df_markers_expr.index.values.tolist(), self.gnc.Convert(list(df_markers_expr.index), 'hugo', 'alias', returnUnknownString=False)))
-            self.makeMarkerSubplot(df_markers_expr, df_tsne.values, hugo_cd_dict, self.dataName, self.saveDir)
+            self.makeMarkerSubplots(df_markers_expr, df_tsne.values, hugo_cd_dict, self.dataName, self.saveDir)
             timeMark()
 
         return None
