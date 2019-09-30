@@ -6,13 +6,13 @@ from codecs import open
 from os import path
 here = path.abspath(path.dirname(__file__))
 # Get the long description from the README file
-with open(path.join(here, 'README.md'), encoding='utf-8') as f:
+with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description=f.read()
 
 setup(
     name='DigitalCellSorter',
     packages=find_packages(),
-    version='1.2.4',
+    version='1.2.0',
     description='Toolkit for dentification of hematological cell types from heterogeneous single cell RNA-seq data',
     long_description=long_description,
     include_package_data=True,

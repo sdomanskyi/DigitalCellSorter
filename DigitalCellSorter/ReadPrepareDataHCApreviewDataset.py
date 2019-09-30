@@ -28,7 +28,7 @@ def PrepareDataOnePatient(filename, patient, saveFolderName, doQC=True,  useAllD
         df.iloc[copy.deepcopy(h5File['GRCh38/indices'][indptr[index]:indptr[index + 1]]), cell] = copy.deepcopy(h5File['GRCh38/data'][indptr[index]:indptr[index + 1]])
     
     print('Compressing %s to Pandas HDF'%(patient))
-    df.to_hdf(os.path.join(saveFolderName, 'HCA_%s.h5'%(patient)), key=patient, mode='a', complevel=4, complib='zlib')
+    df.to_hdf(os.path.join(saveFolderName, '%s.h5'%(patient)), key=patient, mode='a', complevel=4, complib='zlib')
 
     print('-------------------------------------------------------------------------\n')
 

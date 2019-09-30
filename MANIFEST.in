@@ -1,4 +1,6 @@
 include MANIFEST.in
 include LICENSE.txt
 include README.md
+include demo.py
 graft DigitalCellSorter
+graft geneLists
