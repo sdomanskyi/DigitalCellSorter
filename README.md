@@ -179,10 +179,11 @@ in addition this figure contains relative (%) and absolute (cell counts) cluster
 	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_voting.png?raw=true" width="1000"/>
 </p>
 
-- ```makeMarkerSubplot()```:  t-SNE layout colored by individual gene's expression
+- ```getIndividualGeneExpressionPlot()```:  t-SNE layout colored by individual gene's expression
 
 <p align="middle">
-	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_clusters_by_patients.png?raw=true" width="500"/>
+	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/marker_subplots/BM1_CD19_(B4_CVID3_CD19).png?raw=true" width="400"/>
+	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/marker_subplots/BM1_CD4_(CD4_CD4mut).png?raw=true" width="400"/>
 </p>
 
 - ```makeVotingResultsMatrixPlot()```: z-scores of the voting results for each input cell type and each cluster, 
@@ -238,6 +239,21 @@ number of counts measured, and a faraction of mitochondrial genes..
 
 <p align="middle">
 	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/Sankey_exampe.png?raw=true" width="600"/>
+</p>
+
+
+- ```getAnomalyScoresPlot()```: plot with anomaly scores per cell
+
+<p align="middle">
+	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_clusters_by_anomaly_score All.png?raw=true" width="750"/>
+</p>
+
+Calculate and plot anomaly scores for an arbitrary cell type or cluster:
+
+<p align="middle">
+	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_clusters_by_anomaly_score B cell.png?raw=true" width="250"/>
+	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_clusters_by_anomaly_score T cell.png?raw=true" width="250"/>
+	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/output/BM1/BM1_clusters_by_anomaly_score Cluster2.png?raw=true" width="250"/>
 </p>
 
 
