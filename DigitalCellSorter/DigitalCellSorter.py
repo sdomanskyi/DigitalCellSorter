@@ -33,6 +33,8 @@ from sklearn.ensemble import IsolationForest
 from DigitalCellSorter import GeneNameConverter
 from DigitalCellSorter.Combat import combat
 
+from importlib import resources
+
 def timeMark():
 
     '''Print total time elapsed from the beggining of the process
@@ -93,7 +95,7 @@ class DigitalCellSorter:
 
     gnc = GeneNameConverter.GeneNameConverter(dictDir=os.path.join('DigitalCellSorter', 'pickledGeneConverterDict', 'ensembl_hugo_entrez_alias_dict.pythdat'))
 
-    def __init__(self, dataName='', geneListFileName=None, mitochondrialGenes=None,
+    def __init__(self, dataName='dataName', geneListFileName=None, mitochondrialGenes=None,
                 sigmaOverMeanSigma=0.3, nClusters=5, clusteringFunction=AgglomerativeClustering, nComponentsPCA=200, nSamplesDistribution=10000, 
                 saveDir=os.path.join(''), makeMarkerSubplots=False, availableCPUsCount=os.cpu_count(), zScoreCutoff=0.3,
                 subclusteringName=None, doQualityControl=True, doBatchCorrection=True, makePlots=True,
@@ -102,7 +104,7 @@ class DigitalCellSorter:
         '''Initialization function. Automatically called when an instance on Digital Cell Sorter is created
 
         Args:
-            dataName: name used in output files, Default ''
+            dataName: name used in output files, Default 'dataName'
             geneListFileName: , Default None
             mitochondrialGenes: , Default None
             sigmaOverMeanSigma: threshold to consider a gene constant, Default 0.3
@@ -129,10 +131,16 @@ class DigitalCellSorter:
             DCS = DigitalCellSorter.DigitalCellSorter(geneListFileName='MyGeneList.xlsx')
         '''
 
+        defaultGeneList = 'markersDCS' # 'CIBERSORT'
+
         self.saveDir = saveDir
         self.dataName = dataName
 
-        self.geneListFileName = geneListFileName
+        with resources.path('DigitalCellSorter.geneLists','__init__.py') as readIn:
+            self.defualtGeneListsDir = os.path.dirname(readIn)
+
+        self.geneListFileName = os.path.join(self.defualtGeneListsDir, defaultGeneList + '.xlsx') if geneListFileName is None else geneListFileName
+
         self.mitochondrialGenes = mitochondrialGenes
 
         self.sigmaOverMeanSigma = sigmaOverMeanSigma
@@ -473,7 +481,7 @@ class DigitalCellSorter:
         '''
 
         df_expr = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_expr', mode='r')
-        df_expr.index.names = ['patient', 'cell', 'gene']
+        df_expr.index.names = ['batch', 'cell', 'gene']
         df_expr = df_expr.unstack(level='gene', fill_value=0).T
         df_expr.index = df_expr.index.get_level_values('gene')
 
@@ -540,7 +548,7 @@ class DigitalCellSorter:
         df_markers_expr = df_markers_expr.reindex(df_tsne.columns, axis=1).fillna(0.)
 
         labelled = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_markers_expr', mode='r').columns
-        df_markers_expr.columns = labelled.to_series().reset_index().set_index(['patient', 'cell'])['cluster'].loc[df_markers_expr.columns].reset_index().set_index(['patient', 'cell', 'cluster']).index
+        df_markers_expr.columns = labelled.to_series().reset_index().set_index(['batch', 'cell'])['cluster'].loc[df_markers_expr.columns].reset_index().set_index(['batch', 'cell', 'cluster']).index
 
         hugo_cd_dict = {gene: self.gnc.Convert([gene], 'hugo', 'alias', returnUnknownString=False)[0]}
         self.makeMarkerSubplots(df_markers_expr, df_tsne.values, hugo_cd_dict, self.dataName, self.saveDir, NoFrameOnFigures=True, HideClusterLabels=hideClusterLabels, outlineClusters=outlineClusters)
@@ -1335,15 +1343,13 @@ class DigitalCellSorter:
         
 
     # Main functions of class #################################################################################################################################
-    def prepare(self, se_expr=None, df_expr=None, dataFile=None, condensedMatrixFormat=None):
+    def prepare(self, obj, condensedMatrixFormat=None):
 
         '''Prepare pandas.DataFrame for input to function process()
         If input is pd.DataFrame validate the input whether it has correct structure.
 
         Args:
-            df_expr: expression data in a form of pandas.DataFrame
-            se_expr: expression data in a form of pandas.Series
-            dataFile: name and path to a csv file with data
+            obj: expression data in a form of pandas.DataFrame, pandas.Series, or name and path to a csv file with data
             condensedMatrixFormat: whether dataFile is in condensed format, Default None
 
         Returns:
@@ -1354,76 +1360,74 @@ class DigitalCellSorter:
             df_expr = DCS.preapre('data.csv', condensedMatrixFormat=True)
         '''
 
-        if not se_expr is None:
+        if type(obj) is pd.Series:
             print('Received data in a form of pandas.Series')
             print('Validating it and converting it to pandas.DataFrame')
 
-            if not 'cell' in se_expr.index.names:
-                print('Column "cell" not found. Aborting')
+            if not 'cell' in obj.index.names:
+                print('Column "cell" not found. Returning None')
                 return None
 
-            if not 'gene' in se_expr.index.names:
-                print('Column "gene" not found. Aborting')
+            if not 'gene' in obj.index.names:
+                print('Column "gene" not found. Returning None')
                 return None
 
-            if not 'batch' in se_expr.index.names:
+            if not 'batch' in obj.index.names:
                 print('Column "batch" not found. Assuming one batch in the data.')
-                batch = np.array(['batch0']*len(se_expr.index.get_level_values('cell')))
+                batch = np.array(['batch0']*len(obj.index.get_level_values('cell')))
             else:
-                batch = se_expr.index.get_level_values('batch')
+                batch = obj.index.get_level_values('batch')
 
-            se_expr.index = pd.MultiIndex.from_arrays([batch, se_expr.index.get_level_values('cell'), se_expr.index.get_level_values('gene')], names=['batch', 'cell', 'gene'])
+            obj.index = pd.MultiIndex.from_arrays([batch, obj.index.get_level_values('cell'), obj.index.get_level_values('gene')], names=['batch', 'cell', 'gene'])
 
-            df_expr = se_expr.unstack(level='gene').T
+            obj = obj.unstack(level='gene').T
 
-            return df_expr
+            return obj
 
-        if not df_expr is None:
+        elif type(obj) is pd.DataFrame:
             print('Received data in a form of pandas.DataFrame')
             print('Validating pandas.DataFrame')
 
             try:
-                df_expr.index.name='gene'
+                obj.index.name='gene'
             except:
-                print('DataFrame index format is not understood')
+                print('DataFrame index format is not understood. Returning None')
                 return None
 
-            if not 'cell' in df_expr.columns.names:
-                print('Columns level "cell" not found. Aborting')
+            if not 'cell' in obj.columns.names:
+                print('Columns level "cell" not found. Returning None')
                 return None
 
-            if not 'batch' in df_expr.columns.names:
+            if not 'batch' in obj.columns.names:
                 print('Columns level "batch" not found. Assuming one batch in the data.')
-                batch = np.array(['batch0']*len(df_expr.columns.get_level_values('cell')))
+                batch = np.array(['batch0']*len(obj.columns.get_level_values('cell')))
             else:
-                batch = df_expr.columns.get_level_values('batch')
+                batch = obj.columns.get_level_values('batch')
 
-            df_expr.columns = pd.MultiIndex.from_arrays([batch, df_expr.columns.get_level_values('cell')], names=['batch', 'cell'])
+            obj.columns = pd.MultiIndex.from_arrays([batch, obj.columns.get_level_values('cell')], names=['batch', 'cell'])
 
-            return df_expr
+            return obj
 
-        if dataFile==None:
-            print('Specify "dataFile" parameter. Aborting')
-        else:
+        elif type(obj) is str:
             if condensedMatrixFormat is None:
-                print('Specify whether matrix is in condensed form, e.g. "condensedMatrixFormat=True". Aboring')
+                print('Specify whether matrix is in condensed form, e.g. "condensedMatrixFormat=True". Returning None')
             else:
                 if condensedMatrixFormat:
                     print('Received data in a form of condensed matrix. Reading data')
-                    df_expr = pd.read_csv(dataFile, header=0, index_col=None)
+                    df_expr = pd.read_csv(obj, header=0, index_col=None)
 
                     print('Converting it to pandas.DataFrame')
 
                     if not 'cell' in df_expr.columns:
-                        print('The column with "cell" identifiers is not found. Aborting')
+                        print('The column with "cell" identifiers is not found. Returning None')
                         return None
 
                     if not 'gene' in df_expr.columns:
-                        print('The column with "gene" identifiers is not found. Aborting')
+                        print('The column with "gene" identifiers is not found. Returning None')
                         return None
 
                     if not 'expr' in df_expr.columns:
-                        print('The column with expression values is not found. Aborting')
+                        print('The column with expression values is not found. Returning None')
                         return None
 
                     if not 'batch' in df_expr.columns:
@@ -1435,12 +1439,12 @@ class DigitalCellSorter:
                     return df_expr
                 else:
                     print('Received data in a form of matrix. Reading data')
-                    df_expr = pd.read_csv(dataFile, header=None, index_col=0)
+                    df_expr = pd.read_csv(obj, header=None, index_col=0)
 
                     print('Converting it to pandas.DataFrame')
 
                     if not 'cell' in df_expr.index:
-                        print('The row with "cell" identifiers is not found. Aborting')
+                        print('The row with "cell" identifiers is not found. Returning None')
                         return None
 
                     if not 'batch' in df_expr.index:
@@ -1452,6 +1456,8 @@ class DigitalCellSorter:
                     df_expr.index.name = 'gene'
 
                     return df_expr
+        else:
+            print('Unknown input data format. Returning None')
 
         return None
 
@@ -1879,7 +1885,7 @@ class DigitalCellSorter:
 
         if not clusterIndex is None:
 
-            se = df.set_index(['patient', 'cell'])['cluster']
+            se = df.set_index(['batch', 'cell'])['cluster']
 
             condition = se==clusterIndex
 
@@ -1895,7 +1901,7 @@ class DigitalCellSorter:
 
         if not clusterName is None:
 
-            se = df.set_index(['patient', 'cell'])['cluster']
+            se = df.set_index(['batch', 'cell'])['cluster']
 
             condition = se==eval(clusterName.split('#')[1])
 
@@ -1909,7 +1915,7 @@ class DigitalCellSorter:
 
             return selectedCells
 
-        se = df.set_index(['patient', 'cell'])['label']
+        se = df.set_index(['batch', 'cell'])['label']
 
         if celltype is None and clusterIndex is None:
 
@@ -2004,14 +2010,14 @@ class DigitalCellSorter:
         if self.toggleMakeTSNEplotBatches:
             print('Making tSNE plot by patients')
             df_tsne = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_tsne', mode='r')
-            self.makeTSNEplot(df_tsne.values, df_tsne.columns.get_level_values('patient').values, self.dataName, self.saveDir, 'by_patients')
+            self.makeTSNEplot(df_tsne.values, df_tsne.columns.get_level_values('batch').values, self.dataName, self.saveDir, 'by_patients')
             timeMark()
 
         if self.toggleMakeTSNEplotAnnotatedClusters:
             print('Making tSNE plot by clusters "True" labels')
             df_markers_expr = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_markers_expr', mode='r')
             df_tsne = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_tsne', mode='r')
-            df_tsne = df_tsne[df_markers_expr.groupby(level=['patient', 'cell'], sort=False, axis=1).count().columns]
+            df_tsne = df_tsne[df_markers_expr.groupby(level=['batch', 'cell'], sort=False, axis=1).count().columns]
             with open(os.path.join(self.saveDir, 'ColormapForCellTypes.txt'), 'r') as temp_file:
                 colormap = {item.strip().split('\t')[0]:eval(item.strip().split('\t')[1]) for item in temp_file.readlines()}
             self.makeTSNEplot(df_tsne.values, df_markers_expr.columns.get_level_values('label'), self.dataName, self.saveDir, 'by_clusters_annotated',
@@ -2036,7 +2042,7 @@ class DigitalCellSorter:
         if self.toggleMakeMarkerSubplots:
             df_tsne = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_tsne', mode='r')
             df_markers_expr = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_markers_expr', mode='r')
-            df_tsne = df_tsne[pd.MultiIndex.from_arrays([df_markers_expr.columns.get_level_values('patient'), df_markers_expr.columns.get_level_values('cell')])]
+            df_tsne = df_tsne[pd.MultiIndex.from_arrays([df_markers_expr.columns.get_level_values('batch'), df_markers_expr.columns.get_level_values('cell')])]
             hugo_cd_dict = dict(zip(df_markers_expr.index.values.tolist(), self.gnc.Convert(list(df_markers_expr.index), 'hugo', 'alias', returnUnknownString=False)))
             self.makeMarkerSubplots(df_markers_expr, df_tsne.values, hugo_cd_dict, self.dataName, self.saveDir)
             timeMark()
@@ -2075,7 +2081,7 @@ class DigitalCellSorter:
         ##############################################################################################
         if self.toggleDoQualityControl:
             if self.mitochondrialGenes is None:
-                self.mitochondrialGenes = pd.read_excel(os.path.join('geneLists', 'Human.MitoCarta2.0.xls'), sheet_name='A Human MitoCarta2.0', usecols=[3], header=0)['Symbol'].values.squeeze().tolist()
+                self.mitochondrialGenes = pd.read_csv(os.path.join(self.defualtGeneListsDir, 'Human.MitoCarta2.0.csv'), index_col=None, header=0)['Symbol'].values.squeeze().tolist()
             print('Calculating quality control measures (count depth, number of genes, fraction of mitochondrial genes) for each cell')
             df_QC = pd.concat([(df_expr).sum(axis=0), (df_expr > 0).sum(axis=0), (df_expr.loc[self.mitochondrialGenes] > 0).sum(axis=0) / (df_expr > 0).sum(axis=0)], axis=1, sort=False)
             df_QC.columns = ['count_depth', 'number_of_genes', 'fraction_of_mitochondrialGenes']
@@ -2094,7 +2100,7 @@ class DigitalCellSorter:
         if self.toggleDoBatchCorrection:
             print('ComBat transformation')
             cells = df_expr.columns.get_level_values('cell').values.copy()
-            patients = df_expr.columns.get_level_values('patient').values.copy()
+            patients = df_expr.columns.get_level_values('batch').values.copy()
 
             if len(np.unique(patients))==1:
                 print('Only one batch provided. Batch correction is unnecessary')
@@ -2146,18 +2152,20 @@ class DigitalCellSorter:
         ##############################################################################################
         print('Calculating clustering of PCA data')
         df_xpca = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_xpca', mode='r')
+        sendDfExpr = False
         if type(self.clusteringFunction) is dict:
             try:
-                sendDfExpr = True if clusteringFunction[clusterExpression] else False
+                if clusteringFunction[clusterExpression]:
+                    sendDfExpr = True
             except:
-                sendDfExpr = False
+                pass
         cellClusterIndexLabel = self.cluster(df_xpca.values, 
                                              df_expr=df_expr if sendDfExpr else None, 
                                              clusteringFunction=self.clusteringFunction)
         df_clusters = pd.DataFrame(data=cellClusterIndexLabel, index=df_expr.columns)
         df_clusters.columns = ['cluster']
         df_clusters.to_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_clusters', mode='a', complevel=4, complib='zlib')
-        df_expr = pd.concat([df_clusters, df_expr.T], sort=False, axis=1).reset_index().set_index(['patient', 'cell', 'cluster']).T
+        df_expr = pd.concat([df_clusters, df_expr.T], sort=False, axis=1).reset_index().set_index(['batch', 'cell', 'cluster']).T
         timeMark()
 
         ##############################################################################################
@@ -2191,7 +2199,7 @@ class DigitalCellSorter:
         print(votingResults)
         df_markers_expr = df_markers_expr.T.reset_index().T
         df_markers_expr.loc['label'] = np.array([votingResults[int(i)] for i in df_markers_expr.loc['cluster']])
-        df_markers_expr = df_markers_expr.T.set_index(['patient', 'cell', 'cluster', 'label']).T.apply(pd.to_numeric)
+        df_markers_expr = df_markers_expr.T.set_index(['batch', 'cell', 'cluster', 'label']).T.apply(pd.to_numeric)
         df_markers_expr.to_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_markers_expr', mode='a', complevel=4, complib='zlib')
         timeMark()
 
