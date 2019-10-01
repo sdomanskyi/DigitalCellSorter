@@ -4,3 +4,4 @@ include README.md
 include demo.py
 graft DigitalCellSorter
 graft geneLists
+graft docs
