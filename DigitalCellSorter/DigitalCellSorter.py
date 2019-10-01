@@ -27,7 +27,7 @@ import sklearn.metrics
 import sklearn.cluster
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
-from sklearn.cluster import AgglomerativeClustering
+from sklearn.cluster import AgglomerativeClustering, KMeans
 from sklearn.ensemble import IsolationForest
 
 from DigitalCellSorter import GeneNameConverter
@@ -94,7 +94,7 @@ class DigitalCellSorter:
     gnc = GeneNameConverter.GeneNameConverter(dictDir=os.path.join('DigitalCellSorter', 'pickledGeneConverterDict', 'ensembl_hugo_entrez_alias_dict.pythdat'))
 
     def __init__(self, dataName='', geneListFileName=None, mitochondrialGenes=None,
-                sigmaOverMeanSigma=0.3, nClusters=5, nComponentsPCA=200, nSamplesDistribution=10000, 
+                sigmaOverMeanSigma=0.3, nClusters=5, clusteringFunction=AgglomerativeClustering, nComponentsPCA=200, nSamplesDistribution=10000, 
                 saveDir=os.path.join(''), makeMarkerSubplots=False, availableCPUsCount=os.cpu_count(), zScoreCutoff=0.3,
                 subclusteringName=None, doQualityControl=True, doBatchCorrection=True, makePlots=True,
                 minimumNumberOfMarkersPerCelltype=10, minimumScoreForUnknown=0.3):
@@ -107,6 +107,8 @@ class DigitalCellSorter:
             mitochondrialGenes: , Default None
             sigmaOverMeanSigma: threshold to consider a gene constant, Default 0.3
             nClusters: number of clusters, Default 5
+            clusteringFunction: clustering function to use, Default AgglomerativeClustering
+                other options: KMeans, {k_neighbors:40}, etc.
             nComponentsPCA: number of pca components, Default 100
             nSamplesDistribution: , Default 10000
             saveDir: directory for output files, Default is current directory
@@ -143,6 +145,8 @@ class DigitalCellSorter:
 
         self.nSamplesDistribution = nSamplesDistribution
         self.availableCPUsCount = availableCPUsCount
+
+        self.clusteringFunction = clusteringFunction
 
         self.subclusteringName = dataName if subclusteringName is None else subclusteringName
 
@@ -1331,29 +1335,125 @@ class DigitalCellSorter:
         
 
     # Main functions of class #################################################################################################################################
-    def prepare(self, df_expr):
+    def prepare(self, se_expr=None, df_expr=None, dataFile=None, condensedMatrixFormat=None):
 
         '''Prepare pandas.DataFrame for input to function process()
         If input is pd.DataFrame validate the input whether it has correct structure.
 
         Args:
-            df_expr: xxx
-            df_expr: xxx
-            df_expr: xxx
+            df_expr: expression data in a form of pandas.DataFrame
+            se_expr: expression data in a form of pandas.Series
+            dataFile: name and path to a csv file with data
+            condensedMatrixFormat: whether dataFile is in condensed format, Default None
 
         Returns:
             Pandas DataFrame
         
         Usage:
             DCS = DigitalCellSorter.DigitalCellSorter()
-            df_expr = DCS.preapre(xxx)
+            df_expr = DCS.preapre('data.csv', condensedMatrixFormat=True)
         '''
 
+        if not se_expr is None:
+            print('Received data in a form of pandas.Series')
+            print('Validating it and converting it to pandas.DataFrame')
 
+            if not 'cell' in se_expr.index.names:
+                print('Column "cell" not found. Aborting')
+                return None
 
+            if not 'gene' in se_expr.index.names:
+                print('Column "gene" not found. Aborting')
+                return None
 
+            if not 'batch' in se_expr.index.names:
+                print('Column "batch" not found. Assuming one batch in the data.')
+                batch = np.array(['batch0']*len(se_expr.index.get_level_values('cell')))
+            else:
+                batch = se_expr.index.get_level_values('batch')
 
-        return df_expr
+            se_expr.index = pd.MultiIndex.from_arrays([batch, se_expr.index.get_level_values('cell'), se_expr.index.get_level_values('gene')], names=['batch', 'cell', 'gene'])
+
+            df_expr = se_expr.unstack(level='gene').T
+
+            return df_expr
+
+        if not df_expr is None:
+            print('Received data in a form of pandas.DataFrame')
+            print('Validating pandas.DataFrame')
+
+            try:
+                df_expr.index.name='gene'
+            except:
+                print('DataFrame index format is not understood')
+                return None
+
+            if not 'cell' in df_expr.columns.names:
+                print('Columns level "cell" not found. Aborting')
+                return None
+
+            if not 'batch' in df_expr.columns.names:
+                print('Columns level "batch" not found. Assuming one batch in the data.')
+                batch = np.array(['batch0']*len(df_expr.columns.get_level_values('cell')))
+            else:
+                batch = df_expr.columns.get_level_values('batch')
+
+            df_expr.columns = pd.MultiIndex.from_arrays([batch, df_expr.columns.get_level_values('cell')], names=['batch', 'cell'])
+
+            return df_expr
+
+        if dataFile==None:
+            print('Specify "dataFile" parameter. Aborting')
+        else:
+            if condensedMatrixFormat is None:
+                print('Specify whether matrix is in condensed form, e.g. "condensedMatrixFormat=True". Aboring')
+            else:
+                if condensedMatrixFormat:
+                    print('Received data in a form of condensed matrix. Reading data')
+                    df_expr = pd.read_csv(dataFile, header=0, index_col=None)
+
+                    print('Converting it to pandas.DataFrame')
+
+                    if not 'cell' in df_expr.columns:
+                        print('The column with "cell" identifiers is not found. Aborting')
+                        return None
+
+                    if not 'gene' in df_expr.columns:
+                        print('The column with "gene" identifiers is not found. Aborting')
+                        return None
+
+                    if not 'expr' in df_expr.columns:
+                        print('The column with expression values is not found. Aborting')
+                        return None
+
+                    if not 'batch' in df_expr.columns:
+                        print('The column with "batch" identifiers is not found. Assuming one batch in the data')
+                        df_expr['batch'] = np.array(['batch0']*len(df_expr))
+
+                    df_expr = df_expr.set_index(['batch', 'cell', 'gene'])['expr'].unstack(level='gene').T
+
+                    return df_expr
+                else:
+                    print('Received data in a form of matrix. Reading data')
+                    df_expr = pd.read_csv(dataFile, header=None, index_col=0)
+
+                    print('Converting it to pandas.DataFrame')
+
+                    if not 'cell' in df_expr.index:
+                        print('The row with "cell" identifiers is not found. Aborting')
+                        return None
+
+                    if not 'batch' in df_expr.index:
+                        print('The row with "batch" identifiers is not found. Assuming one batch in the data')
+                        df_expr.loc['batch'] = np.array(['batch0']*df_expr.shape[1])
+
+                    df_expr = df_expr.T.set_index(['batch', 'cell']).T
+
+                    df_expr.index.name = 'gene'
+
+                    return df_expr
+
+        return None
 
     def convertIndex(self, df_expr, nameFrom='alias', nameTo='hugo'):
 
@@ -1506,14 +1606,15 @@ class DigitalCellSorter:
 
         return X_pca, _PCA.components_
     
-    def cluster(self, X_pca, df_expr=None, clustering_f=AgglomerativeClustering):
+    def cluster(self, X_pca, df_expr=None, clusteringFunction=AgglomerativeClustering):
 
         '''Cluster PCA-reduced data into a desired number of clusters
 
         Args:
             X_pca: PCA-reduced expression data
-            df_expr: Gene expression data
-            clustering_f: clustering function, if not provided then AgglomerativeClustering is used, otherwise should have .fit method and same input and output
+            df_expr: Gene expression data 
+            clustering_f: clustering function, if not provided then AgglomerativeClustering is used, otherwise should have .fit method and same input and output.
+                For Network-based clustering pass a dictionary {k_neighbors:40, metric:'euclidean', clusterExpression=True}, the best number of clusters will be determined automatically
 
         Returns:
             Cell cluster index labels
@@ -1523,22 +1624,43 @@ class DigitalCellSorter:
             index = DCS.cluster(xPCA, 10)
         '''
 
-        #import pynndescent
-        #import networkx as nx
-        #import community
-        #
-        #data = df_expr.values.T # X_pca.T
-        #
-        #n_neighbors = 40
-        #print('Searching for %s nearest neighbors'%(n_neighbors))
-        #knn = pynndescent.NNDescent(data, metric='euclidean', n_neighbors=n_neighbors).query(data, k=n_neighbors)
-        #A = np.zeros((len(knn[0]),len(knn[0])))
-        #for i in range(len(knn[0])):
-        #    A[i, knn[0][i]] = knn[1][i]
-        #print('Clustering the graph')
-        #cellClusterIndex = pd.Series(community.best_partition(nx.from_numpy_array(A))).sort_index().values
+        if type(clusteringFunction) is dict:
 
-        cellClusterIndex = clustering_f(n_clusters=self.nClusters).fit(X_pca.T).labels_
+            import pynndescent
+            import networkx as nx
+            import community
+            
+            try:
+                k_neighbors = clusteringFunction[k_neighbors]
+            except:
+                k_neighbors = 40
+
+            try:
+                metric = clusteringFunction[metric]
+            except:
+                metric = 'euclidean'
+            
+            try:
+                clusterExpression = clusteringFunction[clusterExpression]
+            except:
+                clusterExpression = False
+
+            data = df_expr.values.T if clusterExpression else X_pca.T
+
+            print('Searching for %s nearest neighbors'%(k_neighbors))
+            knn = pynndescent.NNDescent(data, metric=metric, n_neighbors=k_neighbors).query(data, k=k_neighbors)
+
+            print('k(=%s) nearest neighbors found. Constructing a NetworkX graph'%(k_neighbors))
+            A = np.zeros((len(knn[0]),len(knn[0])))
+            for i in range(len(knn[0])):
+                A[i, knn[0][i]] = knn[1][i]
+
+            G = nx.from_numpy_array(A)
+
+            print('Clustering the graph')
+            cellClusterIndex = pd.Series(community.best_partition(G)).sort_index().values
+        else:
+            cellClusterIndex = clusteringFunction(n_clusters=self.nClusters).fit(X_pca.T).labels_
 
         return cellClusterIndex
     
@@ -2024,7 +2146,14 @@ class DigitalCellSorter:
         ##############################################################################################
         print('Calculating clustering of PCA data')
         df_xpca = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_xpca', mode='r')
-        cellClusterIndexLabel = self.cluster(df_xpca.values, df_expr=df_expr) #clustering_f = sklearn.cluster.KMeans
+        if type(self.clusteringFunction) is dict:
+            try:
+                sendDfExpr = True if clusteringFunction[clusterExpression] else False
+            except:
+                sendDfExpr = False
+        cellClusterIndexLabel = self.cluster(df_xpca.values, 
+                                             df_expr=df_expr if sendDfExpr else None, 
+                                             clusteringFunction=self.clusteringFunction)
         df_clusters = pd.DataFrame(data=cellClusterIndexLabel, index=df_expr.columns)
         df_clusters.columns = ['cluster']
         df_clusters.to_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_clusters', mode='a', complevel=4, complib='zlib')
