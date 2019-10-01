@@ -93,7 +93,7 @@ These and other parameters can be modified after initialization using, e.g.:
 
 ### Gene Expression Data Format
 
-<details open><summary>The input gene expression data is expected in one of the following formats:</summary><p>
+The input gene expression data is expected in one of the following formats:
 
 1. Condensed matrix in a form ```('cell', 'gene', 'expr')```. If there are batches in the data the matrix has to be of the form 
 ```('batch', 'cell', 'gene', 'expr')```. Columns order can be arbitrary.
