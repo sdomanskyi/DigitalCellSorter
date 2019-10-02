@@ -30,24 +30,27 @@ Alternatively, you can install this module directly from GitHub using:
 
 	pip install git+https://github.com/sdomanskyi/DigitalCellSorter
 
-Installing ```fftw``` from the ```conda-forge``` channel can be achieved by adding ```conda-forge``` to your channels with:
+Also one can create a local copy of this project for development purposes by running:
+
+	git clone https://github.com/sdomanskyi/DigitalCellSorter
+
+To install ```fftw``` from the ```conda-forge``` channel add ```conda-forge``` to your channels.
+Once the conda-forge channel has been enabled, ```fftw``` can be installed as follows:
+
 
 	conda config --add channels conda-forge
-
-Once the conda-forge channel has been enabled, ```fftw``` can be installed with:
-
 	conda install fftw
 
 ### Loading the package
 
 In your script import the package:
 
-	import DigitalCellSorter.DigitalCellSorter as DigitalCellSorter
+	import DigitalCellSorter
 
-Create and instance of a ```DigitalCellSorter```, here, for simplicity, we use Default parameter values:
+Import class ```DigitalCellSorter``` and create its instance. Here, for simplicity, we use Default parameter values:
 
-	DCS = DigitalCellSorter.DigitalCellSorter()
-
+	from DigitalCellSorter import DigitalCellSorter as DigitalCellSorterSubmodule
+	DCS = DigitalCellSorterSubmodule.DigitalCellSorter()
 
 <details><summary>During the initialization the following parameters can be specified (click me)</summary><p>
 
@@ -95,8 +98,8 @@ These and other parameters can be modified after initialization using, e.g.:
 
 The input gene expression data is expected in one of the following formats:
 
-1. Condensed matrix in a form ```('cell', 'gene', 'expr')```. If there are batches in the data the matrix has to be of the form 
-```('batch', 'cell', 'gene', 'expr')```. Columns order can be arbitrary.
+1. Spreadsheet of comma-separated values ```csv``` containing condensed matrix in a form ```('cell', 'gene', 'expr')```. 
+If there are batches in the data the matrix has to be of the form ```('batch', 'cell', 'gene', 'expr')```. Columns order can be arbitrary.
 
 <details open><summary>Examples:</summary><p>
 
@@ -187,12 +190,12 @@ Let us demonstrate this on the input of type 1:
 
 ### Other Data
 
-```geneLists/markersDCS.xlsx```: An excel book with marker data. Rows are markers and columns are cell types. 
+```markersDCS.xlsx```: An excel book with marker data. Rows are markers and columns are cell types. 
 '1' means that the gene is a marker for that cell type, and '0' otherwise.
 This gene marker file included in the package is used by Default. 
-If you use your own file it has to be prepared in the same format.
+If you use your own file it has to be prepared in the same format (including tabs names, etc.).
 
-```geneLists/Human.MitoCarta2.0.xls```: An excel book with human mitochondrial genes, created within work 
+```Human.MitoCarta2.0.csv```: An ```csv``` spreadsheet with human mitochondrial genes, created within work 
 [MitoCarta2.0: an updated inventory of mammalian mitochondrial proteins](https://doi.org/10.1093/nar/gkv1003 "MitoCarta2.0")
 Sarah E. Calvo, Karl R. Clauser, Vamsi K. Mootha, *Nucleic Acids Research*, Volume 44, Issue D1, 4 January 2016, Pages D1251–D1257.
 
@@ -350,13 +353,10 @@ from https://preview.data.humancellatlas.org/ (Raw Counts Matrix - Bone Marrow) 
 The file is ~485Mb and contains all 378000 cells from 8 bone marrow donors (BM1-BM8). 
 In our example, the data of BM1 is prepared by 
 function ```PrepareDataOnePatient()``` in module ```ReadPrepareDataHCApreviewDataset```.
-To load this function one can do:
+Load this function, and call it to create a ```BM1.h5``` file (HDF file of input type 3) in the ```data``` folder:
 
-	from DigitalCellSorter.ReadPrepareDataHCApreviewDataset import PrepareDataOnePatient as HCAtool
-
-Now call this function to create a ```BM1.h5``` file (HDF file of input type 3) in the ```data``` folder:
-
-	HCAtool(os.path.join('data', 'ica_bone_marrow_h5.h5'), 'BM1', os.path.join('data', '') 
+	from DigitalCellSorter import ReadPrepareDataHCApreviewDataset as HCAtools
+	HCAtools.PrepareDataOnePatient(os.path.join('data', 'ica_bone_marrow_h5.h5'), 'BM1', os.path.join('data', '') 
 
 In these instructions we have already created an instance of ```DigitalCellSorter```, 
 let's modify some of the ```DCS``` attributes:
@@ -377,7 +377,7 @@ Now we are ready to ```load``` the data, ```validate``` it and ```process```:
 Further analysis can be done on cell types of interest, e.g. here 'T cell' and 'B cell'.
 Let's create a new instance of DigitalCellSorter to run "sub-analysis" with it:
 
-    DCSsub = DigitalCellSorter.DigitalCellSorter(dataName=DCS.dataName, 
+    DCSsub = DigitalCellSorterSubmodule.DigitalCellSorter(dataName=DCS.dataName, 
                                                 nClusters=10, 
                                                 doQualityControl=False)
 

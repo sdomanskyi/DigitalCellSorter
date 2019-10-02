@@ -156,7 +156,7 @@ class DigitalCellSorter:
 
         self.clusteringFunction = clusteringFunction
 
-        self.subclusteringName = dataName if subclusteringName is None else subclusteringName
+        self.subclusteringName = subclusteringName
 
         self.toggleRecordAllExpression = True
 
@@ -1343,21 +1343,20 @@ class DigitalCellSorter:
         
 
     # Main functions of class #################################################################################################################################
-    def prepare(self, obj, condensedMatrixFormat=None):
+    def prepare(self, obj):
 
         '''Prepare pandas.DataFrame for input to function process()
         If input is pd.DataFrame validate the input whether it has correct structure.
 
         Args:
             obj: expression data in a form of pandas.DataFrame, pandas.Series, or name and path to a csv file with data
-            condensedMatrixFormat: whether dataFile is in condensed format, Default None
 
         Returns:
             Pandas DataFrame
         
         Usage:
             DCS = DigitalCellSorter.DigitalCellSorter()
-            df_expr = DCS.preapre('data.csv', condensedMatrixFormat=True)
+            df_expr = DCS.preapre('data.csv')
         '''
 
         if type(obj) is pd.Series:
@@ -1409,53 +1408,52 @@ class DigitalCellSorter:
             return obj
 
         elif type(obj) is str:
-            if condensedMatrixFormat is None:
-                print('Specify whether matrix is in condensed form, e.g. "condensedMatrixFormat=True". Returning None')
+            columns = pd.read_csv(obj, header=0, index_col=None, nrows=5).columns.values.tolist()
+
+            if ('cell' in columns) and ('gene' in columns) and ('expr' in columns):
+                print('Received data in a form of condensed matrix. Reading data')
+                df_expr = pd.read_csv(obj, header=0, index_col=None)
+
+                print('Converting it to pandas.DataFrame')
+
+                if not 'cell' in df_expr.columns:
+                    print('The column with "cell" identifiers is not found. Returning None')
+                    return None
+
+                if not 'gene' in df_expr.columns:
+                    print('The column with "gene" identifiers is not found. Returning None')
+                    return None
+
+                if not 'expr' in df_expr.columns:
+                    print('The column with expression values is not found. Returning None')
+                    return None
+
+                if not 'batch' in df_expr.columns:
+                    print('The column with "batch" identifiers is not found. Assuming one batch in the data')
+                    df_expr['batch'] = np.array(['batch0']*len(df_expr))
+
+                df_expr = df_expr.set_index(['batch', 'cell', 'gene'])['expr'].unstack(level='gene').T
+
+                return df_expr
             else:
-                if condensedMatrixFormat:
-                    print('Received data in a form of condensed matrix. Reading data')
-                    df_expr = pd.read_csv(obj, header=0, index_col=None)
+                print('Received data in a form of matrix. Reading data')
+                df_expr = pd.read_csv(obj, header=None, index_col=0)
 
-                    print('Converting it to pandas.DataFrame')
+                print('Converting it to pandas.DataFrame')
 
-                    if not 'cell' in df_expr.columns:
-                        print('The column with "cell" identifiers is not found. Returning None')
-                        return None
+                if not 'cell' in df_expr.index:
+                    print('The row with "cell" identifiers is not found. Returning None')
+                    return None
 
-                    if not 'gene' in df_expr.columns:
-                        print('The column with "gene" identifiers is not found. Returning None')
-                        return None
+                if not 'batch' in df_expr.index:
+                    print('The row with "batch" identifiers is not found. Assuming one batch in the data')
+                    df_expr.loc['batch'] = np.array(['batch0']*df_expr.shape[1])
 
-                    if not 'expr' in df_expr.columns:
-                        print('The column with expression values is not found. Returning None')
-                        return None
+                df_expr = df_expr.T.set_index(['batch', 'cell']).T
 
-                    if not 'batch' in df_expr.columns:
-                        print('The column with "batch" identifiers is not found. Assuming one batch in the data')
-                        df_expr['batch'] = np.array(['batch0']*len(df_expr))
+                df_expr.index.name = 'gene'
 
-                    df_expr = df_expr.set_index(['batch', 'cell', 'gene'])['expr'].unstack(level='gene').T
-
-                    return df_expr
-                else:
-                    print('Received data in a form of matrix. Reading data')
-                    df_expr = pd.read_csv(obj, header=None, index_col=0)
-
-                    print('Converting it to pandas.DataFrame')
-
-                    if not 'cell' in df_expr.index:
-                        print('The row with "cell" identifiers is not found. Returning None')
-                        return None
-
-                    if not 'batch' in df_expr.index:
-                        print('The row with "batch" identifiers is not found. Assuming one batch in the data')
-                        df_expr.loc['batch'] = np.array(['batch0']*df_expr.shape[1])
-
-                    df_expr = df_expr.T.set_index(['batch', 'cell']).T
-
-                    df_expr.index.name = 'gene'
-
-                    return df_expr
+                return df_expr
         else:
             print('Unknown input data format. Returning None')
 
@@ -1750,7 +1748,7 @@ class DigitalCellSorter:
 
         # Properly rename winning cell type
         T = df_L.index[np.argmax(df_L.values, axis=0)].values
-        T[(df_L.values < minimumScoreForUnknown).all(axis=0)] = 'Unknown'
+        T[(df_L.values < self.minimumScoreForUnknown).all(axis=0)] = 'Unknown'
         T = pd.Index(T) + ' #0'
         for i in range(len(T)):
             T = T.where(~T.duplicated(), T.str.replace(' #%s' % (i), ' #%s' % (i + 1)))
