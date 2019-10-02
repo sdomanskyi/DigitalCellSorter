@@ -27,10 +27,13 @@ import sklearn.metrics
 import sklearn.cluster
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
-from sklearn.cluster import AgglomerativeClustering
+from sklearn.cluster import AgglomerativeClustering, KMeans
+from sklearn.ensemble import IsolationForest
 
 from DigitalCellSorter import GeneNameConverter
 from DigitalCellSorter.Combat import combat
+
+from importlib import resources
 
 def timeMark():
 
@@ -90,22 +93,24 @@ class DigitalCellSorter:
         df_data = DCS.Clean(df_data)
     '''
 
-    gnc = GeneNameConverter.GeneNameConverter(dictDir=os.path.join('tools', 'pickledGeneConverterDict', 'ensembl_hugo_entrez_alias_dict.pythdat'))
+    gnc = GeneNameConverter.GeneNameConverter(dictDir=os.path.join('DigitalCellSorter', 'pickledGeneConverterDict', 'ensembl_hugo_entrez_alias_dict.pythdat'))
 
-    def __init__(self, dataName='', geneListFileName=None, mitochondrialGenes=None,
-                sigmaOverMeanSigma=0.3, nClusters=5, nComponentsPCA=200, nSamplesDistribution=10000, 
+    def __init__(self, dataName='dataName', geneListFileName=None, mitochondrialGenes=None,
+                sigmaOverMeanSigma=0.3, nClusters=5, clusteringFunction=AgglomerativeClustering, nComponentsPCA=200, nSamplesDistribution=10000, 
                 saveDir=os.path.join(''), makeMarkerSubplots=False, availableCPUsCount=os.cpu_count(), zScoreCutoff=0.3,
                 subclusteringName=None, doQualityControl=True, doBatchCorrection=True, makePlots=True,
-                minimumNumberOfMarkersPerCelltype=10):
+                minimumNumberOfMarkersPerCelltype=10, minimumScoreForUnknown=0.3):
 
         '''Initialization function. Automatically called when an instance on Digital Cell Sorter is created
 
         Args:
-            dataName: name used in output files, Default ''
+            dataName: name used in output files, Default 'dataName'
             geneListFileName: , Default None
             mitochondrialGenes: , Default None
             sigmaOverMeanSigma: threshold to consider a gene constant, Default 0.3
             nClusters: number of clusters, Default 5
+            clusteringFunction: clustering function to use, Default AgglomerativeClustering
+                other options: KMeans, {k_neighbors:40}, etc.
             nComponentsPCA: number of pca components, Default 100
             nSamplesDistribution: , Default 10000
             saveDir: directory for output files, Default is current directory
@@ -114,6 +119,7 @@ class DigitalCellSorter:
             votingScheme: voting shceme to use instead of the built-in, Default None
             availableCPUsCount: number of CPUs available, Default os.cpu_count()
             zScoreCutoff: zscore cutoff when calculating Z_mc, Default 0.3
+            minimumScoreForUnknown: zscore cutoff when assigning label "Unknown", Default 0.3
             clusterName: parameter used in subclustering, Default None
             doQualityControl: whether to remove low quality cells, Default True
             doBatchCorrection: whether to correct data for batches, Default False
@@ -125,10 +131,16 @@ class DigitalCellSorter:
             DCS = DigitalCellSorter.DigitalCellSorter(geneListFileName='MyGeneList.xlsx')
         '''
 
+        defaultGeneList = 'markersDCS' # 'CIBERSORT'
+
         self.saveDir = saveDir
         self.dataName = dataName
 
-        self.geneListFileName = geneListFileName
+        with resources.path('DigitalCellSorter.geneLists','__init__.py') as readIn:
+            self.defualtGeneListsDir = os.path.dirname(readIn)
+
+        self.geneListFileName = os.path.join(self.defualtGeneListsDir, defaultGeneList + '.xlsx') if geneListFileName is None else geneListFileName
+
         self.mitochondrialGenes = mitochondrialGenes
 
         self.sigmaOverMeanSigma = sigmaOverMeanSigma
@@ -137,12 +149,16 @@ class DigitalCellSorter:
         self.zScoreCutoff = zScoreCutoff
         self.minimumNumberOfMarkersPerCelltype = minimumNumberOfMarkersPerCelltype
 
+        self.minimumScoreForUnknown = minimumScoreForUnknown
+
         self.nSamplesDistribution = nSamplesDistribution
         self.availableCPUsCount = availableCPUsCount
 
-        self.subclusteringName = dataName if subclusteringName is None else subclusteringName
+        self.clusteringFunction = clusteringFunction
 
-        self.toggleRecordAllExpression = False
+        self.subclusteringName = subclusteringName
+
+        self.toggleRecordAllExpression = True
 
         self.toggleDoQualityControl  =  doQualityControl
         self.toggleDoBatchCorrection = doBatchCorrection
@@ -155,6 +171,7 @@ class DigitalCellSorter:
         self.toggleMakeTSNEplotAnnotatedClusters = makePlots
         self.toggleMakeTSNEplotBatches = makePlots
         self.toggleMakeStackedBarplot = makePlots
+        self.toggleAnomalyScoresTSNEplot = False
 
         self.toggleMakeMarkerSubplots = makeMarkerSubplots
 
@@ -320,16 +337,16 @@ class DigitalCellSorter:
 
         return df_V
 
-    def getIndexOfGoodQualityCells(self, saveDir, dataName, count_depth_quantile_cutoff=0.25, number_of_genes_quantile_cutoff=0.25, mitochondrial_genes_cutoff=2.0):
+    def getIndexOfGoodQualityCells(self, saveDir, dataName, count_depth_cutoff=0.5, number_of_genes_cutoff=0.5, mitochondrial_genes_cutoff_upper_bound=3.0):
 
         '''Get index of sells that satisfy the QC criteria
 
         Args:
             saveDir: directory for output files
             dataName: name used in output files
-            count_depth_quantile_cutoff: quantile to get count depth cutoff, Default 0.25
-            number_of_genes_quantile_cutoff: quantile to get number of genes cutoff, Default 0.25
-            mitochondrial_genes_cutoff: the cutoff is median + standard_deviation * mitochondrial_genes_cutoff, Default 2.0
+            count_depth_cutoff: fraction of median to take as count depth cutoff, Default 0.5
+            number_of_genes_cutoff: fraction of median to take as number of genes cutoff, Default 0.5
+            mitochondrial_genes_cutoff: the cutoff is median + standard_deviation * this_parameter, Default 3.0
 
         Returns:
             Index of cells
@@ -347,9 +364,9 @@ class DigitalCellSorter:
             os.makedirs(plotsDir)
 
         # Calculate cutoffs
-        cutoff_count_depth = self.getQualityControlCutoff(df_QC['count_depth'], count_depth_quantile_cutoff, plotPathAndName=os.path.join(plotsDir, '%s_count_depth' % (dataName)), MakeHistogramPlot=True)
-        cutoff_number_of_genes = self.getQualityControlCutoff(df_QC['number_of_genes'], number_of_genes_quantile_cutoff, plotPathAndName=os.path.join(plotsDir, '%s_number_of_genes' % (dataName)), MakeHistogramPlot=True)
-        cutoff_fraction_of_mitochondrialGenes = self.getQualityControlCutoff(df_QC['fraction_of_mitochondrialGenes'], mitochondrial_genes_cutoff, plotPathAndName=os.path.join(plotsDir, '%s_fraction_of_mitochondrialGenes' % (dataName)), mito=True, MakeHistogramPlot=True)
+        cutoff_count_depth = self.getQualityControlCutoff(df_QC['count_depth'], count_depth_cutoff, plotPathAndName=os.path.join(plotsDir, '%s_count_depth' % (dataName)), MakeHistogramPlot=True)
+        cutoff_number_of_genes = self.getQualityControlCutoff(df_QC['number_of_genes'], number_of_genes_cutoff, plotPathAndName=os.path.join(plotsDir, '%s_number_of_genes' % (dataName)), MakeHistogramPlot=True)
+        cutoff_fraction_of_mitochondrialGenes = self.getQualityControlCutoff(df_QC['fraction_of_mitochondrialGenes'], mitochondrial_genes_cutoff_upper_bound, plotPathAndName=os.path.join(plotsDir, '%s_fraction_of_mitochondrialGenes' % (dataName)), mito=True, MakeHistogramPlot=True)
 
         df_QC['isGoodQuality'] = np.zeros(len(df_QC)).astype(bool)
 
@@ -380,12 +397,163 @@ class DigitalCellSorter:
 
         subset = se[~np.isnan(se.values)].values
 
-        cutoff = np.round(np.median(subset),2) + cutoff * np.round(np.std(subset),2) if mito else int(np.quantile(subset, cutoff))
+        if mito:
+            median = np.round(np.median(subset),4)
+            std = np.round(np.std(subset),4)
+
+            hist_of_subset = scipy.stats.rv_histogram(np.histogram(subset, bins=100, range=(0, 0.3)))
+            hist_data = hist_of_subset._hpdf / 100
+            hist_bins = hist_of_subset._hbins
+
+            xs = np.linspace(hist_bins[0], hist_bins[-1], 1000)
+            spline_data = np.vstack((xs, UnivariateSpline(hist_bins, hist_data[:-1], k=5, s=0)(xs))).T
+            smoothed = scipy.signal.savgol_filter(spline_data.T[1], 101, 3)
+
+            x1 = spline_data.T[0][np.where(spline_data.T[0]>median)[0][0]]
+            y1 = smoothed[np.where(spline_data.T[0]>median)[0][0]]
+
+            x2 = spline_data.T[0][np.where(spline_data.T[0]>(median+1.5*std))[0][0]]
+            y2 = smoothed[np.where(spline_data.T[0]>(median+1.5*std))[0][0]]
+
+            cutoff = min(median + cutoff * std, x1 - y1 * (x2-x1)/(y2-y1))
+        else:
+            cutoff = int(cutoff * np.median(subset))
 
         if MakeHistogramPlot:
             self.makeQualityControlHistogramPlot(subset, cutoff, plotPathAndName=plotPathAndName, mito=mito)
             
         return cutoff
+
+    def scoreCellsByIsolationForest(self, trainingSet, testingSet, printResults=False):
+
+        '''Function to get anomaly score of cells based on some reference
+
+        Args:
+            trainingSet: pandas.DataFrame with cells to trail isolation forest on
+            testingSet: pandas.DataFrame with cells to score
+            printResults: whether to print results
+
+        Returns:
+            Anomaly score(s) of tested cell(s)
+        
+        Usage:
+            DCS = DigitalCellSorter.DigitalCellSorter()
+            cutoff = DCS.checkCellsByIsolationForest(df_expr.iloc[:, 5:], df_expr.iloc[:, :5])
+        '''
+
+        instanceIsolationForest = IsolationForest(behaviour='new',
+                                                  max_samples=np.min([trainingSet.shape[1]-1, 100]), 
+                                                  random_state=np.random.RandomState(None), 
+                                                  contamination='auto')
+
+        instanceIsolationForest.fit(trainingSet.values.T)
+
+        if type(testingSet) is pd.Series:
+            testingSet = testingSet.to_frame()
+
+        scores = instanceIsolationForest.score_samples(testingSet.values.T)
+
+        scores *= -1.
+
+        results = list(zip(testingSet.columns, scores))
+
+        if printResults:
+            for cell in results:
+                print('Cell:', cell[0], 'Score:', cell[1])
+
+        return scores
+
+    def getExprOfCells(self, cells):
+
+        '''Get expression of a set of cells.
+        Run this only after function process()
+
+        Args:
+            cells: index, a set of cells of interest
+
+        Returns:
+            Pandas DataFrame with expression of the cells of interest
+
+        Usage:
+            DCS = DigitalCellSorter.DigitalCellSorter()
+            DCS.process()
+            DCS.getDfExprOfSelectedCells(cells)
+        '''
+
+        df_expr = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_expr', mode='r')
+        df_expr.index.names = ['batch', 'cell', 'gene']
+        df_expr = df_expr.unstack(level='gene', fill_value=0).T
+        df_expr.index = df_expr.index.get_level_values('gene')
+
+        return df_expr[cells]
+
+    def getAnomalyScoresPlot(self, cells='All'):
+
+        '''Make anomaly scores plot
+
+        Args:
+            cells: cells of interest, Default 'All'
+
+        Returns:
+            None
+
+        Usage:
+            DCS = DigitalCellSorter.DigitalCellSorter()
+            DCS.process()
+            cells = DCS.getCells(celltype='T cell')
+            DCS.makeAnomalyScoresPlot(cells)
+        '''
+
+        df_tsne = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_tsne', mode='r')
+
+        if type(cells) is str:
+            if cells=='All':
+                cells = df_tsne.columns
+            else:
+                print('"cells" value "%s" is unknown'%(cells))
+                raise ValueError
+
+        df_sel = self.getExprOfCells(cells)
+        timeMark()
+
+        scores = self.scoreCellsByIsolationForest(df_sel, df_sel)
+        print('Loaded expression data')
+        timeMark()
+
+        scores = pd.DataFrame(index=cells, data=scores).reindex(df_tsne.columns).values.T[0]
+
+        self.makeTSNEplot(df_tsne.values, scores, self.dataName, self.saveDir, suffix='by_anomaly_score', legend=False, labels=False, colorbar=True)
+
+        return None
+    
+    def getIndividualGeneExpressionPlot(self, gene, hideClusterLabels=False, outlineClusters=True):
+
+        '''Produce individual gene expression plot on a tSNE layout
+
+        Args:
+            gene: gene of interest
+
+        Returns:
+            None
+        
+        Usage:
+            DCS = DigitalCellSorter.DigitalCellSorter()
+            DCS.getIndividualGeneExpressionPlot('CD4')
+        '''
+
+        df_markers_expr = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_expr', mode='r').xs(key=gene, axis=0, level=2).T
+        df_markers_expr.index = [gene]
+
+        df_tsne = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_tsne', mode='r')
+        df_markers_expr = df_markers_expr.reindex(df_tsne.columns, axis=1).fillna(0.)
+
+        labelled = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_markers_expr', mode='r').columns
+        df_markers_expr.columns = labelled.to_series().reset_index().set_index(['batch', 'cell'])['cluster'].loc[df_markers_expr.columns].reset_index().set_index(['batch', 'cell', 'cluster']).index
+
+        hugo_cd_dict = {gene: self.gnc.Convert([gene], 'hugo', 'alias', returnUnknownString=False)[0]}
+        self.makeMarkerSubplots(df_markers_expr, df_tsne.values, hugo_cd_dict, self.dataName, self.saveDir, NoFrameOnFigures=True, HideClusterLabels=hideClusterLabels, outlineClusters=outlineClusters)
+
+        return None
 
 
     # Vizualization functions of class ########################################################################################################################
@@ -503,7 +671,7 @@ class DigitalCellSorter:
 
         return
 
-    def makeMarkerSubplot(self, df, X_tsne, hugo_cd_dict, dataName, saveDir, NoFrameOnFigures=False, HideClusterLabels=False):
+    def makeMarkerSubplots(self, df, X_tsne, hugo_cd_dict, dataName, saveDir, NoFrameOnFigures=False, HideClusterLabels=False, outlineClusters=True):
 
         '''Produce subplots on each marker and its expression on all clusters
 
@@ -524,7 +692,7 @@ class DigitalCellSorter:
             DCS.MakeMarkerSubplot(df_markers_expr, tSNE, hugo_cd_dict, dataName, saveDir)
         '''
         
-        def MarkerSubplot(counter, marker, df, votingResults, X_tsne, cellClusterIndexLabel, hugo_cd_dict, dataName, saveDir, NoFrameOnFigures, HideClusterLabels, XLIM, YLIM, directory):
+        def MarkerSubplot(counter, marker, df, votingResults, X_tsne, cellClusterIndexLabel, hugo_cd_dict, dataName, saveDir, NoFrameOnFigures, HideClusterLabels, XLIM, YLIM, directory, circles):
 
             fig,ax = plt.subplots(figsize=(8,8))
 
@@ -566,21 +734,24 @@ class DigitalCellSorter:
                         fontsize=10,
                         ha='center',va='center',#alpha=0.75,
                         ).set_path_effects([path_effects.Stroke(linewidth=3, foreground='white'),path_effects.Normal()])
-                radius = np.sqrt(X_tsne2_cluster.shape[1]) * 300.0
-                ax.scatter(x_mean,y_mean,s=radius * 1,facecolors='none',edgecolors='k')
+
+                if circles:
+                    radius = np.sqrt(X_tsne2_cluster.shape[1]) * 300.0
+                    ax.scatter(x_mean,y_mean,s=radius * 1,facecolors='none',edgecolors='k')
             ax.set_xlim(XLIM)
             ax.set_ylim(YLIM)
             ax.legend(loc='upper right', frameon=False, fontsize=14) #loc='best',numpoints=1,fontsize=12
             ax.set_xticks([])
             ax.set_yticks([]) 
             if NoFrameOnFigures:
-                fig.patch.set_visible(False)
+                #fig.patch.set_visible(False)
                 ax.axis('off')
             fig.tight_layout()
             if saveDir is not None: 
                 #fig.savefig('%s/marker_subplots/%s_%s_%s.png' %
                 #(saveDir,dataName,marker,suffix.replace(',','_').replace('/','_')),dpi=150)
-                fig.savefig(os.path.join(saveDir, 'marker_subplots', '%s_%s_%s.pdf' % (dataName,marker,suffix.replace(',','_').replace('/','_'))))
+                #fig.savefig(os.path.join(saveDir, 'marker_subplots', '%s_%s_%s.pdf' % (dataName,marker,suffix.replace(',','_').replace('/','_'))))
+                fig.savefig(os.path.join(saveDir, 'marker_subplots', '%s_%s_%s.png' % (dataName,marker,suffix.replace(',','_').replace('/','_'))), dpi=300)
                 print(marker, end=", ", flush=True)
 
             plt.close(fig)
@@ -607,7 +778,7 @@ class DigitalCellSorter:
 
         for counter,marker in enumerate(df.index.values):
             MarkerSubplot(counter, marker, pd.DataFrame(data=np.reshape(np.array(df.loc[marker]), (1,len(df.loc[marker]))), columns=df.columns, index=[marker]), 
-                            votingResults, X_tsne, cellClusterIndexLabel, hugo_cd_dict, dataName, saveDir, NoFrameOnFigures, HideClusterLabels, XLIM, YLIM, directory)
+                            votingResults, X_tsne, cellClusterIndexLabel, hugo_cd_dict, dataName, saveDir, NoFrameOnFigures, HideClusterLabels, XLIM, YLIM, directory, outlineClusters)
 
         print('\nDone saving marker subplots!')
 
@@ -806,7 +977,7 @@ class DigitalCellSorter:
 
         return
 
-    def makeTSNEplot(self, X_tsne2, cellClusterIndexLabel, dataName, saveDir, suffix, colormap=None, legend=True, labels=True, fontsize=10):
+    def makeTSNEplot(self, Xtsne, cellClusterIndexLabel, dataName, saveDir, suffix, colormap=cm.jet, legend=True, labels=True, colorbar=False, fontsize=10, plotNaNs=True):
 
         '''Produce tSNE plot with a specified coloring scheme
 
@@ -816,10 +987,12 @@ class DigitalCellSorter:
             dataName: name used in output files
             saveDir: directory for output files
             suffix: text label to append to the figure name
-            colormap: cell coloring sequence, Default None
+            colormap: cell coloring sequence, can be a dictionary or cm.colormap, 
+                Default matplotlib.colors.LinearSegmentedColormap.jet
             legend: whether to print legend, Default True
             labels: whether to print labels, Default True
             fontsize: labels and legend font size, Default 10
+            plotNaNs: whether to plot NaN labels (in grey), Default True
 
         Returns:
             None
@@ -829,7 +1002,32 @@ class DigitalCellSorter:
             DCS.MakeTSNEplot(tSNE, cellClusterIndexLabel, dataName, saveDir, suffix)
         '''
 
-        fig,ax = plt.subplots(figsize=(8,8))
+        def add_colorbar(fig, labels, cmap=matplotlib.colors.LinearSegmentedColormap.from_list('GR', [(0, 1, 0), (1, 0, 0)], N=100), fontsize=10):
+    
+            mapp=cm.ScalarMappable(norm=matplotlib.colors.Normalize(vmin=np.min(labels), vmax=np.max(labels)), cmap=cmap)
+            mapp.set_array(labels)
+            sp = np.linspace(np.max(labels), np.min(labels), num=6, endpoint=True)
+
+            axisColor = fig.add_axes([0.9,0.5,0.01,0.4])
+            fig.colorbar(mapp, cax=axisColor, ticks=sp)
+
+            axisColor.tick_params(labelsize=fontsize)
+            axisColor.set_yticklabels(np.round(sp,2))
+    
+            return None
+
+        fig = plt.figure(figsize=(8,8))
+        ax = fig.add_axes([0.05,0.05,0.9,0.9])
+
+        maxs, mins = np.max(Xtsne,axis=1), np.min(Xtsne,axis=1)
+
+        missing = np.where(cellClusterIndexLabel!=cellClusterIndexLabel)[0]
+        if len(missing)>0:
+            ax.plot(Xtsne[0, missing], Xtsne[1, missing], 'o', color='grey', mew=0.5, alpha=0.2, markeredgecolor='k', label='NaN')
+
+        nonMissing = np.where(cellClusterIndexLabel==cellClusterIndexLabel)[0]
+        cellClusterIndexLabel = np.array(cellClusterIndexLabel)[nonMissing]
+        Xtsne = Xtsne[:, nonMissing]
 
         possible_cluster_labels = np.sort(np.unique(cellClusterIndexLabel))
 
@@ -837,18 +1035,19 @@ class DigitalCellSorter:
             print(possible_cluster_labels)
 
         for ilabel, label in enumerate(possible_cluster_labels):
-            X_tsne2_cluster = X_tsne2[:,cellClusterIndexLabel == label]
-            color = cm.jet(ilabel / len(possible_cluster_labels)) if (colormap is None) else colormap[label.split(' #')[0]]
-            ax.plot(X_tsne2_cluster[0,:], X_tsne2_cluster[1,:], 'o', color=color, mew=0.5, alpha=0.3, markeredgecolor='k', label=label)
+            color = colormap(ilabel / len(possible_cluster_labels)) if type(colormap) is matplotlib.colors.LinearSegmentedColormap else colormap[label.split(' #')[0]]
+
+            XtsneC = Xtsne[:,cellClusterIndexLabel == label]
+
+            ax.plot(XtsneC[0,:], XtsneC[1,:], 'o', color=color, mew=0.5, alpha=0.3, markeredgecolor='k', label=label)
 
             if labels:
-                ax.text(np.mean(X_tsne2_cluster[0,:]), np.mean(X_tsne2_cluster[1,:]), 
+                ax.text(np.mean(XtsneC[0,:]), np.mean(XtsneC[1,:]), 
                     label, fontsize=fontsize, ha='center',va='center').set_path_effects([path_effects.Stroke(linewidth=3, foreground='white'), path_effects.Normal()])
 
         ax.set_xticks([])
         ax.set_yticks([])
-
-        maxs, mins = np.max(X_tsne2,axis=1), np.min(X_tsne2,axis=1)
+        
         ax.set_xlim([mins[0] - (maxs[0] - mins[0]) * 0.05, maxs[0] + (maxs[0] - mins[0]) * 0.05])
         ax.set_ylim([mins[1] - (maxs[1] - mins[1]) * 0.05, maxs[1] + (maxs[1] - mins[1]) * 0.05])
 
@@ -858,7 +1057,8 @@ class DigitalCellSorter:
         #fig.patch.set_visible(False)
         ax.axis('off')
 
-        fig.tight_layout() 
+        if colorbar:
+            add_colorbar(fig, possible_cluster_labels, cmap=colormap, fontsize=fontsize)
 
         if saveDir is not None: 
             fig.savefig(os.path.join(saveDir, '%s_clusters_%s.png' % (dataName, suffix)), dpi=300)
@@ -942,11 +1142,11 @@ class DigitalCellSorter:
         fig.tight_layout()
         fig.savefig(saveName, dpi=300)
 
-        print('\n=================================\nDone saving subclustering plot: %s!\n=================================' % ('All cell clusters' if clusterName == None else clusterName))
+        print('\n=================================\nDone saving stacked bar plot: %s!\n=================================' % ('All cell clusters' if clusterName == None else clusterName))
 
         return
     
-    def makeQualityControlHistogramPlot(self, subset, cutoff, plotPathAndName=None, N_bins=100, mito=False, displayMeasures=True):
+    def makeQualityControlHistogramPlot(self, subset, cutoff, plotPathAndName=None, N_bins=100, mito=False, displayMeasures=True, precision=4):
 
         '''Function to calculate QC quality cutoff and visualize it on a histogram
 
@@ -970,7 +1170,7 @@ class DigitalCellSorter:
             plotPathAndName = 'QC_Plot'
 
         range_min = np.min(subset)
-        range_max = 0.2 if mito else 5000
+        range_max = max(1.1*cutoff, 0.2) if mito else 5000
 
         hist_of_subset = scipy.stats.rv_histogram(np.histogram(subset, bins=N_bins, range=(range_min, range_max)))
         hist_data = hist_of_subset._hpdf / N_bins
@@ -997,30 +1197,30 @@ class DigitalCellSorter:
         ax.plot([x,x], [0,y], 'k', lw=2)
         ax.plot(x, y, 'ko', ms=10, alpha=0.8)
         ax.plot(x, y, 'ro', ms=7)
-        ax.text(x, -0.01 * spline_data.T[1].max(), str(cutoff), va='top', ha='center', color='r')
+        ax.text(x, -0.04 * spline_data.T[1].max(), str(np.round(cutoff, precision)), va='top', ha='center', color='r')
 
         fig.tight_layout()
 
         if displayMeasures:
-            dist_std, dist_median, dist_mean = np.round(np.std(subset),2), np.round(np.median(subset),2), np.round(np.mean(subset),2)
+            dist_std, dist_median, dist_mean = np.round(np.std(subset),precision), np.round(np.median(subset),precision), np.round(np.mean(subset),precision)
             print(plotPathAndName, '\tstd:', dist_std,  '\tmedian:', dist_median,  '\tmean:', dist_mean)
 
             xspan = ax.get_xlim()[1] - ax.get_xlim()[0]
             yspan = ax.get_ylim()[1] - ax.get_ylim()[0]
         
             ax.axvline(x=dist_mean, color='k', lw=1.0, ls='--')
-            ax.text(dist_mean + 0.02 * xspan, 0.98 * yspan, r'$\mu=%s$' % (np.round(dist_mean,2)), fontsize=10, va='top', ha='left', color='k')
+            ax.text(dist_mean + 0.02 * xspan, 0.98 * yspan, r'$\mu=%s$' % (dist_mean), fontsize=10, va='top', ha='left', color='k')
         
             ax.axvline(x=dist_median, color='k', lw=1.0, ls='--')
-            ax.text(dist_median + 0.02 * xspan, 0.94 * yspan, r'$M=%s$' % (np.round(dist_median,2)), fontsize=10, va='top', ha='left', color='k')
+            ax.text(dist_median + 0.02 * xspan, 0.94 * yspan, r'$M=%s$' % (dist_median), fontsize=10, va='top', ha='left', color='k')
         
             ax.axvline(x=dist_median - dist_std, color='k', lw=1.0, ls='--')
-            ax.text(dist_median - dist_std + 0.02 * xspan, 0.90 * yspan, r'$M-\sigma=%s$' % (np.round(dist_median - dist_std,2)), fontsize=10, va='top', ha='left', color='k')
+            ax.text(dist_median - dist_std + 0.02 * xspan, 0.90 * yspan, r'$M-\sigma=%s$' % (np.round(dist_median - dist_std,precision)), fontsize=10, va='top', ha='left', color='k')
         
             ax.axvline(x=dist_median + dist_std, color='k', lw=1.0, ls='--')
-            ax.text(dist_median + dist_std + 0.02 * xspan, 0.90 * yspan, r'$M+\sigma=%s$' % (np.round(dist_median + dist_std,2)), fontsize=10, va='top', ha='left', color='k')
+            ax.text(dist_median + dist_std + 0.02 * xspan, 0.90 * yspan, r'$M+\sigma=%s$' % (np.round(dist_median + dist_std,precision)), fontsize=10, va='top', ha='left', color='k')
 
-            ax.annotate(r'$\sigma=%s$' % (np.round(dist_std,2)), (dist_median + dist_std, 0.86 * yspan), (dist_median, 0.86 * yspan), arrowprops={'width':0, 'headwidth':0, 'headlength':0})
+            ax.annotate(r'$\sigma=%s$' % (dist_std), (dist_median + dist_std, 0.86 * yspan), (dist_median, 0.86 * yspan), arrowprops={'width':0, 'headwidth':0, 'headlength':0})
             ax.annotate('', (dist_median + dist_std, 0.85 * yspan), (dist_median, 0.85 * yspan), arrowprops={'arrowstyle':'<|-|>'})
 
         fig.savefig(plotPathAndName + '_histogram.png', dpi=300)
@@ -1143,6 +1343,122 @@ class DigitalCellSorter:
         
 
     # Main functions of class #################################################################################################################################
+    def prepare(self, obj):
+
+        '''Prepare pandas.DataFrame for input to function process()
+        If input is pd.DataFrame validate the input whether it has correct structure.
+
+        Args:
+            obj: expression data in a form of pandas.DataFrame, pandas.Series, or name and path to a csv file with data
+
+        Returns:
+            Pandas DataFrame
+        
+        Usage:
+            DCS = DigitalCellSorter.DigitalCellSorter()
+            df_expr = DCS.preapre('data.csv')
+        '''
+
+        if type(obj) is pd.Series:
+            print('Received data in a form of pandas.Series')
+            print('Validating it and converting it to pandas.DataFrame')
+
+            if not 'cell' in obj.index.names:
+                print('Column "cell" not found. Returning None')
+                return None
+
+            if not 'gene' in obj.index.names:
+                print('Column "gene" not found. Returning None')
+                return None
+
+            if not 'batch' in obj.index.names:
+                print('Column "batch" not found. Assuming one batch in the data.')
+                batch = np.array(['batch0']*len(obj.index.get_level_values('cell')))
+            else:
+                batch = obj.index.get_level_values('batch')
+
+            obj.index = pd.MultiIndex.from_arrays([batch, obj.index.get_level_values('cell'), obj.index.get_level_values('gene')], names=['batch', 'cell', 'gene'])
+
+            obj = obj.unstack(level='gene').T
+
+            return obj
+
+        elif type(obj) is pd.DataFrame:
+            print('Received data in a form of pandas.DataFrame')
+            print('Validating pandas.DataFrame')
+
+            try:
+                obj.index.name='gene'
+            except:
+                print('DataFrame index format is not understood. Returning None')
+                return None
+
+            if not 'cell' in obj.columns.names:
+                print('Columns level "cell" not found. Returning None')
+                return None
+
+            if not 'batch' in obj.columns.names:
+                print('Columns level "batch" not found. Assuming one batch in the data.')
+                batch = np.array(['batch0']*len(obj.columns.get_level_values('cell')))
+            else:
+                batch = obj.columns.get_level_values('batch')
+
+            obj.columns = pd.MultiIndex.from_arrays([batch, obj.columns.get_level_values('cell')], names=['batch', 'cell'])
+
+            return obj
+
+        elif type(obj) is str:
+            columns = pd.read_csv(obj, header=0, index_col=None, nrows=5).columns.values.tolist()
+
+            if ('cell' in columns) and ('gene' in columns) and ('expr' in columns):
+                print('Received data in a form of condensed matrix. Reading data')
+                df_expr = pd.read_csv(obj, header=0, index_col=None)
+
+                print('Converting it to pandas.DataFrame')
+
+                if not 'cell' in df_expr.columns:
+                    print('The column with "cell" identifiers is not found. Returning None')
+                    return None
+
+                if not 'gene' in df_expr.columns:
+                    print('The column with "gene" identifiers is not found. Returning None')
+                    return None
+
+                if not 'expr' in df_expr.columns:
+                    print('The column with expression values is not found. Returning None')
+                    return None
+
+                if not 'batch' in df_expr.columns:
+                    print('The column with "batch" identifiers is not found. Assuming one batch in the data')
+                    df_expr['batch'] = np.array(['batch0']*len(df_expr))
+
+                df_expr = df_expr.set_index(['batch', 'cell', 'gene'])['expr'].unstack(level='gene').T
+
+                return df_expr
+            else:
+                print('Received data in a form of matrix. Reading data')
+                df_expr = pd.read_csv(obj, header=None, index_col=0)
+
+                print('Converting it to pandas.DataFrame')
+
+                if not 'cell' in df_expr.index:
+                    print('The row with "cell" identifiers is not found. Returning None')
+                    return None
+
+                if not 'batch' in df_expr.index:
+                    print('The row with "batch" identifiers is not found. Assuming one batch in the data')
+                    df_expr.loc['batch'] = np.array(['batch0']*df_expr.shape[1])
+
+                df_expr = df_expr.T.set_index(['batch', 'cell']).T
+
+                df_expr.index.name = 'gene'
+
+                return df_expr
+        else:
+            print('Unknown input data format. Returning None')
+
+        return None
+
     def convertIndex(self, df_expr, nameFrom='alias', nameTo='hugo'):
 
         '''Convert index to hugo names, if any names in the index are
@@ -1294,14 +1610,15 @@ class DigitalCellSorter:
 
         return X_pca, _PCA.components_
     
-    def cluster(self, X_pca, df_expr=None, clustering_f=AgglomerativeClustering):
+    def cluster(self, X_pca, df_expr=None, clusteringFunction=AgglomerativeClustering):
 
         '''Cluster PCA-reduced data into a desired number of clusters
 
         Args:
             X_pca: PCA-reduced expression data
-            df_expr: Gene expression data
-            clustering_f: clustering function, if not provided then AgglomerativeClustering is used, otherwise should have .fit method and same input and output
+            df_expr: Gene expression data 
+            clustering_f: clustering function, if not provided then AgglomerativeClustering is used, otherwise should have .fit method and same input and output.
+                For Network-based clustering pass a dictionary {k_neighbors:40, metric:'euclidean', clusterExpression=True}, the best number of clusters will be determined automatically
 
         Returns:
             Cell cluster index labels
@@ -1311,22 +1628,43 @@ class DigitalCellSorter:
             index = DCS.cluster(xPCA, 10)
         '''
 
-        #import pynndescent
-        #import community
-        #import networkx as nx
-        #
-        #data = df_expr.values.T # X_pca.T
-        #
-        #n_neighbors = 40
-        #print('Searching for %s nearest neighbors'%(n_neighbors))
-        #knn = pynndescent.NNDescent(data, metric='euclidean', n_neighbors=n_neighbors).query(data, k=n_neighbors)
-        #A = np.zeros((len(knn[0]),len(knn[0])))
-        #for i in range(len(knn[0])):
-        #    A[i, knn[0][i]] = knn[1][i]
-        #print('Clustering the graph')
-        #cellClusterIndex = pd.Series(community.best_partition(nx.from_numpy_array(A))).sort_index().values
+        if type(clusteringFunction) is dict:
 
-        cellClusterIndex = clustering_f(n_clusters=self.nClusters).fit(X_pca.T).labels_
+            import pynndescent
+            import networkx as nx
+            import community
+            
+            try:
+                k_neighbors = clusteringFunction[k_neighbors]
+            except:
+                k_neighbors = 40
+
+            try:
+                metric = clusteringFunction[metric]
+            except:
+                metric = 'euclidean'
+            
+            try:
+                clusterExpression = clusteringFunction[clusterExpression]
+            except:
+                clusterExpression = False
+
+            data = df_expr.values.T if clusterExpression else X_pca.T
+
+            print('Searching for %s nearest neighbors'%(k_neighbors))
+            knn = pynndescent.NNDescent(data, metric=metric, n_neighbors=k_neighbors).query(data, k=k_neighbors)
+
+            print('k(=%s) nearest neighbors found. Constructing a NetworkX graph'%(k_neighbors))
+            A = np.zeros((len(knn[0]),len(knn[0])))
+            for i in range(len(knn[0])):
+                A[i, knn[0][i]] = knn[1][i]
+
+            G = nx.from_numpy_array(A)
+
+            print('Clustering the graph')
+            cellClusterIndex = pd.Series(community.best_partition(G)).sort_index().values
+        else:
+            cellClusterIndex = clusteringFunction(n_clusters=self.nClusters).fit(X_pca.T).labels_
 
         return cellClusterIndex
     
@@ -1410,7 +1748,7 @@ class DigitalCellSorter:
 
         # Properly rename winning cell type
         T = df_L.index[np.argmax(df_L.values, axis=0)].values
-        T[(df_L.values < 0.).all(axis=0)] = 'Unknown'
+        T[(df_L.values < self.minimumScoreForUnknown).all(axis=0)] = 'Unknown'
         T = pd.Index(T) + ' #0'
         for i in range(len(T)):
             T = T.where(~T.duplicated(), T.str.replace(' #%s' % (i), ' #%s' % (i + 1)))
@@ -1525,7 +1863,7 @@ class DigitalCellSorter:
 
         return None
 
-    def getCells(self, celltype=None, cluster=None):
+    def getCells(self, celltype=None, clusterIndex=None, clusterName=None):
 
         '''Get cell annoations in a form of pandas.Series
 
@@ -1543,25 +1881,54 @@ class DigitalCellSorter:
 
         df = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_markers_expr', mode='r').columns.to_frame()
 
-        if not cluster is None:
+        if not clusterIndex is None:
 
-            se = df.set_index(['patient', 'cell'])['cluster']
-            selectedCells = se[se==cluster].index
+            se = df.set_index(['batch', 'cell'])['cluster']
 
-            print('Selected %s cells from cluster: %s'%(len(selectedCells), cluster))
+            condition = se==clusterIndex
+
+            if not condition.any():
+                print('No cells found')
+                return None
+
+            selectedCells = se[condition].index
+
+            print('Selected %s cells from cluster: %s'%(len(selectedCells), clusterIndex))
 
             return selectedCells
 
-        se = df.set_index(['patient', 'cell'])['label']
+        if not clusterName is None:
 
-        if celltype is None and cluster is None:
+            se = df.set_index(['batch', 'cell'])['cluster']
+
+            condition = se==eval(clusterName.split('#')[1])
+
+            if not condition.any():
+                print('No cells found')
+                return None
+
+            selectedCells = se[condition].index
+
+            print('Selected %s cells from cluster: %s'%(len(selectedCells), clusterName))
+
+            return selectedCells
+
+        se = df.set_index(['batch', 'cell'])['label']
+
+        if celltype is None and clusterIndex is None:
 
             print('Available cell types:', np.unique(se.str.split(' #', expand=True)[0].values))
             print('Note: To get a specific cell type call this function with a specified cell type')
 
             return se
 
-        selectedCells = se[se.str.find(celltype)!=-1].index
+        condition = se.str.find(celltype)!=-1
+
+        if not condition.any():
+            print('No cells found')
+            return None
+
+        selectedCells = se[condition].index
 
         print('Selected %s cells of type: %s'%(len(selectedCells), celltype))
 
@@ -1625,10 +1992,10 @@ class DigitalCellSorter:
             df_QC = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='QC', mode='r')
             df_tsne = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_tsne_pre_QC', mode='r')
             goodQUalityCells = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_tsne', mode='r').columns
-            self.makeTSNEplot(df_tsne.values, df_QC['number_of_genes'].values, self.dataName, self.saveDir, 'by_number_of_genes', legend=False, labels=False)
-            self.makeTSNEplot(df_tsne.values, df_QC['count_depth'].values, self.dataName, self.saveDir, 'by_count_depth', legend=False, labels=False)
-            self.makeTSNEplot(df_tsne.values, df_QC['fraction_of_mitochondrialGenes'].values, self.dataName, self.saveDir, 'by_fraction_of_mitochondrialGenes', legend=False, labels=False)
-            self.makeTSNEplot(df_tsne.values, np.array([cell in goodQUalityCells for cell in df_QC.index]), self.dataName, self.saveDir, 'by_is_quality_cell', legend=False, labels=False)
+            self.makeTSNEplot(df_tsne.values, df_QC['number_of_genes'].values, self.dataName, self.saveDir, 'by_number_of_genes', legend=False, labels=False, colorbar=True)
+            self.makeTSNEplot(df_tsne.values, df_QC['count_depth'].values, self.dataName, self.saveDir, 'by_count_depth', legend=False, labels=False, colorbar=True)
+            self.makeTSNEplot(df_tsne.values, df_QC['fraction_of_mitochondrialGenes'].values, self.dataName, self.saveDir, 'by_fraction_of_mitochondrialGenes', legend=False, labels=False, colorbar=True)
+            self.makeTSNEplot(df_tsne.values, np.array([cell in goodQUalityCells for cell in df_QC.index]), self.dataName, self.saveDir, 'by_is_quality_cell', legend=False, labels=True)
             timeMark()    
 
         if self.toggleMakeTSNEplotClusters:
@@ -1641,18 +2008,22 @@ class DigitalCellSorter:
         if self.toggleMakeTSNEplotBatches:
             print('Making tSNE plot by patients')
             df_tsne = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_tsne', mode='r')
-            self.makeTSNEplot(df_tsne.values, df_tsne.columns.get_level_values('patient').values, self.dataName, self.saveDir, 'by_patients')
+            self.makeTSNEplot(df_tsne.values, df_tsne.columns.get_level_values('batch').values, self.dataName, self.saveDir, 'by_patients')
             timeMark()
 
         if self.toggleMakeTSNEplotAnnotatedClusters:
             print('Making tSNE plot by clusters "True" labels')
             df_markers_expr = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_markers_expr', mode='r')
             df_tsne = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_tsne', mode='r')
-            df_tsne = df_tsne[df_markers_expr.groupby(level=['patient', 'cell'], sort=False, axis=1).count().columns]
+            df_tsne = df_tsne[df_markers_expr.groupby(level=['batch', 'cell'], sort=False, axis=1).count().columns]
             with open(os.path.join(self.saveDir, 'ColormapForCellTypes.txt'), 'r') as temp_file:
                 colormap = {item.strip().split('\t')[0]:eval(item.strip().split('\t')[1]) for item in temp_file.readlines()}
             self.makeTSNEplot(df_tsne.values, df_markers_expr.columns.get_level_values('label'), self.dataName, self.saveDir, 'by_clusters_annotated',
                              colormap=colormap, legend=False)
+            timeMark()
+
+        if self.toggleAnomalyScoresTSNEplot:
+            self.getAnomalyScoresPlot()
             timeMark()
            
         ##############################################################################################
@@ -1669,14 +2040,14 @@ class DigitalCellSorter:
         if self.toggleMakeMarkerSubplots:
             df_tsne = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_tsne', mode='r')
             df_markers_expr = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_markers_expr', mode='r')
-            df_tsne = df_tsne[pd.MultiIndex.from_arrays([df_markers_expr.columns.get_level_values('patient'), df_markers_expr.columns.get_level_values('cell')])]
+            df_tsne = df_tsne[pd.MultiIndex.from_arrays([df_markers_expr.columns.get_level_values('batch'), df_markers_expr.columns.get_level_values('cell')])]
             hugo_cd_dict = dict(zip(df_markers_expr.index.values.tolist(), self.gnc.Convert(list(df_markers_expr.index), 'hugo', 'alias', returnUnknownString=False)))
-            self.makeMarkerSubplot(df_markers_expr, df_tsne.values, hugo_cd_dict, self.dataName, self.saveDir)
+            self.makeMarkerSubplots(df_markers_expr, df_tsne.values, hugo_cd_dict, self.dataName, self.saveDir)
             timeMark()
 
         return None
 
-    def process(self, df_expr):
+    def process(self, df_expr, visualize=True):
 
         '''Main function
 
@@ -1708,7 +2079,7 @@ class DigitalCellSorter:
         ##############################################################################################
         if self.toggleDoQualityControl:
             if self.mitochondrialGenes is None:
-                self.mitochondrialGenes = pd.read_excel(os.path.join('geneLists', 'Human.MitoCarta2.0.xls'), sheet_name='A Human MitoCarta2.0', usecols=[3], header=0)['Symbol'].values.squeeze().tolist()
+                self.mitochondrialGenes = pd.read_csv(os.path.join(self.defualtGeneListsDir, 'Human.MitoCarta2.0.csv'), index_col=None, header=0)['Symbol'].values.squeeze().tolist()
             print('Calculating quality control measures (count depth, number of genes, fraction of mitochondrial genes) for each cell')
             df_QC = pd.concat([(df_expr).sum(axis=0), (df_expr > 0).sum(axis=0), (df_expr.loc[self.mitochondrialGenes] > 0).sum(axis=0) / (df_expr > 0).sum(axis=0)], axis=1, sort=False)
             df_QC.columns = ['count_depth', 'number_of_genes', 'fraction_of_mitochondrialGenes']
@@ -1727,7 +2098,7 @@ class DigitalCellSorter:
         if self.toggleDoBatchCorrection:
             print('ComBat transformation')
             cells = df_expr.columns.get_level_values('cell').values.copy()
-            patients = df_expr.columns.get_level_values('patient').values.copy()
+            patients = df_expr.columns.get_level_values('batch').values.copy()
 
             if len(np.unique(patients))==1:
                 print('Only one batch provided. Batch correction is unnecessary')
@@ -1747,7 +2118,7 @@ class DigitalCellSorter:
         ##############################################################################################
         if self.toggleRecordAllExpression:
             print('Recording compressed DataFrame')
-            df_expr.replace(0, np.nan).T.stack().to_frame().to_hdf(os.path.join(saveDir, dataName + '_processed.h5'), key='df_expr', mode='a', complevel=4, complib='zlib')
+            df_expr.replace(0, np.nan).T.stack().to_frame().to_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_expr', mode='a', complevel=4, complib='zlib')
             timeMark()
 
         ##############################################################################################
@@ -1779,11 +2150,20 @@ class DigitalCellSorter:
         ##############################################################################################
         print('Calculating clustering of PCA data')
         df_xpca = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_xpca', mode='r')
-        cellClusterIndexLabel = self.cluster(df_xpca.values, df_expr=df_expr) #clustering_f = sklearn.cluster.KMeans
+        sendDfExpr = False
+        if type(self.clusteringFunction) is dict:
+            try:
+                if clusteringFunction[clusterExpression]:
+                    sendDfExpr = True
+            except:
+                pass
+        cellClusterIndexLabel = self.cluster(df_xpca.values, 
+                                             df_expr=df_expr if sendDfExpr else None, 
+                                             clusteringFunction=self.clusteringFunction)
         df_clusters = pd.DataFrame(data=cellClusterIndexLabel, index=df_expr.columns)
         df_clusters.columns = ['cluster']
         df_clusters.to_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_clusters', mode='a', complevel=4, complib='zlib')
-        df_expr = pd.concat([df_clusters, df_expr.T], sort=False, axis=1).reset_index().set_index(['patient', 'cell', 'cluster']).T
+        df_expr = pd.concat([df_clusters, df_expr.T], sort=False, axis=1).reset_index().set_index(['batch', 'cell', 'cluster']).T
         timeMark()
 
         ##############################################################################################
@@ -1817,7 +2197,7 @@ class DigitalCellSorter:
         print(votingResults)
         df_markers_expr = df_markers_expr.T.reset_index().T
         df_markers_expr.loc['label'] = np.array([votingResults[int(i)] for i in df_markers_expr.loc['cluster']])
-        df_markers_expr = df_markers_expr.T.set_index(['patient', 'cell', 'cluster', 'label']).T.apply(pd.to_numeric)
+        df_markers_expr = df_markers_expr.T.set_index(['batch', 'cell', 'cluster', 'label']).T.apply(pd.to_numeric)
         df_markers_expr.to_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_markers_expr', mode='a', complevel=4, complib='zlib')
         timeMark()
 
@@ -1840,6 +2220,7 @@ class DigitalCellSorter:
         ##############################################################################################
         # Make all plots to conclude analysis
         ##############################################################################################
-        self.visualize()
+        if visualize:
+            self.visualize()
 
         return None

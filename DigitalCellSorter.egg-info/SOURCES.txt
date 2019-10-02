@@ -1,5 +1,7 @@
 MANIFEST.in
 README.md
+README.rst
+demo.py
 setup.cfg
 setup.py
 DigitalCellSorter/Combat.py
@@ -28,4 +30,53 @@ DigitalCellSorter/__pycache__/generalForGeneLists.cpython-36.pyc
 DigitalCellSorter/fast_tsne_bin/FItSNE.exe
 DigitalCellSorter/fast_tsne_bin/libfftw3-3.dll
 DigitalCellSorter/fast_tsne_bin/__pycache__/fast_tsne.cpython-37.pyc
+DigitalCellSorter/geneLists/CIBERSORT.xlsx
+DigitalCellSorter/geneLists/Human.MitoCarta2.0.csv
+DigitalCellSorter/geneLists/__init__.py
+DigitalCellSorter/geneLists/markersDCS.xlsx
+DigitalCellSorter/geneLists/__pycache__/__init__.cpython-37.pyc
 DigitalCellSorter/pickledGeneConverterDict/ensembl_hugo_entrez_alias_dict.pythdat
+docs/examples/BM123_no_corr_clusters__by_patients.png
+docs/examples/BM123_with_corr_clusters__by_patients.png
+docs/examples/Sankey_example.html
+docs/examples/Sankey_example.png
+docs/examples/Sankey_example_files/MathJax.js.download
+docs/examples/output/BM1/BM1_clusters_by_anomaly_score All.png
+docs/examples/output/BM1/BM1_clusters_by_anomaly_score B cell.png
+docs/examples/output/BM1/BM1_clusters_by_anomaly_score Cluster2.png
+docs/examples/output/BM1/BM1_clusters_by_anomaly_score T cell.png
+docs/examples/output/BM1/BM1_clusters_by_clusters.png
+docs/examples/output/BM1/BM1_clusters_by_clusters_annotated.png
+docs/examples/output/BM1/BM1_clusters_by_count_depth.png
+docs/examples/output/BM1/BM1_clusters_by_fraction_of_mitochondrialGenes.png
+docs/examples/output/BM1/BM1_clusters_by_is_quality_cell.png
+docs/examples/output/BM1/BM1_clusters_by_number_of_genes.png
+docs/examples/output/BM1/BM1_clusters_by_patients.png
+docs/examples/output/BM1/BM1_matrix_voting.png
+docs/examples/output/BM1/BM1_new_markers.png
+docs/examples/output/BM1/BM1_null_distributions.png
+docs/examples/output/BM1/BM1_subclustering_stacked_barplot_.png
+docs/examples/output/BM1/BM1_voting.png
+docs/examples/output/BM1/BM1_voting.xlsx
+docs/examples/output/BM1/CIBERSORT.xlsx
+docs/examples/output/BM1/ColormapForCellTypes.txt
+docs/examples/output/BM1/new_markers.xlsx
+docs/examples/output/BM1/QC_plots/BM1_count_depth_histogram.png
+docs/examples/output/BM1/QC_plots/BM1_fraction_of_mitochondrialGenes_histogram.png
+docs/examples/output/BM1/QC_plots/BM1_number_of_genes_histogram.png
+docs/examples/output/BM1/marker_subplots/BM1_CD19_(B4_CVID3_CD19).png
+docs/examples/output/BM1/marker_subplots/BM1_CD4_(CD4_CD4mut).png
+docs/examples/output/BM1/subclustering T cell/BM1_clusters_by_clusters.png
+docs/examples/output/BM1/subclustering T cell/BM1_clusters_by_clusters_annotated.png
+docs/examples/output/BM1/subclustering T cell/BM1_clusters_by_patients.png
+docs/examples/output/BM1/subclustering T cell/BM1_matrix_voting.png
+docs/examples/output/BM1/subclustering T cell/BM1_new_markers.png
+docs/examples/output/BM1/subclustering T cell/BM1_null_distributions.png
+docs/examples/output/BM1/subclustering T cell/BM1_voting.png
+docs/examples/output/BM1/subclustering T cell/BM1_voting.xlsx
+docs/examples/output/BM1/subclustering T cell/CIBERSORT_T_SUB.xlsx
+docs/examples/output/BM1/subclustering T cell/ColormapForCellTypes.txt
+docs/examples/output/BM1/subclustering T cell/new_markers.xlsx
+geneLists/CIBERSORT.xlsx
+geneLists/CIBERSORT_B_SUB.xlsx
+geneLists/CIBERSORT_T_SUB.xlsx
