@@ -206,14 +206,15 @@ The main class for cell sorting functions and producing output images is Digital
 
 <details open><summary>The class includes tools for:</summary><p>
 
-  1. Pre-preprocessing single cell mRNA sequencing data (gene expression data)
+  1. **Pre-preprocessing** of single cell mRNA sequencing data (gene expression data)
      1. Cleaning: filling in missing values, zemoving all-zero genes and cells, converting gene index to a desired convention, etc.
      2. Normalizing: rescaling all cells expression, log-transforming, etc.
 
-  2. Quality control
-  3. Batch effects correction
-  4. Dimensionality reduction
-  5. Clustering (Hierarchical, K-Means, knn-graph-based, etc.)
+  2. **Quality control**
+  3. **Batch effects correction**
+  4. **Cells anomaly score evaluation**
+  4. **Dimensionality reduction**
+  5. **Clustering** (Hierarchical, K-Means, knn-graph-based, etc.)
   6. **Annotating cell types**
   7. **Vizualization**
        1. t-SNE layout plot
@@ -222,11 +223,12 @@ The main class for cell sorting functions and producing output images is Digital
        4. Marker-centroids expression plot
        5. Voting results matrix plot
        6. Cell types stacked barplot
-       7. Histogram null distribution plot
-       8. New markers plot
-       9. Sankey diagram (a.k.a. river plot)
+       7. Anomaly scores plot
+       8. Histogram null distribution plot
+       9. New markers plot
+       10. Sankey diagram (a.k.a. river plot)
   
-  8. Post-processing functions, e.g. extract cells of interest, find significantly expressed genes, 
+  8. **Post-processing** functions, e.g. extract cells of interest, find significantly expressed genes, 
 plot marker expression of the cells of interest, etc.
 
 </p></details>
@@ -341,7 +343,7 @@ Calculate and plot anomaly scores for an arbitrary cell type or cluster:
 
 ### Usage
 
-
+In these instructions we have already created an instance of ```DigitalCellSorter``` class (see section **Loading the package**) .
 The function ```process()``` takes takes as an input parameter a pandas DataFrame validated by function ```process()```:
 
 	DCS.process(df_expr) 
@@ -358,8 +360,7 @@ Load this function, and call it to create a ```BM1.h5``` file (HDF file of input
 	from DigitalCellSorter import ReadPrepareDataHCApreviewDataset as HCAtools
 	HCAtools.PrepareDataOnePatient(os.path.join('data', 'ica_bone_marrow_h5.h5'), 'BM1', os.path.join('data', '') 
 
-In these instructions we have already created an instance of ```DigitalCellSorter```, 
-let's modify some of the ```DCS``` attributes:
+Let's modify some of the ```DCS``` attributes:
 
 	DCS.dataName = 'BM1'
 	DCS.saveDir = os.path.join('output', dataName, '')
