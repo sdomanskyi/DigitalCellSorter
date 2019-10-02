@@ -12,15 +12,15 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 setup(
     name='DigitalCellSorter',
     packages=find_packages(),
-    version='1.2.0',
-    description='Toolkit for dentification of hematological cell types from heterogeneous single cell RNA-seq data',
+    version='1.2.1',
+    description='Toolkit for analysis and identification of hematological cell types from heterogeneous single cell RNA-seq data',
     long_description=long_description,
     include_package_data=True,
     author='S. Domanskyi , A. Szedlak, N. T Hawkins, J. Wang, G. Paternostro, C. Piermarocchi',
     author_email='s.domanskyi@gmail.com',
     license='MIT',
     url='https://github.com/sdomanskyi/DigitalCellSorter',
-    download_url='https://github.com/sdomanskyi/DigitalCellSorter/archive/1.2.4.tar.gz',
+    download_url='https://github.com/sdomanskyi/DigitalCellSorter/archive/1.2.1.tar.gz',
     keywords=['single cell RNA sequencing', 'cell type identification','biomarkers'],
     classifiers=[
         'License :: OSI Approved :: MIT License',

@@ -131,7 +131,7 @@ class DigitalCellSorter:
             DCS = DigitalCellSorter.DigitalCellSorter(geneListFileName='MyGeneList.xlsx')
         '''
 
-        defaultGeneList = 'markersDCS' # 'CIBERSORT'
+        defaultGeneList = 'CIBERSORT' # 'CIBERSORT' 'markersDCS'
 
         self.saveDir = saveDir
         self.dataName = dataName
