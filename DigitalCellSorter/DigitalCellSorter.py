@@ -30,10 +30,8 @@ from sklearn.manifold import TSNE
 from sklearn.cluster import AgglomerativeClustering, KMeans
 from sklearn.ensemble import IsolationForest
 
-from DigitalCellSorter import GeneNameConverter
-from DigitalCellSorter.Combat import combat
-
-from importlib import resources
+from . import GeneNameConverter, geneLists
+from .Combat import combat
 
 def timeMark():
 
@@ -135,9 +133,8 @@ class DigitalCellSorter:
 
         self.saveDir = saveDir
         self.dataName = dataName
-
-        with resources.path('DigitalCellSorter.geneLists','__init__.py') as readIn:
-            self.defualtGeneListsDir = os.path.dirname(readIn)
+        
+        self.defualtGeneListsDir = os.path.dirname(geneLists.__file__)
 
         self.geneListFileName = os.path.join(self.defualtGeneListsDir, defaultGeneList + '.xlsx') if geneListFileName is None else geneListFileName
 
@@ -1598,7 +1595,8 @@ class DigitalCellSorter:
             print('Performing tSNE projection from %s to %s features...' % (self.nComponentsPCA,2))
             if do_fast_tsne:
                 if platform.system() == "Windows":
-                    from DigitalCellSorter.FastTSNE import fast_tsne
+                    from .FastTSNE import fast_tsne
+                    print('Windows detected. Using FastTSNE submodule wrapper')
                     X_tsne2 = fast_tsne(X_pca.T, perplexity = 30, seed=42).T
                 else:
                     import fitsne

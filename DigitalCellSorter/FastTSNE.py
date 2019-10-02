@@ -9,7 +9,6 @@
 #
 # Written by Dmitry Kobak
 
-
 import os
 import subprocess
 import struct
@@ -120,7 +119,7 @@ def fast_tsne(X, theta=.5, perplexity=30, map_dims=2, max_iter=1000,
     loss: numpy array
         Loss values computed during optimisation. Only returned if return_loss is True.
     """
-
+    
     version_number = '1.1.0'
 
 
