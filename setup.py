@@ -6,19 +6,20 @@ from codecs import open
 from os import path
 here = path.abspath(path.dirname(__file__))
 # Get the long description from the README file
-with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
+with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description=f.read()
 
 setup(
     name='DigitalCellSorter',
     packages=find_packages(),
-    version='1.2.1',
+    version='1.2.2',
     description='Toolkit for analysis and identification of hematological cell types from heterogeneous single cell RNA-seq data',
+    long_description_content_type="text/markdown",
     long_description=long_description,
     include_package_data=True,
     author='S. Domanskyi , A. Szedlak, N. T Hawkins, J. Wang, G. Paternostro, C. Piermarocchi',
     author_email='s.domanskyi@gmail.com',
-    license='MIT',
+    license='MIT License',
     url='https://github.com/sdomanskyi/DigitalCellSorter',
     download_url='https://github.com/sdomanskyi/DigitalCellSorter/archive/1.2.1.tar.gz',
     keywords=['single cell RNA sequencing', 'cell type identification','biomarkers'],
