@@ -1,0 +1,6 @@
+batch,cell,gene,expr
+batch0,C1,G1,3
+batch0,C1,G2,2
+batch0,C1,G3,1
+batch1,C2,G1,1
+batch1,C2,G4,5

@@ -183,10 +183,7 @@ identification and the third level gene names.
 Any of the data types outlined above need to be prepared/validated with a function ```prepare()```. 
 Let us demonstrate this on the input of type 1:
 
-	df_expr = DCS.prepare(data='data/testData/data.tsv', 
-				genes='data/testData/genes.tsv', 
-				cells='data/testData/barcodes.tsv',
-				batches=None)
+	df_expr = DCS.prepare('data/testData/dataFileCondensedWithBatches.tsv')
 
 ### Other Data
 
@@ -343,11 +340,6 @@ Calculate and plot anomaly scores for an arbitrary cell type or cluster:
 
 ### Usage
 
-In these instructions we have already created an instance of ```DigitalCellSorter``` class (see section **Loading the package**) .
-The function ```process()``` takes takes as an input parameter a pandas DataFrame validated by function ```process()```:
-
-	DCS.process(df_expr) 
-
 We have made an example execution file ```demo.py``` that shows how to use ```DigitalCellSorter```.
 
 In the demo, folder ```data``` is intentionally left empty. The reader can download the file ```ica_bone_marrow_h5.h5``` 
@@ -360,6 +352,7 @@ Load this function, and call it to create a ```BM1.h5``` file (HDF file of input
 	from DigitalCellSorter import ReadPrepareDataHCApreviewDataset as HCAtools
 	HCAtools.PrepareDataOnePatient(os.path.join('data', 'ica_bone_marrow_h5.h5'), 'BM1', os.path.join('data', ''))
 
+In these instructions we have already created an instance of ```DigitalCellSorter``` class (see section **Loading the package**) .
 Let's modify some of the ```DCS``` attributes:
 
 	DCS.dataName = 'BM1'
@@ -367,13 +360,21 @@ Let's modify some of the ```DCS``` attributes:
 	DCS.geneListFileName = os.path.join('geneLists', 'CIBERSORT.xlsx')
 	DCS.nClusters = 20
 
-Now we are ready to ```load``` the data, ```validate``` it and ```process```:
+Now we are ready to ```load``` the data, ```prepare```(validate) it and ```process```. The function ```process()``` 
+takes takes as an input parameter a pandas DataFrame validated by function ```prepare()```:
 
 	df_expr = pd.read_hdf(os.path.join('data', 'BM1.h5'), key='BM1', mode='r')
-
-	df_expr = DCS.prepare(df_expr)
-	
+	df_expr = DCS.prepare(df_expr)	
 	DCS.process(df_expr)
+
+This will launch the processing workflow detailed in our paper and generate the plots. If you don't need any plots and
+looking forward to use post-processing tools, call function ```process()``` with an additional parameter:
+
+	DCS.process(df_expr, visualize=False)
+
+Then, if necessary, you can generate all the default plots by:
+
+	DCS.visualize()
 
 Further analysis can be done on cell types of interest, e.g. here 'T cell' and 'B cell'.
 Let's create a new instance of DigitalCellSorter to run "sub-analysis" with it:
@@ -409,9 +410,15 @@ We can reuse the ```DCSsub``` to analyze cell type 'B cell':
     DCSsub.process(df_expr[DCS.getCells(celltype='B cell')])
 
 
-For a complete script see:
+To execute the complete script ```demo.py``` run:
 
 	python demo.py
+
+*Note that the HCA BM1 data contains 48000 sequenced cells, requiring approximately 60Gb of RAM (we recommend to use High Performance Computers).
+If you want to run our example on a regular PC or a laptop, you can use a randomly chosen number of cells when using ```HCAtools```:
+
+	HCAtools.PrepareDataOnePatient(os.path.join('data', 'ica_bone_marrow_h5.h5'), 'BM1', os.path.join('data', ''),
+	                               useAllData=False, cellsLimitToUse=5000)
 
 ### Output
 
