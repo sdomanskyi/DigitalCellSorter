@@ -1,0 +1,34 @@
+DigitalCellSorter package
+=========================
+
+Subpackages
+-----------
+
+.. toctree::
+
+
+Module contents
+---------------
+
+.. automodule:: DigitalCellSorter
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+
+Submodules
+----------
+
+
+
+DigitalCellSorter.VisualizationFunctions module
+-----------------------------------------------
+
+.. automodule:: DigitalCellSorter.VisualizationFunctions
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+

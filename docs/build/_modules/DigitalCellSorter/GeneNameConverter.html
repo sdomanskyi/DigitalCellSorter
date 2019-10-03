@@ -1,0 +1,453 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>DigitalCellSorter.GeneNameConverter &mdash; DigitalCellSorter 1.2.2 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> DigitalCellSorter
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html"><strong>Digital Cell Sorter</strong></a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">DigitalCellSorter</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>DigitalCellSorter.GeneNameConverter</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for DigitalCellSorter.GeneNameConverter</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Spyder Editor</span>
+
+<span class="sd">This is a temporary script file.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+
+<span class="kn">import</span> <span class="nn">mygene</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+
+
+
+
+
+<div class="viewcode-block" id="GeneNameConverter"><a class="viewcode-back" href="../../DigitalCellSorter.html#DigitalCellSorter.DigitalCellSorter.GeneNameConverter">[docs]</a><span class="k">class</span> <span class="nc">GeneNameConverter</span><span class="p">:</span>
+    
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">dictDir</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">jumpStart</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                 <span class="p">):</span>
+        <span class="k">if</span> <span class="n">dictDir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">dictDir</span> <span class="o">=</span> <span class="s1">&#39;pickledGeneConverterDict/ensembl_hugo_entrez_alias_dict.pythdat&#39;</span>
+        <span class="k">else</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">dictDir</span> <span class="o">=</span> <span class="n">dictDir</span>
+        <span class="c1">#Try getting dictionary from disk, and if it can&#39;t be found, initialize an empty dict</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Load</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dictDir</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">IOError</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;hugo&#39;</span><span class="p">:{</span><span class="s1">&#39;entrez&#39;</span><span class="p">:{},</span><span class="s1">&#39;ensembl&#39;</span><span class="p">:{},</span><span class="s1">&#39;alias&#39;</span><span class="p">:{}},</span>
+                                   <span class="s1">&#39;entrez&#39;</span><span class="p">:{</span><span class="s1">&#39;hugo&#39;</span><span class="p">:{},</span><span class="s1">&#39;ensembl&#39;</span><span class="p">:{},</span><span class="s1">&#39;retired&#39;</span><span class="p">:{}},</span>
+                                   <span class="s1">&#39;ensembl&#39;</span><span class="p">:{</span><span class="s1">&#39;entrez&#39;</span><span class="p">:{},</span><span class="s1">&#39;hugo&#39;</span><span class="p">:{}},</span>
+                                   <span class="s1">&#39;alias&#39;</span><span class="p">:{</span><span class="s1">&#39;hugo&#39;</span><span class="p">:{},</span><span class="s1">&#39;entrez&#39;</span><span class="p">:{},</span><span class="s1">&#39;ensembl&#39;</span><span class="p">:{}},</span>
+                                   <span class="s1">&#39;retired&#39;</span><span class="p">:{</span><span class="s1">&#39;entrez&#39;</span><span class="p">:{}},</span>
+                                   <span class="p">}</span>
+            
+            <span class="k">for</span> <span class="n">sourceType</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;hugo&#39;</span><span class="p">,</span><span class="s1">&#39;alias&#39;</span><span class="p">,</span><span class="s1">&#39;entrez&#39;</span><span class="p">,</span><span class="s1">&#39;ensembl&#39;</span><span class="p">,</span><span class="s1">&#39;retired&#39;</span><span class="p">]:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">[</span><span class="n">sourceType</span><span class="p">][</span><span class="s1">&#39;known&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">[</span><span class="n">sourceType</span><span class="p">][</span><span class="s1">&#39;unknown&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">jumpStart</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">JumpStart</span><span class="p">()</span>
+                <span class="k">except</span> <span class="ne">IOError</span><span class="p">:</span> <span class="k">pass</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">Save</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">dictDir</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="GeneNameConverter.JumpStart"><a class="viewcode-back" href="../../DigitalCellSorter.html#DigitalCellSorter.DigitalCellSorter.GeneNameConverter.JumpStart">[docs]</a>    <span class="k">def</span> <span class="nf">JumpStart</span><span class="p">(</span><span class="bp">self</span><span class="p">,):</span>
+        <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+        <span class="c1">#Get a sandwich because this will take a while</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Convert</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;seedGenes/genes_ensembl.txt&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span><span class="s1">&#39;ensembl&#39;</span><span class="p">,</span><span class="s1">&#39;entrez&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Convert</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;seedGenes/genes_entrez.txt&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span><span class="s1">&#39;retired&#39;</span><span class="p">,</span><span class="s1">&#39;entrez&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Convert</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s1">&#39;seedGenes/genes_hugo.txt&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span><span class="s1">&#39;alias&#39;</span><span class="p">,</span><span class="s1">&#39;entrez&#39;</span><span class="p">)</span></div>
+        
+    
+<div class="viewcode-block" id="GeneNameConverter.Convert"><a class="viewcode-back" href="../../DigitalCellSorter.html#DigitalCellSorter.DigitalCellSorter.GeneNameConverter.Convert">[docs]</a>    <span class="k">def</span> <span class="nf">Convert</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                <span class="n">genes</span><span class="p">,</span>
+                <span class="n">sourceType</span><span class="p">,</span>
+                <span class="n">targetType</span><span class="p">,</span>
+                <span class="n">onlineSearch</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                <span class="n">aggressiveSearch</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                <span class="n">returnUnknownString</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                <span class="p">):</span>
+        
+        <span class="k">class</span> <span class="nc">MyTypeError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span> <span class="k">pass</span>
+        <span class="n">returnFlatFlag</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">genes</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="nb">list</span> <span class="ow">and</span> <span class="nb">type</span><span class="p">(</span><span class="n">genes</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="nb">tuple</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">genes</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">int</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">genes</span><span class="p">)</span> <span class="ow">is</span> <span class="n">long</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">genes</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">str</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">genes</span><span class="p">)</span> <span class="ow">is</span> <span class="n">unicode</span><span class="p">:</span>
+                <span class="n">genes</span> <span class="o">=</span> <span class="p">[</span><span class="n">genes</span><span class="p">]</span>
+                <span class="n">returnFlatFlag</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">MyTypeError</span><span class="p">(</span><span class="s1">&#39;The only currently supported input types for &quot;genes&quot; are list, tuple, int, long, string, and unicode&#39;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">onlineSearch</span><span class="p">:</span>
+            <span class="n">genesToFetch</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">genes</span><span class="p">)</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">[</span><span class="n">sourceType</span><span class="p">][</span><span class="n">targetType</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+            <span class="k">if</span> <span class="n">aggressiveSearch</span> <span class="o">==</span> <span class="kc">False</span><span class="p">:</span>
+                <span class="n">genesToFetch</span> <span class="o">=</span> <span class="n">genesToFetch</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">[</span><span class="n">sourceType</span><span class="p">][</span><span class="s1">&#39;unknown&#39;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">genesToFetch</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">Fetch</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">genesToFetch</span><span class="p">),</span><span class="n">sourceType</span><span class="p">)</span>
+        
+        <span class="n">geneSet</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">[</span><span class="n">sourceType</span><span class="p">][</span><span class="n">targetType</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        
+        <span class="k">if</span> <span class="n">returnUnknownString</span><span class="p">:</span>
+            <span class="n">genes_converted</span> <span class="o">=</span> <span class="p">[</span> <span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">[</span><span class="n">sourceType</span><span class="p">][</span><span class="n">targetType</span><span class="p">][</span><span class="n">gene</span><span class="p">]</span> 
+                                <span class="k">if</span> <span class="n">gene</span> <span class="ow">in</span> <span class="n">geneSet</span>
+                                <span class="k">else</span> <span class="p">(</span><span class="s1">&#39;UNKNOWN (</span><span class="si">%s</span><span class="s1">)&#39;</span> <span class="o">%</span> <span class="n">gene</span><span class="p">)</span> 
+                                <span class="k">for</span> <span class="n">gene</span> <span class="ow">in</span> <span class="n">genes</span> <span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">genes_converted</span> <span class="o">=</span> <span class="p">[</span> <span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">[</span><span class="n">sourceType</span><span class="p">][</span><span class="n">targetType</span><span class="p">][</span><span class="n">gene</span><span class="p">]</span> 
+                                <span class="k">if</span> <span class="n">gene</span> <span class="ow">in</span> <span class="n">geneSet</span>
+                                <span class="k">else</span> <span class="n">gene</span>
+                                <span class="k">for</span> <span class="n">gene</span> <span class="ow">in</span> <span class="n">genes</span> <span class="p">]</span>
+        
+        <span class="k">if</span> <span class="n">returnFlatFlag</span><span class="p">:</span> <span class="k">return</span> <span class="n">genes_converted</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span> <span class="k">return</span> <span class="n">genes_converted</span></div>
+    
+<div class="viewcode-block" id="GeneNameConverter.Fetch"><a class="viewcode-back" href="../../DigitalCellSorter.html#DigitalCellSorter.DigitalCellSorter.GeneNameConverter.Fetch">[docs]</a>    <span class="k">def</span> <span class="nf">Fetch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+              <span class="n">genes</span><span class="p">,</span>
+              <span class="n">sourceType</span><span class="p">,</span>
+              <span class="p">):</span>
+        
+        <span class="n">kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;species&#39;</span><span class="p">:</span><span class="s1">&#39;human&#39;</span><span class="p">,</span><span class="s1">&#39;fields&#39;</span><span class="p">:[</span><span class="s1">&#39;ensembl.gene&#39;</span><span class="p">,</span><span class="s1">&#39;entrezgene&#39;</span><span class="p">,</span><span class="s1">&#39;symbol&#39;</span><span class="p">,</span><span class="s1">&#39;alias&#39;</span><span class="p">,</span><span class="s1">&#39;retired&#39;</span><span class="p">]}</span>
+        <span class="k">if</span> <span class="n">sourceType</span><span class="o">==</span><span class="s1">&#39;entrez&#39;</span> <span class="ow">or</span> <span class="n">sourceType</span><span class="o">==</span><span class="s1">&#39;retired&#39;</span><span class="p">:</span>
+            <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;scopes&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;entrezgene&#39;</span><span class="p">,</span><span class="s1">&#39;retired&#39;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">gene</span> <span class="ow">in</span> <span class="n">genes</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">gene</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">int</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">gene</span><span class="p">)</span> <span class="ow">is</span> <span class="n">long</span>
+        <span class="k">elif</span> <span class="n">sourceType</span><span class="o">==</span><span class="s1">&#39;ensembl&#39;</span><span class="p">:</span>
+            <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;scopes&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;ensembl.gene&#39;</span>
+            <span class="k">for</span> <span class="n">gene</span> <span class="ow">in</span> <span class="n">genes</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">gene</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">str</span>
+                <span class="k">assert</span> <span class="n">gene</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span><span class="o">==</span><span class="s1">&#39;ENSG&#39;</span>
+        <span class="k">elif</span> <span class="n">sourceType</span><span class="o">==</span><span class="s1">&#39;hugo&#39;</span> <span class="ow">or</span> <span class="n">sourceType</span><span class="o">==</span><span class="s1">&#39;alias&#39;</span><span class="p">:</span> 
+            <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;scopes&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;symbol&#39;</span><span class="p">,</span><span class="s1">&#39;alias&#39;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">gene</span> <span class="ow">in</span> <span class="n">genes</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">gene</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">str</span>
+                <span class="k">assert</span> <span class="n">gene</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span><span class="o">!=</span><span class="s1">&#39;ENSG&#39;</span>
+        
+        <span class="n">genesSet</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">genes</span><span class="p">)</span>
+        <span class="n">queryList</span> <span class="o">=</span> <span class="n">mygene</span><span class="o">.</span><span class="n">MyGeneInfo</span><span class="p">()</span><span class="o">.</span><span class="n">querymany</span><span class="p">(</span><span class="n">genes</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="c1">#Loop through query results and fill in the dictionary</span>
+        <span class="k">for</span> <span class="n">q</span><span class="p">,</span><span class="n">gene</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">queryList</span><span class="p">,</span><span class="n">genes</span><span class="p">):</span>
+            <span class="c1">#First check if gene was found by mygene</span>
+            <span class="k">if</span> <span class="s1">&#39;notfound&#39;</span> <span class="ow">in</span> <span class="n">q</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">[</span><span class="n">sourceType</span><span class="p">][</span><span class="s1">&#39;unknown&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span> <span class="n">gene</span> <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1">#Extract the different naming conventions from the query </span>
+                <span class="c1">#(lots of ugly bookkeeping)</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">entrez</span> <span class="o">=</span> <span class="n">q</span><span class="p">[</span><span class="s1">&#39;entrezgene&#39;</span><span class="p">]</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">retireds</span> <span class="o">=</span> <span class="n">q</span><span class="p">[</span><span class="s1">&#39;retired&#39;</span><span class="p">]</span>
+                        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">retireds</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">int</span><span class="p">:</span>
+                            <span class="n">retireds</span> <span class="o">=</span> <span class="p">[</span><span class="n">retireds</span><span class="p">]</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">retireds</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">retireds</span><span class="p">)</span>
+                        <span class="n">retireds</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">entrez</span><span class="p">)</span>
+                    <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                        <span class="n">retireds</span> <span class="o">=</span> <span class="p">[</span><span class="n">entrez</span><span class="p">]</span>
+                <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                    <span class="n">entrez</span> <span class="o">=</span> <span class="kc">None</span>
+                    <span class="n">retireds</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">try</span><span class="p">:</span> <span class="n">hugo</span> <span class="o">=</span> <span class="n">q</span><span class="p">[</span><span class="s1">&#39;symbol&#39;</span><span class="p">]</span>
+                <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span> <span class="n">hugo</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">q</span><span class="p">[</span><span class="s1">&#39;query&#39;</span><span class="p">])[:</span><span class="mi">4</span><span class="p">]</span><span class="o">==</span><span class="s1">&#39;ENSG&#39;</span><span class="p">:</span>
+                    <span class="n">ensembl</span> <span class="o">=</span> <span class="n">q</span><span class="p">[</span><span class="s1">&#39;query&#39;</span><span class="p">]</span>
+                    <span class="n">ensembl_list</span> <span class="o">=</span> <span class="p">(</span><span class="n">ensembl</span><span class="p">,)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">ensembl</span> <span class="o">=</span> <span class="n">q</span><span class="p">[</span><span class="s1">&#39;ensembl&#39;</span><span class="p">]</span>
+                        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">ensembl</span><span class="p">)</span><span class="o">==</span><span class="nb">dict</span><span class="p">:</span>
+                            <span class="n">ensembl</span> <span class="o">=</span> <span class="n">ensembl</span><span class="p">[</span><span class="s1">&#39;gene&#39;</span><span class="p">]</span>
+                        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">ensembl</span><span class="p">)</span><span class="o">==</span><span class="nb">list</span><span class="p">:</span>
+                            <span class="n">ensembl_list</span> <span class="o">=</span> <span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">values</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">ensembl</span><span class="p">]</span>
+                            <span class="n">ensembl</span> <span class="o">=</span> <span class="n">ensembl_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">ensembl_list</span> <span class="o">=</span> <span class="p">()</span>
+                        
+                    <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                        <span class="n">ensembl</span> <span class="o">=</span> <span class="kc">None</span>
+                        <span class="n">ensembl_list</span> <span class="o">=</span> <span class="p">()</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">aliases</span> <span class="o">=</span> <span class="n">q</span><span class="p">[</span><span class="s1">&#39;alias&#39;</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">aliases</span><span class="p">)</span><span class="o">!=</span><span class="nb">list</span><span class="p">:</span> <span class="n">aliases</span> <span class="o">=</span> <span class="p">[</span><span class="n">aliases</span><span class="p">]</span>
+                    <span class="n">aliases</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">hugo</span><span class="p">)</span>
+                    <span class="n">aliases</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">aliases</span><span class="p">))</span>
+                <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span> <span class="n">aliases</span> <span class="o">=</span> <span class="p">()</span>
+                
+                <span class="c1">#Map between all pairs of the three conventions (when possible)</span>
+                <span class="k">for</span> <span class="n">source</span><span class="p">,</span><span class="n">sourceGene</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">([</span><span class="s1">&#39;entrez&#39;</span><span class="p">,</span><span class="s1">&#39;hugo&#39;</span><span class="p">,</span><span class="s1">&#39;ensembl&#39;</span><span class="p">],[</span><span class="n">entrez</span><span class="p">,</span><span class="n">hugo</span><span class="p">,</span><span class="n">ensembl</span><span class="p">]):</span>
+                    <span class="k">for</span> <span class="n">target</span><span class="p">,</span><span class="n">targetGene</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">([</span><span class="s1">&#39;entrez&#39;</span><span class="p">,</span><span class="s1">&#39;hugo&#39;</span><span class="p">,</span><span class="s1">&#39;ensembl&#39;</span><span class="p">],[</span><span class="n">entrez</span><span class="p">,</span><span class="n">hugo</span><span class="p">,</span><span class="n">ensembl</span><span class="p">]):</span>
+                        <span class="k">if</span> <span class="n">source</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">[</span><span class="n">source</span><span class="p">][</span><span class="s1">&#39;known&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">sourceGene</span><span class="p">)</span>
+                            <span class="k">if</span> <span class="n">sourceGene</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">[</span><span class="n">source</span><span class="p">][</span><span class="s1">&#39;unknown&#39;</span><span class="p">]:</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">[</span><span class="n">source</span><span class="p">][</span><span class="s1">&#39;unknown&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">sourceGene</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">source</span><span class="o">!=</span><span class="n">target</span> <span class="ow">and</span> <span class="n">sourceGene</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">targetGene</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">[</span><span class="n">source</span><span class="p">][</span><span class="n">target</span><span class="p">][</span><span class="n">sourceGene</span><span class="p">]</span> <span class="o">=</span> <span class="n">targetGene</span>
+                
+                <span class="c1">#Some searches identify many ensembl&#39;s for a given hugo/entrez query</span>
+                <span class="k">for</span> <span class="n">ensembl_list_item</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">ensembl_list</span><span class="p">)</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">genesSet</span><span class="p">):</span>
+                    <span class="k">for</span> <span class="n">target</span><span class="p">,</span><span class="n">targetGene</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">([</span><span class="s1">&#39;entrez&#39;</span><span class="p">,</span><span class="s1">&#39;hugo&#39;</span><span class="p">],[</span><span class="n">entrez</span><span class="p">,</span><span class="n">hugo</span><span class="p">]):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">[</span><span class="s1">&#39;ensembl&#39;</span><span class="p">][</span><span class="n">target</span><span class="p">][</span><span class="n">ensembl_list_item</span><span class="p">]</span> <span class="o">=</span> <span class="n">targetGene</span>
+                
+                <span class="c1">#Map all aliases individually to the other conventions</span>
+                <span class="k">for</span> <span class="n">alias</span> <span class="ow">in</span> <span class="n">aliases</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">[</span><span class="s1">&#39;alias&#39;</span><span class="p">][</span><span class="s1">&#39;known&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">alias</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">alias</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">[</span><span class="s1">&#39;alias&#39;</span><span class="p">][</span><span class="s1">&#39;unknown&#39;</span><span class="p">]:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">[</span><span class="s1">&#39;alias&#39;</span><span class="p">][</span><span class="s1">&#39;unknown&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">alias</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">target</span><span class="p">,</span><span class="n">targetGene</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">([</span><span class="s1">&#39;entrez&#39;</span><span class="p">,</span><span class="s1">&#39;hugo&#39;</span><span class="p">,</span><span class="s1">&#39;ensembl&#39;</span><span class="p">],[</span><span class="n">entrez</span><span class="p">,</span><span class="n">hugo</span><span class="p">,</span><span class="n">ensembl</span><span class="p">]):</span>
+                        <span class="k">if</span> <span class="n">targetGene</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">[</span><span class="s1">&#39;alias&#39;</span><span class="p">][</span><span class="n">target</span><span class="p">][</span><span class="n">alias</span><span class="p">]</span> <span class="o">=</span> <span class="n">targetGene</span>
+                
+                <span class="c1">#Map official hugo to a tuple of aliases</span>
+                <span class="k">if</span> <span class="n">hugo</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">aliases</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">[</span><span class="s1">&#39;hugo&#39;</span><span class="p">][</span><span class="s1">&#39;alias&#39;</span><span class="p">][</span><span class="n">hugo</span><span class="p">]</span> <span class="o">=</span> <span class="n">aliases</span>
+                
+                <span class="c1">#Map all retired entrez to official entrez and vice versa</span>
+                <span class="k">if</span> <span class="n">entrez</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">[</span><span class="s1">&#39;entrez&#39;</span><span class="p">][</span><span class="s1">&#39;retired&#39;</span><span class="p">][</span><span class="n">entrez</span><span class="p">]</span> <span class="o">=</span> <span class="n">retireds</span>
+                    <span class="k">for</span> <span class="n">retired</span> <span class="ow">in</span> <span class="n">retireds</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">[</span><span class="s1">&#39;retired&#39;</span><span class="p">][</span><span class="s1">&#39;entrez&#39;</span><span class="p">][</span><span class="n">retired</span><span class="p">]</span> <span class="o">=</span> <span class="n">entrez</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">[</span><span class="s1">&#39;retired&#39;</span><span class="p">][</span><span class="s1">&#39;known&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">retired</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">retired</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">[</span><span class="s1">&#39;retired&#39;</span><span class="p">][</span><span class="s1">&#39;unknown&#39;</span><span class="p">]:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">[</span><span class="s1">&#39;retired&#39;</span><span class="p">][</span><span class="s1">&#39;unknown&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">retired</span><span class="p">)</span>
+                
+        <span class="c1">#Fix alias dictionary to always assume that the input gene is the official</span>
+        <span class="c1">#hugo. This is important in the case of symbols like CRP, which is both an alias</span>
+        <span class="c1">#of CSRP1 with EzID=1465 and an official hugo name with EzID=1401. This final </span>
+        <span class="c1">#loop guarantees</span>
+        <span class="c1">#</span>
+        <span class="c1">#   conversionDict[&#39;alias&#39;][&#39;hugo&#39;][&#39;CRP&#39;] == &#39;CRP&#39;</span>
+        <span class="c1">#</span>
+        <span class="c1">#Without this final loop, the alias dictionary would ERRONEOUSLY map the </span>
+        <span class="c1">#official gene name CRP to CSRP1:</span>
+        <span class="c1">#</span>
+        <span class="c1">#   conversionDict[&#39;alias&#39;][&#39;hugo&#39;][&#39;CRP&#39;] == &#39;CSRP1&#39;</span>
+        <span class="c1">#</span>
+        <span class="c1">#Gene name conventions are complicated.</span>
+        <span class="k">for</span> <span class="n">hugo</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">[</span><span class="s1">&#39;hugo&#39;</span><span class="p">][</span><span class="s1">&#39;entrez&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="o">+</span>\
+                    <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">[</span><span class="s1">&#39;hugo&#39;</span><span class="p">][</span><span class="s1">&#39;ensembl&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="o">+</span>\
+                    <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">[</span><span class="s1">&#39;hugo&#39;</span><span class="p">][</span><span class="s1">&#39;alias&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+            <span class="k">try</span><span class="p">:</span> <span class="n">entrez</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">[</span><span class="s1">&#39;hugo&#39;</span><span class="p">][</span><span class="s1">&#39;entrez&#39;</span><span class="p">][</span><span class="n">hugo</span><span class="p">]</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span> <span class="n">entrez</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">try</span><span class="p">:</span> <span class="n">ensembl</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">[</span><span class="s1">&#39;hugo&#39;</span><span class="p">][</span><span class="s1">&#39;ensembl&#39;</span><span class="p">][</span><span class="n">hugo</span><span class="p">]</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span> <span class="n">ensembl</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">for</span> <span class="n">target</span><span class="p">,</span><span class="n">targetGene</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">([</span><span class="s1">&#39;entrez&#39;</span><span class="p">,</span><span class="s1">&#39;hugo&#39;</span><span class="p">,</span><span class="s1">&#39;ensembl&#39;</span><span class="p">],[</span><span class="n">entrez</span><span class="p">,</span><span class="n">hugo</span><span class="p">,</span><span class="n">ensembl</span><span class="p">]):</span>
+                <span class="k">if</span> <span class="n">targetGene</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">[</span><span class="s1">&#39;alias&#39;</span><span class="p">][</span><span class="n">target</span><span class="p">][</span><span class="n">hugo</span><span class="p">]</span> <span class="o">=</span> <span class="n">targetGene</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">Save</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conversionDict</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">dictDir</span><span class="p">)</span></div>
+    
+<div class="viewcode-block" id="GeneNameConverter.Save"><a class="viewcode-back" href="../../DigitalCellSorter.html#DigitalCellSorter.DigitalCellSorter.GeneNameConverter.Save">[docs]</a>    <span class="k">def</span> <span class="nf">Save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">x</span><span class="p">,</span><span class="n">pathToFile</span><span class="p">):</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">pathToFile</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span></div>
+    
+<div class="viewcode-block" id="GeneNameConverter.Load"><a class="viewcode-back" href="../../DigitalCellSorter.html#DigitalCellSorter.DigitalCellSorter.GeneNameConverter.Load">[docs]</a>    <span class="k">def</span> <span class="nf">Load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">pathToFile</span><span class="p">):</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">pathToFile</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span> <span class="k">return</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span></div></div>
+
+
+
+
+
+
+
+<span class="c1">#if __name__==&#39;__main__&#39;:</span>
+<span class="c1">#    </span>
+<span class="c1">#    </span>
+<span class="c1">#    gnc = GeneNameConverter()</span>
+<span class="c1">#    </span>
+<span class="c1">#    </span>
+<span class="c1">#    genes = [&#39;TP53&#39;,&#39;ABL1&#39;,&#39;CD34&#39;]</span>
+<span class="c1">#    genes_converted = gnc.Convert(genes,&#39;hugo&#39;,&#39;entrez&#39;)</span>
+<span class="c1">#    for i in zip(genes,genes_converted):</span>
+<span class="c1">#        print &#39;%s --&gt; %s&#39; % i</span>
+<span class="c1">#    </span>
+<span class="c1">#    </span>
+<span class="c1">#    genes = [729173]</span>
+<span class="c1">#    genes_converted = gnc.Convert(genes,&#39;retired&#39;,&#39;entrez&#39;)</span>
+<span class="c1">#    for i in zip(genes,genes_converted):</span>
+<span class="c1">#        print &#39;%s --&gt; %s&#39; % i</span>
+
+
+
+
+
+
+
+
+
+
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, S. Domanskyi , A. Szedlak, N. T. Hawkins, J. Wang, G. Paternostro, C. Piermarocchi
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

@@ -1,0 +1,839 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Core functions of the Digital Cell Sorter &mdash; DigitalCellSorter 1.2.2 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Visualization functions" href="VisualizationFunctions.html" />
+    <link rel="prev" title="DigitalCellSorter" href="modules.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> DigitalCellSorter
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html"><strong>DigitalCellSorter</strong></a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#"><strong>Core functions of the Digital Cell Sorter</strong></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#module-DigitalCellSorter.DigitalCellSorter"><strong>Submodule DigitalCellSorter</strong></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="VisualizationFunctions.html"><strong>Visualization functions</strong></a></li>
+<li class="toctree-l2"><a class="reference internal" href="GenericFunctions.html"><strong>Generic functions</strong></a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">DigitalCellSorter</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="modules.html"><strong>DigitalCellSorter</strong></a> &raquo;</li>
+        
+      <li><strong>Core functions of the Digital Cell Sorter</strong></li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/DigitalCellSorter.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="core-functions-of-the-digital-cell-sorter">
+<h1><strong>Core functions of the Digital Cell Sorter</strong><a class="headerlink" href="#core-functions-of-the-digital-cell-sorter" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-DigitalCellSorter.DigitalCellSorter">
+<span id="submodule-digitalcellsorter"></span><h2><strong>Submodule DigitalCellSorter</strong><a class="headerlink" href="#module-DigitalCellSorter.DigitalCellSorter" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="DigitalCellSorter.DigitalCellSorter.DigitalCellSorter">
+<em class="property">class </em><code class="descclassname">DigitalCellSorter.DigitalCellSorter.</code><code class="descname">DigitalCellSorter</code><span class="sig-paren">(</span><em>dataName='dataName'</em>, <em>geneListFileName=None</em>, <em>mitochondrialGenes=None</em>, <em>sigmaOverMeanSigma=0.3</em>, <em>nClusters=5</em>, <em>clusteringFunction=&lt;class 'sklearn.cluster.hierarchical.AgglomerativeClustering'&gt;</em>, <em>nComponentsPCA=200</em>, <em>nSamplesDistribution=10000</em>, <em>saveDir=''</em>, <em>makeMarkerSubplots=False</em>, <em>availableCPUsCount=4</em>, <em>zScoreCutoff=0.3</em>, <em>subclusteringName=None</em>, <em>doQualityControl=True</em>, <em>doBatchCorrection=True</em>, <em>makePlots=True</em>, <em>minimumNumberOfMarkersPerCelltype=10</em>, <em>minimumScoreForUnknown=0.3</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DigitalCellSorter/DigitalCellSorter.html#DigitalCellSorter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DigitalCellSorter.DigitalCellSorter.DigitalCellSorter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="VisualizationFunctions.html#DigitalCellSorter.VisualizationFunctions.VisualizationFunctions" title="DigitalCellSorter.VisualizationFunctions.VisualizationFunctions"><code class="xref py py-class docutils literal notranslate"><span class="pre">DigitalCellSorter.VisualizationFunctions.VisualizationFunctions</span></code></a></p>
+<p>Class of Digital Cell Sorter with methods for processing single cell mRNA-seq data.
+Includes analyses and visualization tools.</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd><dl class="first last docutils">
+<dt>dataName: str, Default ‘dataName’</dt>
+<dd>Name used in output files</dd>
+<dt>geneListFileName: str, Default None</dt>
+<dd>Name of the marker genes file</dd>
+<dt>mitochondrialGenes: list, Default None</dt>
+<dd>List of mitochondrial genes to use in quality control</dd>
+<dt>sigmaOverMeanSigma: float, Default 0.3</dt>
+<dd>Threshold to consider a gene constant</dd>
+<dt>nClusters: </dt>
+<dd>Number of clusters, Default 5</dd>
+<dt>clusteringFunction: function, Default AgglomerativeClustering</dt>
+<dd>Clustering function to use.
+Other options: KMeans, {k_neighbors:40}, etc.</dd>
+<dt>nComponentsPCA: int, Default 100</dt>
+<dd>Number of pca components</dd>
+<dt>nSamplesDistribution: int, Default 10000</dt>
+<dd>Number of random samples in distribution</dd>
+<dt>saveDir: str, Default os.path.join(‘’)</dt>
+<dd>Directory for output files</dd>
+<dt>makeMarkerSubplots: boolean, Default True</dt>
+<dd>Whether to make subplots on markers</dd>
+<dt>makePlots: boolean, Default True</dt>
+<dd>Whether to make all major plots</dd>
+<dt>votingScheme: function, Default None</dt>
+<dd>Voting shceme to use instead of the built-in</dd>
+<dt>availableCPUsCount: int, Default os.cpu_count()</dt>
+<dd>Number of CPUs available</dd>
+<dt>zScoreCutoff: float, Default 0.3</dt>
+<dd>Z-Score cutoff when calculating Z_mc</dd>
+<dt>minimumScoreForUnknown: float, Default 0.3</dt>
+<dd>Z-Score cutoff when assigning label “Unknown”</dd>
+<dt>clusterName: str, Default None</dt>
+<dd>Parameter used in subclustering</dd>
+<dt>doQualityControl: boolean, Default True</dt>
+<dd>Whether to remove low quality cells</dd>
+<dt>doBatchCorrection: boolean, Default False</dt>
+<dd>Whether to correct data for batches</dd>
+</dl>
+</dd>
+<dt>Usage:</dt>
+<dd>DCS = DigitalCellSorter.DigitalCellSorter()
+df_data = DCS.Clean(df_data)</dd>
+</dl>
+<dl class="attribute">
+<dt id="DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.gnc">
+<code class="descname">gnc</code><em class="property"> = &lt;DigitalCellSorter.GeneNameConverter.GeneNameConverter object&gt;</em><a class="headerlink" href="#DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.gnc" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.prepare">
+<code class="descname">prepare</code><span class="sig-paren">(</span><em>obj</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DigitalCellSorter/DigitalCellSorter.html#DigitalCellSorter.prepare"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.prepare" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prepare pandas.DataFrame for input to function process()
+If input is pd.DataFrame validate the input whether it has correct structure.</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd><dl class="first last docutils">
+<dt>obj: str, pandas.DataFrame, pandas.Series</dt>
+<dd>Expression data in a form of pandas.DataFrame, pandas.Series, or name and path to a csv file with data</dd>
+</dl>
+</dd>
+<dt>Returns:</dt>
+<dd><dl class="first last docutils">
+<dt>pandas.DataFrame</dt>
+<dd>Pandas DataFrame</dd>
+</dl>
+</dd>
+<dt>Usage:</dt>
+<dd>DCS = DigitalCellSorter.DigitalCellSorter()
+df_expr = DCS.preapre(‘data.csv’)</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.convertIndex">
+<code class="descname">convertIndex</code><span class="sig-paren">(</span><em>df_expr</em>, <em>nameFrom='alias'</em>, <em>nameTo='hugo'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DigitalCellSorter/DigitalCellSorter.html#DigitalCellSorter.convertIndex"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.convertIndex" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert index to hugo names, if any names in the index are
+duplicated, remove duplicates</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd><dl class="first last docutils">
+<dt>df_expr: pandas.DataFrame</dt>
+<dd>Data to process</dd>
+<dt>nameFrom: str, Default ‘alias’</dt>
+<dd>Gene name type to convert from</dd>
+<dt>nameTo: str, Default ‘hugo’</dt>
+<dd>Gene name type to convert to</dd>
+</dl>
+</dd>
+<dt>Returns:</dt>
+<dd><dl class="first last docutils">
+<dt>pandas.DataFrame</dt>
+<dd>Processed data</dd>
+</dl>
+</dd>
+<dt>Usage:</dt>
+<dd>DCS = DigitalCellSorter.DigitalCellSorter()
+df_expr = DCS.convertIndex(df_expr)</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.clean">
+<code class="descname">clean</code><span class="sig-paren">(</span><em>df_expr</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DigitalCellSorter/DigitalCellSorter.html#DigitalCellSorter.clean"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.clean" title="Permalink to this definition">¶</a></dt>
+<dd><p>Clean pandas.DataFrame: validate index,
+replace missing with zeros, remove all-zero rows and columns</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd><dl class="first last docutils">
+<dt>df_expr: pandas.DataFrame</dt>
+<dd>Data to clean</dd>
+</dl>
+</dd>
+<dt>Returns:</dt>
+<dd><dl class="first last docutils">
+<dt>pandas.DataFrame</dt>
+<dd>Processed data</dd>
+</dl>
+</dd>
+<dt>Usage:</dt>
+<dd>DCS = DigitalCellSorter.DigitalCellSorter()
+df_expr = DCS.clean(df_expr)</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.normalize">
+<code class="descname">normalize</code><span class="sig-paren">(</span><em>df_expr</em>, <em>median=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DigitalCellSorter/DigitalCellSorter.html#DigitalCellSorter.normalize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.normalize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Normalize pandas.DataFrame: rescale all cells, log-transform data,
+remove constant genes, sort index</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd><dl class="first last docutils">
+<dt>df_expr: pandas.DataFrame</dt>
+<dd>Data to normalize</dd>
+<dt>median: float, Default None</dt>
+<dd>Scale factor, if not provided will be computed as median across all cells in data</dd>
+</dl>
+</dd>
+<dt>Returns:</dt>
+<dd><dl class="first last docutils">
+<dt>pandas.DataFrame</dt>
+<dd>Processed data</dd>
+</dl>
+</dd>
+<dt>Usage:</dt>
+<dd>DCS = DigitalCellSorter.DigitalCellSorter()
+df_expr = DCS.normalize(df_expr, 0.3)</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.project">
+<code class="descname">project</code><span class="sig-paren">(</span><em>df_expr</em>, <em>PCAonly=False</em>, <em>do_fast_tsne=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DigitalCellSorter/DigitalCellSorter.html#DigitalCellSorter.project"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.project" title="Permalink to this definition">¶</a></dt>
+<dd><p>Project pandas.DataFrame to lower dimensions</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd><dl class="first last docutils">
+<dt>df_expr: pandas.DataFrame</dt>
+<dd>Data to process</dd>
+<dt>PCAonly: boolean, Default False</dt>
+<dd>Perform Principal component analysis only</dd>
+<dt>do_fast_tsne: boolean, Default True</dt>
+<dd>Do FI-tSNE instead of “exact” tSNE</dd>
+</dl>
+</dd>
+<dt>Returns:</dt>
+<dd><dl class="first last docutils">
+<dt>pandas.DataFrame</dt>
+<dd>Processed data</dd>
+</dl>
+</dd>
+<dt>Usage:</dt>
+<dd>DCS = DigitalCellSorter.DigitalCellSorter()
+xPCA, PCs, tSNE = DCS.project(df_expr, 100)</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.cluster">
+<code class="descname">cluster</code><span class="sig-paren">(</span><em>X_pca</em>, <em>df_expr=None</em>, <em>clusteringFunction=&lt;class 'sklearn.cluster.hierarchical.AgglomerativeClustering'&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DigitalCellSorter/DigitalCellSorter.html#DigitalCellSorter.cluster"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.cluster" title="Permalink to this definition">¶</a></dt>
+<dd><p>Cluster PCA-reduced data into a desired number of clusters</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd><dl class="first last docutils">
+<dt>X_pca: 2d numpy.array</dt>
+<dd>PCA-reduced expression data</dd>
+<dt>df_expr: 2d numpy.array, Default None</dt>
+<dd>Gene expression data</dd>
+<dt>clusteringFunction: function, Default AgglomerativeClustering</dt>
+<dd>Note: the function should have .fit method and same input and output.
+For Network-based clustering pass a dictionary 
+{‘k_neighbors’:40, metric:’euclidean’, ‘clusterExpression’:True},
+thsi way the best number of clusters will be determined automatically</dd>
+</dl>
+</dd>
+<dt>Returns:</dt>
+<dd><dl class="first last docutils">
+<dt>1d numpy.array</dt>
+<dd>Cell cluster index labels</dd>
+</dl>
+</dd>
+<dt>Usage:</dt>
+<dd>DCS = DigitalCellSorter.DigitalCellSorter()
+index = DCS.cluster(xPCA, 10)</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.vote">
+<code class="descname">vote</code><span class="sig-paren">(</span><em>df_markers_expr</em>, <em>df_marker_cell_type</em>, <em>votingScheme</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DigitalCellSorter/DigitalCellSorter.html#DigitalCellSorter.vote"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.vote" title="Permalink to this definition">¶</a></dt>
+<dd><p>Produce cluster voting results</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd><dl class="first last docutils">
+<dt>df_markers_expr: pandas.DataFrame</dt>
+<dd>Data with marker genes by cells expression</dd>
+<dt>df_marker_cell_type: pandas.DataFrame</dt>
+<dd>Data with marker genes by cell types</dd>
+<dt>votingScheme: function</dt>
+<dd>Voting function</dd>
+</dl>
+</dd>
+<dt>Returns:</dt>
+<dd><dl class="first last docutils">
+<dt>dictionary</dt>
+<dd>Voting results, a dictionary in form of:
+{cluster label: assigned cell type}</dd>
+</dl>
+</dd>
+<dt>Usage:</dt>
+<dd>DCS = DigitalCellSorter.DigitalCellSorter()
+voting = DCS.vote(df_markers_expr, df_marker_cell_type)</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.dcsVotingScheme">
+<code class="descname">dcsVotingScheme</code><span class="sig-paren">(</span><em>df_markers_expr</em>, <em>df_marker_cell_type</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DigitalCellSorter/DigitalCellSorter.html#DigitalCellSorter.dcsVotingScheme"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.dcsVotingScheme" title="Permalink to this definition">¶</a></dt>
+<dd><p>Produce cluster voting results</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd><dl class="first last docutils">
+<dt>df_markers_expr: pandas.DataFrame </dt>
+<dd>Data with marker genes by cells expression</dd>
+<dt>df_marker_cell_type: pandas.DataFrame </dt>
+<dd>Data with marker genes by cell types</dd>
+</dl>
+</dd>
+<dt>Returns:</dt>
+<dd><dl class="first last docutils">
+<dt>dictionary</dt>
+<dd>Voting results, a dictionary in form of:
+{cluster label: assigned cell type}</dd>
+</dl>
+</dd>
+<dt>Usage:</dt>
+<dd>Function should be called internally only</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.extractNewMarkerGenes">
+<code class="descname">extractNewMarkerGenes</code><span class="sig-paren">(</span><em>cluster=None</em>, <em>top=100</em>, <em>zScoreCutoff=0.3</em>, <em>removeUnknown=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DigitalCellSorter/DigitalCellSorter.html#DigitalCellSorter.extractNewMarkerGenes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.extractNewMarkerGenes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract new marker genes based on the cluster annotations</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd><dl class="first last docutils">
+<dt>cluster: int, Default None</dt>
+<dd>Cluster #, if provided genes of only this culster will be returned</dd>
+<dt>top: int, Default 100</dt>
+<dd>Upper bound for number of new markers per cell type</dd>
+<dt>zScoreCutoff: float, Default 0.3</dt>
+<dd>Lower bound for a marker z-score to be significant</dd>
+<dt>removeUnknown: boolean, Default False</dt>
+<dd>Whether to remove type “Unknown”</dd>
+</dl>
+</dd>
+<dt>Returns:</dt>
+<dd>None</dd>
+<dt>Usage:</dt>
+<dd>DCS = DigitalCellSorter.DigitalCellSorter()
+DCS.extractNewMarkerGenes()</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.visualize">
+<code class="descname">visualize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/DigitalCellSorter/DigitalCellSorter.html#DigitalCellSorter.visualize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.visualize" title="Permalink to this definition">¶</a></dt>
+<dd><p>A convenient aggregate of visualization tools of this class.</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd>None</dd>
+<dt>Returns:</dt>
+<dd>None</dd>
+<dt>Usage:</dt>
+<dd>DCS = DigitalCellSorter.DigitalCellSorter()
+DCS.process(df_expr)
+DCS.visualize()</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.process">
+<code class="descname">process</code><span class="sig-paren">(</span><em>df_expr</em>, <em>visualize=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DigitalCellSorter/DigitalCellSorter.html#DigitalCellSorter.process"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.process" title="Permalink to this definition">¶</a></dt>
+<dd><p>Main function</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd><dl class="first last docutils">
+<dt>df_expr: pandas.DataFrame</dt>
+<dd>Gene expression data</dd>
+<dt>visualize: boolean, Default True</dt>
+<dd>Whether to make the plots</dd>
+</dl>
+</dd>
+<dt>Returns:</dt>
+<dd>None</dd>
+<dt>Usage:</dt>
+<dd>DCS = DigitalCellSorter.DigitalCellSorter()
+DCS.process(df_expr)</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.getCountsDataframe">
+<code class="descname">getCountsDataframe</code><span class="sig-paren">(</span><em>se1</em>, <em>se2</em>, <em>tagForMissing='Missing'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DigitalCellSorter/DigitalCellSorter.html#DigitalCellSorter.getCountsDataframe"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.getCountsDataframe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a pandas.DataFrame with cross-counts (overlaps) between two pandas.Series</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd><dl class="first last docutils">
+<dt>se1: pandas.Series</dt>
+<dd>Series with the first set of items</dd>
+<dt>se2: pandas.Series </dt>
+<dd>Series with the second set of items</dd>
+<dt>tagForMissing: str, Default ‘Missing’</dt>
+<dd>Label to assign to non-overlapping items</dd>
+</dl>
+</dd>
+<dt>Returns:</dt>
+<dd><dl class="first last docutils">
+<dt>pandas.DataFrame</dt>
+<dd>Contains counts</dd>
+</dl>
+</dd>
+<dt>Usage:</dt>
+<dd>DCS = DigitalCellSorter.DigitalCellSorter()
+df = DCS.getCountsDataframe(se1, se2)</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.getAnomalyScores">
+<code class="descname">getAnomalyScores</code><span class="sig-paren">(</span><em>trainingSet</em>, <em>testingSet</em>, <em>printResults=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DigitalCellSorter/DigitalCellSorter.html#DigitalCellSorter.getAnomalyScores"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.getAnomalyScores" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to get anomaly score of cells based on some reference</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd><dl class="first last docutils">
+<dt>trainingSet: pandas.DataFrame</dt>
+<dd>With cells to trail isolation forest on</dd>
+<dt>testingSet: pandas.DataFrame</dt>
+<dd>With cells to score</dd>
+<dt>printResults: boolean, Default False</dt>
+<dd>Whether to print results</dd>
+</dl>
+</dd>
+<dt>Returns:</dt>
+<dd><dl class="first last docutils">
+<dt>1d numpy.array</dt>
+<dd>Anomaly score(s) of tested cell(s)</dd>
+</dl>
+</dd>
+<dt>Usage:</dt>
+<dd>DCS = DigitalCellSorter.DigitalCellSorter()
+cutoff = DCS.checkCellsByIsolationForest(df_expr.iloc[:, 5:], df_expr.iloc[:, :5])</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.getExprOfCells">
+<code class="descname">getExprOfCells</code><span class="sig-paren">(</span><em>cells</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DigitalCellSorter/DigitalCellSorter.html#DigitalCellSorter.getExprOfCells"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.getExprOfCells" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get expression of a set of cells.
+Run this function only after function process()</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd><dl class="first last docutils">
+<dt>cells: pandas.MultiIndex</dt>
+<dd>Index of cells of interest</dd>
+</dl>
+</dd>
+<dt>Returns:</dt>
+<dd><dl class="first last docutils">
+<dt>pandas.DataFrame</dt>
+<dd>With expression of the cells of interest</dd>
+</dl>
+</dd>
+<dt>Usage:</dt>
+<dd>DCS = DigitalCellSorter.DigitalCellSorter()
+DCS.process()
+DCS.getDfExprOfSelectedCells(cells)</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.getAnomalyScoresPlot">
+<code class="descname">getAnomalyScoresPlot</code><span class="sig-paren">(</span><em>cells='All'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DigitalCellSorter/DigitalCellSorter.html#DigitalCellSorter.getAnomalyScoresPlot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.getAnomalyScoresPlot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make anomaly scores plot</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd><dl class="first last docutils">
+<dt>cells: pandas.MultiIndex, Default ‘All’</dt>
+<dd>Index of cells of interest</dd>
+</dl>
+</dd>
+<dt>Returns:</dt>
+<dd>None</dd>
+<dt>Usage:</dt>
+<dd>DCS = DigitalCellSorter.DigitalCellSorter()
+DCS.process()
+cells = DCS.getCells(celltype=’T cell’)
+DCS.makeAnomalyScoresPlot(cells)</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.getIndividualGeneExpressionPlot">
+<code class="descname">getIndividualGeneExpressionPlot</code><span class="sig-paren">(</span><em>gene</em>, <em>hideClusterLabels=False</em>, <em>outlineClusters=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DigitalCellSorter/DigitalCellSorter.html#DigitalCellSorter.getIndividualGeneExpressionPlot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.getIndividualGeneExpressionPlot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Produce individual gene expression plot on a tSNE layout</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd><dl class="first last docutils">
+<dt>gene: str</dt>
+<dd>Name of gene of interest</dd>
+<dt>hideClusterLabels: boolean, Default False</dt>
+<dd>Whether to hide the clusters labels</dd>
+<dt>outlineClusters: boolean, Default True</dt>
+<dd>Whether to outline the clusters with circles</dd>
+</dl>
+</dd>
+<dt>Returns:</dt>
+<dd>None</dd>
+<dt>Usage:</dt>
+<dd>DCS = DigitalCellSorter.DigitalCellSorter()
+DCS.getIndividualGeneExpressionPlot(‘CD4’)</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.getCells">
+<code class="descname">getCells</code><span class="sig-paren">(</span><em>celltype=None</em>, <em>clusterIndex=None</em>, <em>clusterName=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DigitalCellSorter/DigitalCellSorter.html#DigitalCellSorter.getCells"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.getCells" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get cell annoations in a form of pandas.Series</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd><dl class="first last docutils">
+<dt>celltype: str, Default None</dt>
+<dd>Cell type to extract</dd>
+<dt>clusterIndex: int, Default None</dt>
+<dd>Cell type to extract</dd>
+<dt>clusterName: str, Default None</dt>
+<dd>Cell type to extract</dd>
+</dl>
+</dd>
+<dt>Returns:</dt>
+<dd><dl class="first last docutils">
+<dt>pandas.MultiIndex</dt>
+<dd>Index of labelled cells</dd>
+</dl>
+</dd>
+<dt>Usage:</dt>
+<dd>DCS = DigitalCellSorter.DigitalCellSorter()
+DCS.process(df_expr)
+labels = DCS.getLabelledCells()</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.getIndexOfGoodQualityCells">
+<code class="descname">getIndexOfGoodQualityCells</code><span class="sig-paren">(</span><em>saveDir</em>, <em>dataName</em>, <em>count_depth_cutoff=0.5</em>, <em>number_of_genes_cutoff=0.5</em>, <em>mitochondrial_genes_cutoff_upper_bound=3.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DigitalCellSorter/DigitalCellSorter.html#DigitalCellSorter.getIndexOfGoodQualityCells"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.getIndexOfGoodQualityCells" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get index of sells that satisfy the QC criteria</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd><dl class="first last docutils">
+<dt>saveDir: str</dt>
+<dd>Directory for output files</dd>
+<dt>dataName: str </dt>
+<dd>Name used in output files</dd>
+<dt>count_depth_cutoff: float, Default 0.5</dt>
+<dd>Fraction of median to take as count depth cutoff</dd>
+<dt>number_of_genes_cutoff: float, Default 0.5</dt>
+<dd>Fraction of median to take as number of genes cutoff</dd>
+<dt>mitochondrial_genes_cutoff: float, Default 3.0</dt>
+<dd>The cutoff is median + standard_deviation * this_parameter</dd>
+</dl>
+</dd>
+<dt>Returns:</dt>
+<dd><dl class="first last docutils">
+<dt>pandas.Index</dt>
+<dd>Index of cells</dd>
+</dl>
+</dd>
+<dt>Usage:</dt>
+<dd>DCS = DigitalCellSorter.DigitalCellSorter()
+index = DCS.get_index_of_good_quality_cells(saveDir, dataName)</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.getQualityControlCutoff">
+<code class="descname">getQualityControlCutoff</code><span class="sig-paren">(</span><em>se</em>, <em>cutoff</em>, <em>mito=False</em>, <em>plotPathAndName=None</em>, <em>MakeHistogramPlot=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DigitalCellSorter/DigitalCellSorter.html#DigitalCellSorter.getQualityControlCutoff"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.getQualityControlCutoff" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to calculate QC quality cutoff</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd><dl class="first last docutils">
+<dt>se: pandas.Series </dt>
+<dd>With data to analyze</dd>
+<dt>cutoff: float</dt>
+<dd>Parameter for calculating the quality control cutoff</dd>
+<dt>mito: boolean, Default False</dt>
+<dd>Whether the analysis of mitochondrial genes fraction</dd>
+<dt>plotPathAndName: str, Default None</dt>
+<dd>Text to include in the figure title and file name</dd>
+<dt>MakeHistogramPlot: boolean, Default True</dt>
+<dd>Whether to make a histogram plot</dd>
+</dl>
+</dd>
+<dt>Returns:</dt>
+<dd><dl class="first last docutils">
+<dt>float</dt>
+<dd>Cutoff value</dd>
+</dl>
+</dd>
+<dt>Usage:</dt>
+<dd>DCS = DigitalCellSorter.DigitalCellSorter()
+cutoff = DCS.getCutoff(se)</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.convertColormap">
+<code class="descname">convertColormap</code><span class="sig-paren">(</span><em>colormap</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DigitalCellSorter/DigitalCellSorter.html#DigitalCellSorter.convertColormap"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.convertColormap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert colormap from the form (1.,1.,1.,1.) to ‘rgba(255,255,255,1.)’</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd><dl class="first last docutils">
+<dt>colormap: dictionary</dt>
+<dd>Colormap to convert</dd>
+</dl>
+</dd>
+<dt>Returns:</dt>
+<dd><dl class="first last docutils">
+<dt>dictionary</dt>
+<dd>Converted colomap</dd>
+</dl>
+</dd>
+<dt>Usage:</dt>
+<dd>DCS = DigitalCellSorter.DigitalCellSorter()
+colormap = DCS.convertColormap(colormap)</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.zScoreOfSeries">
+<code class="descname">zScoreOfSeries</code><span class="sig-paren">(</span><em>se</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DigitalCellSorter/DigitalCellSorter.html#DigitalCellSorter.zScoreOfSeries"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.zScoreOfSeries" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate z-score of pandas.Series and modify the Series in place</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd><dl class="first last docutils">
+<dt>se: pandas.Series</dt>
+<dd>Series to process</dd>
+</dl>
+</dd>
+<dt>Returns:</dt>
+<dd><dl class="first last docutils">
+<dt>pandas.Series</dt>
+<dd>Processed series</dd>
+</dl>
+</dd>
+<dt>Usage:</dt>
+<dd>se = zScoreOfSeries(se)</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.getV">
+<code class="descname">getV</code><span class="sig-paren">(</span><em>args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/DigitalCellSorter/DigitalCellSorter.html#DigitalCellSorter.getV"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#DigitalCellSorter.DigitalCellSorter.DigitalCellSorter.getV" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the vting scores (celltypes by clusters)</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd><dl class="first last docutils">
+<dt>args: tuple</dt>
+<dd><p class="first">Tuple of sub-arguments</p>
+<dl class="last docutils">
+<dt>df_M: pandas.DataFrame</dt>
+<dd>Marker cell type DataFrame</dd>
+<dt>df_markers_expr: pandas.DataFrame</dt>
+<dd>Markers expression DataFrame</dd>
+<dt>cluster_index: 1d numpy.array</dt>
+<dd>Clustering index</dd>
+<dt>zscore_cutoff: float</dt>
+<dd>Z-Score cutoff for a given marker to be significant</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+<dt>Returns:</dt>
+<dd><dl class="first last docutils">
+<dt>pandas.DataFrame </dt>
+<dd>Contains voting scores per celltype per cluster</dd>
+</dl>
+</dd>
+<dt>Usage:</dt>
+<dd>df = getV((df_marker_celltype, df_markers_expr, cluster_index, 0.3))</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="VisualizationFunctions.html" class="btn btn-neutral float-right" title="Visualization functions" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="modules.html" class="btn btn-neutral float-left" title="DigitalCellSorter" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, S. Domanskyi , A. Szedlak, N. T. Hawkins, J. Wang, G. Paternostro, C. Piermarocchi
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
