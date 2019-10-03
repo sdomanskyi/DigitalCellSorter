@@ -5,7 +5,7 @@ import os
 import pickle
 import gzip
 import time
-import numpy
+import numpy as np
 
 def write(data, fileName):
     
@@ -63,7 +63,7 @@ def timeMark():
         timeMark()
     '''
         
-    return print('--> Total elapsed time: %s min' % (numpy.round(time.thread_time() / 60., 1)), '\n')
+    return print('--> Total elapsed time: %s min' % (np.round(time.thread_time() / 60., 1)), '\n')
 
 def getStartTime():
 
@@ -96,5 +96,5 @@ def getElapsedTime(start):
         getElapsedTime(start)
     '''
 
-    return print('Elapsed time: ' + str(numpy.round((time.time() - start) / 60.,1)) + ' min' + '\n')
+    return print('Elapsed time: ' + str(np.round((time.time() - start) / 60.,1)) + ' min' + '\n')
 
