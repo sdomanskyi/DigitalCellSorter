@@ -1,10 +1,46 @@
+'''The user can download the file ica_bone_marrow_h5.h5 from https://preview.data.humancellatlas.org/ (Raw Counts Matrix - Bone Marrow) and place in folder data. 
+The file is ~485Mb and contains all 378000 cells from 8 bone marrow donors (BM1-BM8).
+'''
+
+import os
 import copy
 import h5py
-import os
 import numpy as np
 import pandas as pd
 
-def PrepareDataOnePatient(filename, patient, saveFolderName, doQC=True,  useAllData=True, cellsLimitToUse=1000, randomlySample=True, randomSeed=0):
+def PrepareDataOnePatient(filename, patient, saveFolderName,  
+                          useAllData=True, cellsLimitToUse=1000, randomlySample=True, randomSeed=0):
+
+    '''Prepare data from Human Cell Atlas (HCA) h5 data file.
+        
+    Parameters:
+        filename: str
+            Path and name of the file to store binary data in
+
+        patient: str
+            Identifier of the patient: 'BM1', 'BM2', 'BM3', 'BM4', 'BM5', 'BM6', 'BM7' or 'BM8'
+
+        saveFolderName: str
+            Path where to save prepared data file
+
+        useAllData: boolean, Default True
+            Whether to use all data or a subset
+
+        cellsLimitToUse: int, Default 1000
+            Number of cells to use if useAllData=False
+
+        randomlySample: boolean, Default True
+            Whether to sample cell randomly of pick top number
+
+        randomSeed: int, Default 0
+            Random seed
+
+    Returns:
+        None
+        
+    Usage:
+        PrepareDataOnePatient(os.path.join('data', 'ica_bone_marrow_h5.h5'), 'BM1', os.path.join('data', ''), useAllData=False, cellsLimitToUse=5000)
+    '''
 
     print('------ Reading values of %s --------------------------------------------'%(patient))
 
@@ -31,4 +67,6 @@ def PrepareDataOnePatient(filename, patient, saveFolderName, doQC=True,  useAllD
     df.to_hdf(os.path.join(saveFolderName, '%s.h5'%(patient)), key=patient, mode='a', complevel=4, complib='zlib')
 
     print('-------------------------------------------------------------------------\n')
+
+    return None
 
