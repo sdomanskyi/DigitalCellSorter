@@ -146,7 +146,7 @@ class DigitalCellSorter(VisualizationFunctions):
         self.saveDir = saveDir
         self.dataName = dataName
         
-        self.defualtGeneListsDir = os.path.dirname(geneLists.__file__)
+        self.defualtGeneListsDir = os.path.join(os.path.dirname(__file__), 'geneLists')
 
         self.geneListFileName = os.path.join(self.defualtGeneListsDir, defaultGeneList + '.xlsx') if geneListFileName is None else geneListFileName
 
