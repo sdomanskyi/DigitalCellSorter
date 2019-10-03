@@ -10,3 +10,4 @@ pynndescent>=0.3.3
 networkx>=2.3
 python-louvain>=0.13
 patsy>=0.5.1
+h5py>=2.9.0
