@@ -33,9 +33,53 @@ from sklearn.ensemble import IsolationForest
 from . import GeneNameConverter, geneLists
 from .Combat import combat
 
+def write(data, fileName):
+    
+    '''Pickle object into a (binary) file
+        
+    Args:
+        data: any Pyhton object, e.g. list, dictionary, file, method, variable, etc.
+        fileName: path and name of the file to store binary data in
+
+    Returns:
+        None
+        
+    Usage:
+        data = [['A', 'B', 'C'], pd.DataFrame()]
+        DCS = DigitalCellSorter.DigitalCellSorter()
+        DCS.write(data, os.path.join('some dir 1', 'some dir 2', 'File with my data'))
+    '''
+
+    with gzip.open(fileName + '.pklz','wb') as temp_file:
+        pickle.dump(data, temp_file, protocol=4)
+
+    return None
+
+def read(fileName):
+
+    '''Unpickle object from a (binary) file
+
+    Args:
+        fileName: path and name of the file with binary data stored in
+
+    Returns:
+        Data stored in the provided file
+        
+    Usage:
+        DCS = DigitalCellSorter.DigitalCellSorter()
+        data = DCS.read(os.path.join('some dir 1', 'some dir 2', 'File with my data'))
+    '''
+
+    with gzip.open(fileName + '.pklz','rb') as temp_file:
+        data = pickle.load(temp_file)
+        return data
+
+    return None
+
 def timeMark():
 
     '''Print total time elapsed from the beggining of the process
+    from which the function is called
         
     Args:
         None
@@ -83,8 +127,8 @@ def getElapsedTime(start):
 
 class DigitalCellSorter:
 
-    '''Class of Digital Cell Sorter with methods to process single cell mRNA-seq data.
-    Includes analysis and visualization tools.
+    '''Class of Digital Cell Sorter with methods for processing single cell mRNA-seq data.
+    Includes analyses and visualization tools.
     
     Usage:
         DCS = DigitalCellSorter.DigitalCellSorter()
@@ -103,14 +147,14 @@ class DigitalCellSorter:
 
         Args:
             dataName: name used in output files, Default 'dataName'
-            geneListFileName: , Default None
-            mitochondrialGenes: , Default None
+            geneListFileName: name of the marker genes file, Default None
+            mitochondrialGenes: list of mitochondrial genes to use in quality control, Default None
             sigmaOverMeanSigma: threshold to consider a gene constant, Default 0.3
             nClusters: number of clusters, Default 5
             clusteringFunction: clustering function to use, Default AgglomerativeClustering
                 other options: KMeans, {k_neighbors:40}, etc.
             nComponentsPCA: number of pca components, Default 100
-            nSamplesDistribution: , Default 10000
+            nSamplesDistribution: number of random samples in distribution, Default 10000
             saveDir: directory for output files, Default is current directory
             makeMarkerSubplots:  whether to make subplots on markers, Default True
             makePlots: whether to make all major plots, Default True
@@ -176,49 +220,6 @@ class DigitalCellSorter:
 
 
     # Supporting functions of class ###########################################################################################################################
-    def write(self, data, fileName):
-    
-        '''Pickle object into a (binary) file
-        
-        Args:
-            data: any Pyhton object, e.g. list, dictionary, file, method, variable, etc.
-            fileName: path and name of the file to store binary data in
-
-        Returns:
-            None
-        
-        Usage:
-            data = [['A', 'B', 'C'], pd.DataFrame()]
-            DCS = DigitalCellSorter.DigitalCellSorter()
-            DCS.write(data, os.path.join('some dir 1', 'some dir 2', 'File with my data'))
-        '''
-
-        with gzip.open(fileName + '.pklz','wb') as temp_file:
-            pickle.dump(data, temp_file, protocol=4)
-
-        return
-
-    def read(self, fileName):
-
-        '''Unpickle object from a (binary) file
-
-        Args:
-            fileName: path and name of the file with binary data stored in
-
-        Returns:
-            Data stored in the provided file
-        
-        Usage:
-            DCS = DigitalCellSorter.DigitalCellSorter()
-            data = DCS.read(os.path.join('some dir 1', 'some dir 2', 'File with my data'))
-        '''
-
-        with gzip.open(fileName + '.pklz','rb') as temp_file:
-            data = pickle.load(temp_file)
-            return data
-
-        return
-
     def convertColormap(self, colormap):
 
         '''Convert colormap from the form (1.,1.,1.,1.) to 'rgba(255,255,255,1.)'
@@ -306,10 +307,10 @@ class DigitalCellSorter:
     
         Args:
             args: tupple of sub-arguments
-                df_M: 
-                df_markers_expr: 
-                cluster_index: 
-                zscore_cutoff: 
+                df_M: marker cell type DataFrame
+                df_markers_expr: markers expression DataFrame
+                cluster_index: clustering index
+                zscore_cutoff: z-score cutoff for a given marker to be significant
 
         Returns:
             pandas.DataFrame containing voting scores per celltype per cluster 
@@ -381,7 +382,7 @@ class DigitalCellSorter:
             se: pandas.Series with data to analyze
             cutoff: parameter for calculating the quality control cutoff
             mito: whether the analysis of mitochondrial genes fraction, Default False
-            plotPathAndName: text to include in the figure title and file name
+            plotPathAndName: text to include in the figure title and file name, Default None
             MakeHistogramPlot: whether to make a histogram plot, Default True
 
         Returns:
@@ -428,7 +429,7 @@ class DigitalCellSorter:
         Args:
             trainingSet: pandas.DataFrame with cells to trail isolation forest on
             testingSet: pandas.DataFrame with cells to score
-            printResults: whether to print results
+            printResults: whether to print results, Default False
 
         Returns:
             Anomaly score(s) of tested cell(s)
@@ -529,6 +530,8 @@ class DigitalCellSorter:
 
         Args:
             gene: gene of interest
+            hideClusterLabels: whether to hide the clusters labels, Default False
+            outlineClusters: whether to outline the clusters with circles, Default True
 
         Returns:
             None
@@ -678,8 +681,9 @@ class DigitalCellSorter:
             hugo_cd_dict: dictionary with aliases for hugo names of genes
             dataName: name used in output files
             saveDir: directory for output files
-            NoFrameOnFigures: whether to include frame on the figure
-            HideClusterLabels: whether to print cluster labels on the figure
+            NoFrameOnFigures: whether to include frame on the figure, Default False
+            HideClusterLabels: whether to print cluster labels on the figure, Default False
+            outlineClusters: whether to outline the clusters with circles, Default True
 
         Returns:
             None
@@ -988,6 +992,8 @@ class DigitalCellSorter:
                 Default matplotlib.colors.LinearSegmentedColormap.jet
             legend: whether to print legend, Default True
             labels: whether to print labels, Default True
+            colorbar: whether to show colorbar, Default False
+                Use with non-numerical values will raise an error
             fontsize: labels and legend font size, Default 10
             plotNaNs: whether to plot NaN labels (in grey), Default True
 
@@ -1150,10 +1156,11 @@ class DigitalCellSorter:
         Args:
             subset: data to analyze
             cutoff: cutoff to display
-            plotPathAndName: text to include in the figure title and file name
-            N_bins: number of bins of the histogram
+            plotPathAndName: text to include in the figure title and file name, Default None
+            N_bins: number of bins of the histogram, Default 100
             mito: whether the analysis of mitochondrial genes fraction, Default False
-            displayMeasures: print vertical dashed lines along with mean, median, and standard deviation
+            displayMeasures: print vertical dashed lines along with mean, median, and standard deviation, Default True
+            precision: number of digits after decimal, Default 4
 
         Returns:
             None
@@ -1230,12 +1237,12 @@ class DigitalCellSorter:
 
         Args:
             df: pandas.DataFrame with counts (overlaps)
-            colormapForIndex: colors to use for nodes specified in the DataFrame index
-            colormapForColumns: colors to use for nodes specified in the DataFrame columns
-            linksColor: color of the non-overlapping links
-            title: title to print on the diagram
-            interactive: whether to launch interactive JavaScript-based graph
-            quality: proportional to the resolution of the figure to save
+            colormapForIndex: colors to use for nodes specified in the DataFrame index, Default None
+            colormapForColumns: colors to use for nodes specified in the DataFrame columns, Default None
+            linksColor: color of the non-overlapping links, Default 'rgba(100,100,100,0.6)'
+            title: title to print on the diagram, Default ''
+            interactive: whether to launch interactive JavaScript-based graph, Default False
+            quality: proportional to the resolution of the figure to save, Default 4
 
         Returns:
             None
@@ -1463,6 +1470,8 @@ class DigitalCellSorter:
 
         Args:
             df_expr: pandas.DataFrame to process
+            nameFrom: gene name type to convert from, Default 'alias'
+            nameTo: gene name type to convert to, Default 'hugo'
 
         Returns:
             Processed DataFrame
@@ -1528,7 +1537,7 @@ class DigitalCellSorter:
         Args:
             df_expr: pandas.DataFrame to normalize
             sigma_over_mean_sigma: threshold when keeping only genes with large enough standard deviation
-            median: scale factor (optional), default None
+            median: scale factor (optional), Default None
 
         Returns:
             Processed DataFrame
@@ -1615,8 +1624,9 @@ class DigitalCellSorter:
         Args:
             X_pca: PCA-reduced expression data
             df_expr: Gene expression data 
-            clustering_f: clustering function, if not provided then AgglomerativeClustering is used, otherwise should have .fit method and same input and output.
-                For Network-based clustering pass a dictionary {k_neighbors:40, metric:'euclidean', clusterExpression=True}, the best number of clusters will be determined automatically
+            clusteringFunction: clustering function, Default AgglomerativeClustering
+                Note: the function should have .fit method and same input and output.
+                For Network-based clustering pass a dictionary {'k_neighbors':40, metric:'euclidean', 'clusterExpression':True}, the best number of clusters will be determined automatically
 
         Returns:
             Cell cluster index labels
@@ -1795,10 +1805,10 @@ class DigitalCellSorter:
         '''Extract new marker genes based on the cluster annotations
 
         Args:
-            cluster: cluster #, if provided genes of only this culster will be returned
-            top: upper bound for number of new markers per cell type
-            zScoreCutoff: lower bound for a marker z-score to be significant
-            removeUnknown: whether to remove type "Unknown"
+            cluster: cluster #, if provided genes of only this culster will be returned, Default None
+            top: upper bound for number of new markers per cell type, Default 100
+            zScoreCutoff: lower bound for a marker z-score to be significant, Default 0.3
+            removeUnknown: whether to remove type "Unknown", Default False
 
         Returns:
             None
@@ -1867,6 +1877,8 @@ class DigitalCellSorter:
 
         Args:
             celltype: cell type to extract, Default None
+            clusterIndex: cell type to extract, Default None
+            clusterName: cell type to extract, Default None
 
         Returns:
             Labelled cells
