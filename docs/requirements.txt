@@ -9,3 +9,4 @@ mygene>=3.1.0
 pynndescent>=0.3.3
 networkx>=2.3
 python-louvain>=0.13
+patsy>=0.5.1
