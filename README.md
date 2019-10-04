@@ -306,7 +306,7 @@ Effect of batch correction demostrated on combining BM1, BM2, BM3 and processing
 
 - ```makeSankeyDiagram()```: river plot to compare various results 
 
-[(see interactive HTML version, download it and open in a browser)](https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/Sankey_example.html "Sankey interactive diagram")
+[(see interactive HTML version, download it and open in a browser)](http://htmlpreview.github.io/?https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/Sankey_example.html "Sankey interactive diagram")
 
 <p align="middle">
 	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/Sankey_example.png?raw=true" width="800"/>
