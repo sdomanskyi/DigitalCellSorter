@@ -1,9 +1,11 @@
 /data/**/*.h5
 .vs/
-other/
+/other/
 *.sb
-forSankey/
-output/
+/forSankey/
+/output/
+*.pyproj
+*.sln
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
