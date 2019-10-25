@@ -19,7 +19,7 @@ import plotly.graph_objects
 
 class VisualizationFunctions(object):
 
-    '''Class of vizualization functions for DigitalCellSorter'''
+    '''Class of visualization functions for DigitalCellSorter'''
 
     def __init__(self):
 

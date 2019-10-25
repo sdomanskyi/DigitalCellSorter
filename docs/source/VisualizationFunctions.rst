@@ -5,12 +5,20 @@ The package contains a set of standard visualization functions that can be launc
 
 
 **Submodule VisualizationFunctions** 
-------------------------------------
 
-.. automodule:: DigitalCellSorter.VisualizationFunctions
-    :members:
-    :undoc-members:
-    :show-inheritance:
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+
+   visFunctions/makeTSNEplot
+   visFunctions/makeMarkerSubplots
+   visFunctions/makeQualityControlHistogramPlot
+   visFunctions/makeHistogramNullDistributionPlot
+   visFunctions/makeSankeyDiagram
+   visFunctions/makeStackedBarplot
+   visFunctions/makeVotingResultsMatrixPlot
+   visFunctions/makeMarkerExpressionPlot
+   visFunctions/makePlotOfNewMarkers
 
 
 

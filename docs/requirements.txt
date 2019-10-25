@@ -11,3 +11,5 @@ networkx>=2.3
 python-louvain>=0.13
 patsy>=0.5.1
 h5py>=2.9.0
+sphinxcontrib-images>=0.8.0
+autodocsumm>=0.1.11
