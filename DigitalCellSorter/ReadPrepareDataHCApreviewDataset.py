@@ -56,7 +56,7 @@ def PrepareDataOnePatient(filename, patient, saveFolderName,
         np.random.seed(randomSeed)
         patient_cells = np.random.choice(patient_cells, replace=False, size=cellsLimitToUse) if randomlySample else patient_cells[:cellsLimitToUse]
 
-    columns = pd.MultiIndex.from_arrays([patients[patient_cells], barcodes[patient_cells]], names=['patient', 'cell'])
+    columns = pd.MultiIndex.from_arrays([patients[patient_cells], barcodes[patient_cells]], names=['batch', 'cell'])
     df = pd.DataFrame(data=np.zeros((len(gene_names), len(patient_cells))), index=gene_names, columns=columns)
 
     print('Combining cells into DataFrame. Data size: %s genes, %s cells' % df.shape)
