@@ -1,0 +1,8 @@
+T cells CD4 memory activated	(0.0, 0.0, 0.5, 1.0)
+T cells CD4 memory resting	(0.0, 0.06470588235294118, 1.0, 1.0)
+T cells CD4 naive	(0.0, 0.6450980392156863, 1.0, 1.0)
+T cells CD8	(0.24984187223276405, 1.0, 0.717900063251107, 1.0)
+T cells follicular helper	(0.7179000632511068, 1.0, 0.2498418722327641, 1.0)
+T cells gamma delta	(1.0, 0.7269426289034134, 0.0, 1.0)
+T cells regulatory (Tregs)	(1.0, 0.18954248366013093, 0.0, 1.0)
+Unknown	(0.5, 0.0, 0.0, 1.0)
