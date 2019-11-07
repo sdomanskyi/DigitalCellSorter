@@ -46,12 +46,6 @@ import scipy.cluster.hierarchy
 import scipy.spatial.distance
 from scipy.interpolate import UnivariateSpline
 
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import matplotlib.patheffects as path_effects
-from matplotlib import cm
-
 import sklearn.metrics
 import sklearn.cluster
 from sklearn.decomposition import PCA
@@ -63,6 +57,7 @@ from . import GeneNameConverter, geneLists
 from .Combat import combat
 from .VisualizationFunctions import VisualizationFunctions
 from .GenericFunctions import read, write, timeMark, getStartTime, getElapsedTime
+from .VisualizationFunctions import cm
 
 class DigitalCellSorter(VisualizationFunctions):
 
@@ -184,7 +179,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         self.toggleMakeMarkerSubplots = makeMarkerSubplots
 
-        super().__init__()
+        super().__init__(saveDir=saveDir, dataName=dataName)
 
         return None
 
@@ -762,7 +757,7 @@ class DigitalCellSorter(VisualizationFunctions):
         df_marker_cell_type = pd.read_excel(os.path.join(self.saveDir, os.path.basename(self.geneListFileName)), index_col=0, header=0)
         df_new_marker_genes = df_new_marker_genes[df_new_marker_list.index]
 
-        self.makePlotOfNewMarkers(self.saveDir, self.dataName, df_marker_cell_type, df_new_marker_genes)
+        self.makePlotOfNewMarkers(df_marker_cell_type, df_new_marker_genes)
 
         return None
 
@@ -799,7 +794,7 @@ class DigitalCellSorter(VisualizationFunctions):
         ##############################################################################################
         if self.toggleMakeHistogramNullDistributionPlot:
             print('Making null distributions plot')
-            self.makeHistogramNullDistributionPlot(self.saveDir, self.dataName)
+            self.makeHistogramNullDistributionPlot()
             timeMark()
 
         ##############################################################################################
@@ -807,7 +802,7 @@ class DigitalCellSorter(VisualizationFunctions):
         ##############################################################################################
         if self.toggleMakeVotingResultsMatrixPlot:
             print('Making voting results matrix plot')
-            self.makeVotingResultsMatrixPlot(self.saveDir, self.dataName)
+            self.makeVotingResultsMatrixPlot()
             timeMark()
         
         ##############################################################################################
@@ -815,7 +810,7 @@ class DigitalCellSorter(VisualizationFunctions):
         ##############################################################################################
         if self.toggleMakeMarkerExpressionPlot:
             print('Making marker expression plot')
-            self.makeMarkerExpressionPlot(self.dataName, self.saveDir)
+            self.makeMarkerExpressionPlot()
             timeMark()
 
         ##############################################################################################
@@ -826,23 +821,23 @@ class DigitalCellSorter(VisualizationFunctions):
             df_QC = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='QC', mode='r')
             df_tsne = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_tsne_pre_QC', mode='r')
             goodQUalityCells = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_tsne', mode='r').columns
-            self.makeTSNEplot(df_tsne.values, df_QC['number_of_genes'].values, self.dataName, self.saveDir, 'by_number_of_genes', legend=False, labels=False, colorbar=True)
-            self.makeTSNEplot(df_tsne.values, df_QC['count_depth'].values, self.dataName, self.saveDir, 'by_count_depth', legend=False, labels=False, colorbar=True)
-            self.makeTSNEplot(df_tsne.values, df_QC['fraction_of_mitochondrialGenes'].values, self.dataName, self.saveDir, 'by_fraction_of_mitochondrialGenes', legend=False, labels=False, colorbar=True)
-            self.makeTSNEplot(df_tsne.values, np.array([cell in goodQUalityCells for cell in df_QC.index]), self.dataName, self.saveDir, 'by_is_quality_cell', legend=False, labels=True)
+            self.makeTSNEplot(df_tsne.values, df_QC['number_of_genes'].values, 'by_number_of_genes', legend=False, labels=False, colorbar=True)
+            self.makeTSNEplot(df_tsne.values, df_QC['count_depth'].values, 'by_count_depth', legend=False, labels=False, colorbar=True)
+            self.makeTSNEplot(df_tsne.values, df_QC['fraction_of_mitochondrialGenes'].values, 'by_fraction_of_mitochondrialGenes', legend=False, labels=False, colorbar=True)
+            self.makeTSNEplot(df_tsne.values, np.array([cell in goodQUalityCells for cell in df_QC.index]), 'by_is_quality_cell', legend=False, labels=True)
             timeMark()    
 
         if self.toggleMakeTSNEplotClusters:
             print('Making tSNE plot by clusters')
             df_clusters = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_clusters', mode='r')
             df_tsne = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_tsne', mode='r')
-            self.makeTSNEplot(df_tsne.values, np.array(['Cluster #%s' % (label[0]) for label in df_clusters.values]), self.dataName, self.saveDir, 'by_clusters')
+            self.makeTSNEplot(df_tsne.values, np.array(['Cluster #%s' % (label[0]) for label in df_clusters.values]), 'by_clusters')
             timeMark()
 
         if self.toggleMakeTSNEplotBatches:
             print('Making tSNE plot by patients')
             df_tsne = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_tsne', mode='r')
-            self.makeTSNEplot(df_tsne.values, df_tsne.columns.get_level_values('batch').values, self.dataName, self.saveDir, 'by_patients')
+            self.makeTSNEplot(df_tsne.values, df_tsne.columns.get_level_values('batch').values, 'by_patients')
             timeMark()
 
         if self.toggleMakeTSNEplotAnnotatedClusters:
@@ -852,7 +847,7 @@ class DigitalCellSorter(VisualizationFunctions):
             df_tsne = df_tsne[df_markers_expr.groupby(level=['batch', 'cell'], sort=False, axis=1).count().columns]
             with open(os.path.join(self.saveDir, 'ColormapForCellTypes.txt'), 'r') as temp_file:
                 colormap = {item.strip().split('\t')[0]:eval(item.strip().split('\t')[1]) for item in temp_file.readlines()}
-            self.makeTSNEplot(df_tsne.values, df_markers_expr.columns.get_level_values('label'), self.dataName, self.saveDir, 'by_clusters_annotated',
+            self.makeTSNEplot(df_tsne.values, df_markers_expr.columns.get_level_values('label'), 'by_clusters_annotated',
                              colormap=colormap, legend=False)
             timeMark()
 
@@ -864,7 +859,7 @@ class DigitalCellSorter(VisualizationFunctions):
         # Make stacked barplot of cell type fractions
         ##############################################################################################
         if self.toggleMakeStackedBarplot:        
-            self.makeStackedBarplot(self.saveDir, self.dataName, self.subclusteringName)
+            self.makeStackedBarplot(self.subclusteringName)
             timeMark()
         
         ##############################################################################################
@@ -876,7 +871,7 @@ class DigitalCellSorter(VisualizationFunctions):
             df_markers_expr = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_markers_expr', mode='r')
             df_tsne = df_tsne[pd.MultiIndex.from_arrays([df_markers_expr.columns.get_level_values('batch'), df_markers_expr.columns.get_level_values('cell')])]
             hugo_cd_dict = dict(zip(df_markers_expr.index.values.tolist(), self.gnc.Convert(list(df_markers_expr.index), 'hugo', 'alias', returnUnknownString=False)))
-            self.makeMarkerSubplots(df_markers_expr, df_tsne.values, hugo_cd_dict, self.dataName, self.saveDir)
+            self.makeMarkerSubplots(df_markers_expr, df_tsne.values, hugo_cd_dict)
             timeMark()
 
         return None
@@ -1232,7 +1227,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         scores = pd.DataFrame(index=cells, data=scores).reindex(df_tsne.columns).values.T[0]
 
-        self.makeTSNEplot(df_tsne.values, scores, self.dataName, self.saveDir, suffix='by_anomaly_score', legend=False, labels=False, colorbar=True)
+        self.makeTSNEplot(df_tsne.values, scores, suffix='by_anomaly_score', legend=False, labels=False, colorbar=True)
 
         return None
     
