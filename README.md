@@ -1,4 +1,10 @@
 # Digital Cell Sorter
+
+[![DOI](https://badge.fury.io/gh/sdomanskyi%2FDigitalCellSorter.svg)](https://badge.fury.io/gh/sdomanskyi%2FDigitalCellSorter)
+[![DOI](https://badge.fury.io/py/DigitalCellSorter.svg)](https://pypi.org/project/DigitalCellSorter)
+[![DOI](https://readthedocs.org/projects/digital-cell-sorter/badge/?version=latest)](https://digital-cell-sorter.readthedocs.io/en/latest/?badge=latest)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3470068.svg)](https://doi.org/10.5281/zenodo.3470068)
+
 Identification of hematological cell types from heterogeneous single cell RNA-seq data.
 
 [Polled Digital Cell Sorter (p-DCS): Automatic identification of hematological cell types from single cell RNA-sequencing clusters](
@@ -6,6 +12,23 @@ https://doi.org/10.1186/s12859-019-2951-x
 "Polled Digital Cell Sorter (p-DCS): Automatic identification of hematological cell types from single cell RNA-sequencing clusters")
 Sergii Domanskyi, Anthony Szedlak, Nathaniel T Hawkins, Jiayin Wang, Giovanni Paternostro & Carlo Piermarocchi,
  *BMC Bioinformatics* volume 20, Article number: 369 (**2019**)
+
+The documentation is available at https://digital-cell-sorter.readthedocs.io/.
+
+
+- [Getting Started](#Getting-Started)
+  * [Prerequisites](##Prerequisites)
+  * [Loading the package](##Loading-the-package)
+  * [Gene Expression Data Format](##Gene-Expression-Data-Format)
+  * [Other Data](##Other-Data)
+- [Functionality](#Functionality)
+  * [Overall](##Overall)
+  * [Visualization](##Visualization)
+- [Demo](#Demo)
+  * [Usage](##Usage)
+    + [Main cell types](###Main-cell-types)
+    + [Cell sub-types](###Cell-sub-types)
+  * [Output](##Output)
 
 
 ## Getting Started
@@ -47,10 +70,9 @@ In your script import the package:
 
 	import DigitalCellSorter
 
-Import class ```DigitalCellSorter``` and create its instance. Here, for simplicity, we use Default parameter values:
+Create an instance of class ```DigitalCellSorter```. Here, for simplicity, we use Default parameter values:
 
-	from DigitalCellSorter import DigitalCellSorter as DigitalCellSorterSubmodule
-	DCS = DigitalCellSorterSubmodule.DigitalCellSorter()
+	DCS = DigitalCellSorter.DigitalCellSorter()
 
 <details><summary>During the initialization the following parameters can be specified (click me)</summary><p>
 
@@ -199,6 +221,8 @@ Sarah E. Calvo, Karl R. Clauser, Vamsi K. Mootha, *Nucleic Acids Research*, Volu
 
 ## Functionality
 
+### Overall
+
 The main class for cell sorting functions and producing output images is DigitalCellSorter
 
 <details open><summary>The class includes tools for:</summary><p>
@@ -230,8 +254,9 @@ plot marker expression of the cells of interest, etc.
 
 </p></details>
 
+### Visualization
 
-The ```process()``` function will produce all necessary files for post-analysis of the data. 
+Function ```visualize()``` or ```process()``` will produce all necessary files for post-analysis of the data. 
 
 <details open><summary>The visualization tools include:</summary><p>
  
@@ -349,15 +374,17 @@ In our example, the data of BM1 is prepared by
 function ```PrepareDataOnePatient()``` in module ```ReadPrepareDataHCApreviewDataset```.
 Load this function, and call it to create a ```BM1.h5``` file (HDF file of input type 3) in the ```data``` folder:
 
-	from DigitalCellSorter import ReadPrepareDataHCApreviewDataset as HCAtools
-	HCAtools.PrepareDataOnePatient(os.path.join('data', 'ica_bone_marrow_h5.h5'), 'BM1', os.path.join('data', ''))
+	from DigitalCellSorter.ReadPrepareDataHCApreviewDataset import PrepareDataOnePatient
+	PrepareDataOnePatient(os.path.join('data', 'ica_bone_marrow_h5.h5'), 'BM1', os.path.join('data', ''))
+
+
+#### Main cell types
 
 In these instructions we have already created an instance of ```DigitalCellSorter``` class (see section **Loading the package**) .
 Let's modify some of the ```DCS``` attributes:
 
 	DCS.dataName = 'BM1'
-	DCS.saveDir = os.path.join('output', dataName, '')
-	DCS.geneListFileName = os.path.join('geneLists', 'CIBERSORT.xlsx')
+	DCS.saveDir = os.path.join(os.path.dirname(__file__), 'output', 'BM1', '')
 	DCS.nClusters = 20
 
 Now we are ready to ```load``` the data, ```prepare```(validate) it and ```process```. The function ```process()``` 
@@ -376,20 +403,23 @@ Then, if necessary, you can generate all the default plots by:
 
 	DCS.visualize()
 
+
+#### Cell sub-types
+
 Further analysis can be done on cell types of interest, e.g. here 'T cell' and 'B cell'.
 Let's create a new instance of DigitalCellSorter to run "sub-analysis" with it:
 
-    DCSsub = DigitalCellSorterSubmodule.DigitalCellSorter(dataName=DCS.dataName, 
+    DCSsub = DigitalCellSorter.DigitalCellSorter(dataName=DCS.dataName, 
                                                 nClusters=10, 
                                                 doQualityControl=False)
 
-Here it was important to disable Quality control, because the low quality cells have already been identified with ```DCS```.
+It is important to disable Quality control, because the low quality cells have already been identified and filtered with ```DCS```.
 Also ```dataName``` parameter points to the location processed with ```DCS```. 
-Now modify a few other attributes and process cell type 'T cell':
+Next modify a few other attributes and process cell type 'T cell':
 
     DCSsub.subclusteringName = 'T cell'
-    DCSsub.saveDir = os.path.join('output', DCS.dataName, 'subclustering T cell', '')
-    DCSsub.geneListFileName = os.path.join('geneLists', 'CIBERSORT_T_SUB.xlsx')
+    DCSsub.saveDir = os.path.join(os.path.dirname(__file__), 'output', DCS.dataName, 'subclustering T cell', '')
+    DCSsub.geneListFileName = os.path.join(os.path.dirname(__file__), 'docs', 'examples', 'CIBERSORT_T_SUB.xlsx')
 
     DCSsub.process(df_expr[DCS.getCells(celltype='T cell')])
 
@@ -401,11 +431,11 @@ are generated by the function ```process()```:
 	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/output/BM1/subclustering T cell/BM1_matrix_voting.png?raw=true" height="400"/>
 </p>
 
-We can reuse the ```DCSsub``` to analyze cell type 'B cell':
+We can reuse the ```DCSsub``` to analyze cell type 'B cell'. Just modify the following attributes:
 
     DCSsub.subclusteringName = 'B cell'
-    DCSsub.saveDir = os.path.join('output', DCS.dataName, 'subclustering B cell', '')
-    DCSsub.geneListFileName = os.path.join('geneLists', 'CIBERSORT_B_SUB.xlsx')
+    DCSsub.saveDir = os.path.join(os.path.dirname(__file__), 'output', DCS.dataName, 'subclustering B cell', '')
+    DCSsub.geneListFileName = os.path.join(os.path.dirname(__file__), 'docs', 'examples', 'CIBERSORT_B_SUB.xlsx')
 
     DCSsub.process(df_expr[DCS.getCells(celltype='B cell')])
 
@@ -417,10 +447,11 @@ To execute the complete script ```demo.py``` run:
 *Note that the HCA BM1 data contains 48000 sequenced cells, requiring approximately 60Gb of RAM (we recommend to use High Performance Computers).
 If you want to run our example on a regular PC or a laptop, you can use a randomly chosen number of cells when using ```HCAtools```:
 
-	HCAtools.PrepareDataOnePatient(os.path.join('data', 'ica_bone_marrow_h5.h5'), 'BM1', os.path.join('data', ''),
+	PrepareDataOnePatient(os.path.join('data', 'ica_bone_marrow_h5.h5'), 'BM1', os.path.join('data', ''),
 	                               useAllData=False, cellsLimitToUse=5000)
 
 ### Output
 
-All the output files are saved in ```output``` directory. If you specify any other directory, the results will be generetaed in it.
+All the output files are saved in ```output``` directory inside the directory where the ```demo.py``` script is. 
+If you specify any other directory, the results will be generetaed in it.
 If you do not provide any directory the results will appear in the root where the script was executed.
