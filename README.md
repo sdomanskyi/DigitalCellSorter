@@ -16,19 +16,19 @@ Sergii Domanskyi, Anthony Szedlak, Nathaniel T Hawkins, Jiayin Wang, Giovanni Pa
 The documentation is available at https://digital-cell-sorter.readthedocs.io/.
 
 
-- [Getting Started](##Getting-Started)
-  * [Prerequisites](###Prerequisites)
-  * [Loading the package](###Loading-the-package)
-  * [Gene Expression Data Format](###Gene-Expression-Data-Format)
-  * [Other Data](###Other-Data)
-- [Functionality](##Functionality)
-  * [Overall](###Overall)
-  * [Visualization](###Visualization)
-- [Demo](##Demo)
-  * [Usage](###Usage)
-    + [Main cell types](####Main-cell-types)
-    + [Cell sub-types](####Cell-sub-types)
-  * [Output](###Output)
+- [Getting Started](#Getting-Started)
+  * [Prerequisites](##Prerequisites)
+  * [Loading the package](##Loading-the-package)
+  * [Gene Expression Data Format](##Gene-Expression-Data-Format)
+  * [Other Data](##Other-Data)
+- [Functionality](#Functionality)
+  * [Overall](##Overall)
+  * [Visualization](##Visualization)
+- [Demo](#Demo)
+  * [Usage](##Usage)
+    + [Main cell types](###Main-cell-types)
+    + [Cell sub-types](###Cell-sub-types)
+  * [Output](##Output)
 
 
 ## Getting Started
