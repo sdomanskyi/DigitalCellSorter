@@ -31,6 +31,7 @@ Sergii Domanskyi, Anthony Szedlak, Nathaniel T Hawkins, Jiayin Wang, Giovanni Pa
    VisualizationFunctions
    GenericFunctions
    dataPrepFunctions
+   data
    examples
 
 

@@ -146,7 +146,7 @@ class VisualizationFunctions:
 
         return
 
-    def makeMarkerSubplots(self, df, X_tsne, hugo_cd_dict, NoFrameOnFigures=False, HideClusterLabels=False, outlineClusters=True):
+    def makeMarkerSubplots(self, df, X_tsne, hugo_cd_dict, NoFrameOnFigures=False, HideClusterLabels=False, outlineClusters=True, analyzeBy='cluster'):
 
         '''Produce subplots on each marker and its expression on all clusters
 
@@ -174,6 +174,10 @@ class VisualizationFunctions:
 
             outlineClusters: boolean, Default True
                 Whether to outline the clusters with circles
+
+            analyzeBy: str, Default 'cluster'
+                What level of lablels to include.
+                Other possible option is 'label'
 
         Returns:
             None
@@ -263,10 +267,12 @@ class VisualizationFunctions:
 
         print('\nSaving marker subplots:\n')
 
-        df_votingResults = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_voting.xlsx'), sheet_name='z-scores')
-        votingResults = dict(zip(df_votingResults['cluster'].values, df_votingResults['Predicted cell type'].values))
+        votingAnalyzeBy = 'Predicted cell type' if analyzeBy=='label' else analyzeBy
 
-        cellClusterIndexLabel = df.columns.get_level_values('cluster').values
+        df_votingResults = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_voting.xlsx'), sheet_name='z-scores')
+        votingResults = dict(zip(df_votingResults[votingAnalyzeBy].values, df_votingResults['Predicted cell type'].values))
+
+        cellClusterIndexLabel = df.columns.get_level_values(analyzeBy).values
 
         for counter,marker in enumerate(df.index.values):
             MarkerSubplot(counter, marker, pd.DataFrame(data=np.reshape(np.array(df.loc[marker]), (1,len(df.loc[marker]))), columns=df.columns, index=[marker]), 
@@ -909,3 +915,90 @@ class VisualizationFunctions:
 
         return None
 
+    def makeTtestPlot(self, df, dfp, label=None, reorder=False, p_value_cutoff=0.05):
+
+        '''Produce heatmap plot of the new markers extracted from the annotated clusters
+
+        Parameters:
+            df: pandas.DataFrame
+                t-test p-Values calculated gene-pair-wise
+
+            label: str, Default None
+                Lebel to include in the plot
+                
+            reorder: boolean, Default True
+                Reorder values to group similar
+
+        Returns:
+            None
+        
+        Usage:
+            DCS = DigitalCellSorter.DigitalCellSorter()
+
+            DCS.makeTtestPlot(df)
+        '''
+
+        if reorder:
+
+            def metricCommonEuclidean(u,v):
+
+                where_common = (~np.isnan(u)) * (~np.isnan(v))
+
+                return np.sqrt(((u[where_common] - v[where_common]) ** 2).sum())
+
+            order = scipy.cluster.hierarchy.dendrogram(scipy.cluster.hierarchy.linkage(df.values, method='average', metric=metricCommonEuclidean), no_plot=True, get_leaves=True)['leaves']
+
+            df = df[df.columns.values[order]]
+            dfp = dfp[dfp.columns.values[order]]
+            df = df.loc[df.index.values[order]]
+            dfp = dfp.loc[dfp.index.values[order]]
+
+        df = df[df.columns[::-1]]
+        dfp = dfp[dfp.columns[::-1]]
+
+        fig = plt.figure(figsize=(5,5))
+
+        ax = fig.add_axes([0.35,0.02,0.63,0.63])
+        
+        cmap = plt.cm.PuOr_r #BrBG #PiYG #seismic
+        cmap.set_bad('grey')
+
+        ax.imshow(df.values.astype(float), cmap=cmap, interpolation='None', aspect='auto')
+
+        wh = np.where(dfp.values.T<=p_value_cutoff)
+        ax.plot(wh[0], wh[1], '*k')
+
+        ax.set_xticks(range(df.shape[1]))
+        ax.set_yticks(range(df.shape[0]))
+        ax.set_xticklabels(df.columns.values, rotation=90, fontsize=8)
+        ax.set_yticklabels(df.index.values, rotation=0, fontsize=8)
+        ax.set_xlim([-0.5, df.shape[1] - 0.5])
+        ax.set_ylim([-0.5, df.shape[0] - 0.5])
+
+        ax.xaxis.tick_top()
+
+        if not label is None:
+            ax.text(-0.5, 1.5, label, transform=ax.transAxes, fontsize=10, color='k', ha='left', va='top').set_path_effects(
+                [path_effects.Stroke(linewidth=0.5, foreground='blue'),path_effects.Normal()])
+
+        ax.set_title('Two-tailed p-Value (t-test)')
+
+        data = df.values.flatten().astype(float)
+        data = data[np.where(~np.isnan(data))]
+        dataMin = np.min(data)
+        dataMax = np.max(data)
+
+        axisColor = fig.add_axes([0.22,0.75,0.08,0.02])
+
+        norm=matplotlib.colors.Normalize(vmin=dataMin, vmax=dataMax)
+        mapp=cm.ScalarMappable(norm=norm, cmap=cmap)
+        mapp.set_array(data)
+        fig.colorbar(mapp, cax=axisColor, ticks=[dataMax,dataMin], orientation='horizontal')
+        axisColor.tick_params(labelsize=4)
+        axisColor.set_xlabel('Statistic\n*p-Value < %s'%(p_value_cutoff), fontsize=5)
+
+        axisColor.set_yticklabels([np.round(dataMax,2), np.round(dataMin,2)])
+
+        fig.savefig(os.path.join(self.saveDir, self.dataName + '_ttest_%s.png'%(label.replace('\n', '_'))), dpi=300)
+
+        return None

@@ -1160,6 +1160,56 @@ class DigitalCellSorter(VisualizationFunctions):
 
         return scores
 
+    def getExprOfGene(self, gene, analyzeBy='cluster'):
+
+        '''Get expression of a gene.
+        Run this function only after function process()
+
+        Parameters:
+            cells: pandas.MultiIndex
+                Index of cells of interest
+
+            analyzeBy: str, Default 'cluster'
+                What level of lablels to include.
+                Other possible options are 'label' and 'celltype'
+
+        Returns:
+            pandas.DataFrame
+                With expression of the cells of interest
+
+        Usage:
+            DCS = DigitalCellSorter.DigitalCellSorter()
+
+            DCS.process()
+
+            DCS.getExprOfGene('SDC1')
+        '''
+
+        try:
+            df_markers_expr = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_expr', mode='r').xs(key=gene, axis=0, level=2).T
+        except:
+            print('Gene %s not in index'%(gene))
+            return
+
+        df_markers_expr.index = [gene]
+
+        labelled = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_markers_expr', mode='r').columns
+        
+        columns = pd.MultiIndex.from_arrays([labelled.get_level_values('batch'), labelled.get_level_values('cell')])
+        df_markers_expr = df_markers_expr.reindex(columns, axis=1).fillna(0.)
+
+        if analyzeBy=='celltype':
+            analyzeBy = 'label'
+            columns = labelled.to_series().reset_index().set_index(['batch', 'cell'])[analyzeBy].loc[df_markers_expr.columns].reset_index().set_index(['batch', 'cell', analyzeBy]).index
+
+            df_markers_expr.columns = pd.MultiIndex.from_arrays([columns.get_level_values('batch'), 
+                                                                 columns.get_level_values('cell'), 
+                                                                 columns.get_level_values(analyzeBy).str.split(' #', expand=True).get_level_values(0)], names=['batch', 'cell','celltype'])
+        else:
+            df_markers_expr.columns = labelled.to_series().reset_index().set_index(['batch', 'cell'])[analyzeBy].loc[df_markers_expr.columns].reset_index().set_index(['batch', 'cell', analyzeBy]).index
+
+        return df_markers_expr
+    
     def getExprOfCells(self, cells):
 
         '''Get expression of a set of cells.
@@ -1178,7 +1228,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
             DCS.process()
 
-            DCS.getDfExprOfSelectedCells(cells)
+            DCS.getExprOfCells(cells)
         '''
 
         df_expr = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_expr', mode='r')
@@ -1231,6 +1281,51 @@ class DigitalCellSorter(VisualizationFunctions):
 
         return None
     
+    def getIndividualGeneTtestPlot(self, gene, analyzeBy='label'):
+
+        '''Produce individual gene t-test plot of the two-tailed p-value.
+
+        Parameters:
+            gene: str
+                Name of gene of interest
+
+            analyzeBy: str, Default 'cluster'
+                What level of lablels to include.
+                Other possible options are 'label' and 'celltype'
+
+        Returns:
+            None
+        
+        Usage:
+            DCS = DigitalCellSorter.DigitalCellSorter()
+
+            DCS.getIndividualGeneTtestPlot('SDC1')
+        '''
+
+        df_markers_expr = self.getExprOfGene(gene, analyzeBy=analyzeBy)
+
+        if df_markers_expr is None:
+
+            return None
+
+        groups = np.unique(df_markers_expr.columns.get_level_values(analyzeBy).values)
+
+        ttestStatistic = pd.DataFrame(index=groups, columns=groups)
+        ttestpValue = pd.DataFrame(index=groups, columns=groups)
+        for groupA in groups:
+            for groupB in groups:
+                A = df_markers_expr.xs(key=groupA, level=analyzeBy, axis=1).values.squeeze()
+                B = df_markers_expr.xs(key=groupB, level=analyzeBy, axis=1).values.squeeze()
+                ttestStatistic.loc[groupA, groupB], ttestpValue.loc[groupA, groupB] = scipy.stats.ttest_ind(A[np.where(A!=0)], B[np.where(B!=0)])
+
+        alt = self.gnc.Convert([gene], 'hugo', 'alias', returnUnknownString=False)[0]
+        alt = [alt] if type(alt) is str else alt
+        hugo_cd_dict = '%s\n(%s)'%(gene, ('\n').join(list(alt)))
+
+        self.makeTtestPlot(ttestStatistic, ttestpValue, label=hugo_cd_dict)
+
+        return None    
+
     def getIndividualGeneExpressionPlot(self, gene, hideClusterLabels=False, outlineClusters=True):
 
         '''Produce individual gene expression plot on a tSNE layout
@@ -1254,17 +1349,22 @@ class DigitalCellSorter(VisualizationFunctions):
             DCS.getIndividualGeneExpressionPlot('CD4')
         '''
 
-        df_markers_expr = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_expr', mode='r').xs(key=gene, axis=0, level=2).T
-        df_markers_expr.index = [gene]
+        df_markers_expr = self.getExprOfGene(gene, analyzeBy='cluster')
+
+        if df_markers_expr is None:
+
+            return None
 
         df_tsne = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_tsne', mode='r')
-        df_markers_expr = df_markers_expr.reindex(df_tsne.columns, axis=1).fillna(0.)
-
-        labelled = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_markers_expr', mode='r').columns
-        df_markers_expr.columns = labelled.to_series().reset_index().set_index(['batch', 'cell'])['cluster'].loc[df_markers_expr.columns].reset_index().set_index(['batch', 'cell', 'cluster']).index
-
+        
         hugo_cd_dict = {gene: self.gnc.Convert([gene], 'hugo', 'alias', returnUnknownString=False)[0]}
-        self.makeMarkerSubplots(df_markers_expr, df_tsne.values, hugo_cd_dict, self.dataName, self.saveDir, NoFrameOnFigures=True, HideClusterLabels=hideClusterLabels, outlineClusters=outlineClusters)
+
+        self.makeMarkerSubplots(df_markers_expr, 
+                                df_tsne.values, 
+                                hugo_cd_dict, 
+                                NoFrameOnFigures=True, 
+                                HideClusterLabels=hideClusterLabels, 
+                                outlineClusters=outlineClusters)
 
         return None
 
