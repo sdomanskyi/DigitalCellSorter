@@ -352,6 +352,14 @@ Calculate and plot anomaly scores for an arbitrary cell type or cluster:
 </p>
 
 
+- ```getIndividualGeneTtestPlot()```: Produce heatmap plot of t-test p-Values calculated gene-pair-wise
+        from the annotated clusters
+
+<p align="middle">
+	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/output/BM1/BM1_ttest_CD4_(CD4_CD4mut).png?raw=true" width="500"/>
+</p>
+
+
 - ```makePlotOfNewMarkers()```: genes significantly expressed in the annotated cell types
 
 <p align="middle">

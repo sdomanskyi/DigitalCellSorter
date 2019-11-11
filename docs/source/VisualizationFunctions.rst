@@ -18,6 +18,7 @@ The package contains a set of standard visualization functions that can be launc
    visFunctions/makeStackedBarplot
    visFunctions/makeVotingResultsMatrixPlot
    visFunctions/makeMarkerExpressionPlot
+   visFunctions/makeTtestPlot
    visFunctions/makePlotOfNewMarkers
 
 

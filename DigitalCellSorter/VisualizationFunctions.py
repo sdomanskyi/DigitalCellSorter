@@ -915,9 +915,10 @@ class VisualizationFunctions:
 
         return None
 
-    def makeTtestPlot(self, df, dfp, label=None, reorder=False, p_value_cutoff=0.05):
+    def makeTtestPlot(self, df, dfp, label=None, reorder=True, p_value_cutoff=0.05):
 
-        '''Produce heatmap plot of the new markers extracted from the annotated clusters
+        '''Produce heatmap plot of t-test p-Values calculated gene-pair-wise
+        from the annotated clusters.
 
         Parameters:
             df: pandas.DataFrame
