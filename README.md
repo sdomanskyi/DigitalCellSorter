@@ -3,15 +3,16 @@
 [![DOI](https://badge.fury.io/gh/sdomanskyi%2FDigitalCellSorter.svg)](https://badge.fury.io/gh/sdomanskyi%2FDigitalCellSorter)
 [![DOI](https://badge.fury.io/py/DigitalCellSorter.svg)](https://pypi.org/project/DigitalCellSorter)
 [![DOI](https://readthedocs.org/projects/digital-cell-sorter/badge/?version=latest)](https://digital-cell-sorter.readthedocs.io/en/latest/?badge=latest)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3470068.svg)](https://doi.org/10.5281/zenodo.3470068)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3538306.svg)](https://doi.org/10.5281/zenodo.3538306)
+
 
 Identification of hematological cell types from heterogeneous single cell RNA-seq data.
 
 [Polled Digital Cell Sorter (p-DCS): Automatic identification of hematological cell types from single cell RNA-sequencing clusters](
 https://doi.org/10.1186/s12859-019-2951-x 
 "Polled Digital Cell Sorter (p-DCS): Automatic identification of hematological cell types from single cell RNA-sequencing clusters")
-Sergii Domanskyi, Anthony Szedlak, Nathaniel T Hawkins, Jiayin Wang, Giovanni Paternostro & Carlo Piermarocchi,
- *BMC Bioinformatics* volume 20, Article number: 369 (**2019**)
+Sergii Domanskyi, Anthony Szedlak, Nathaniel T Hawkins, Jiayin Wang, Giovanni Paternostro & Carlo Piermarocchi, 
+*BMC Bioinformatics* volume 20, Article number: 369 (**2019**)
 
 The documentation is available at https://digital-cell-sorter.readthedocs.io/.
 
