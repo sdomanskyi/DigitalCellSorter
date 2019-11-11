@@ -15,6 +15,7 @@ Sergii Domanskyi, Anthony Szedlak, Nathaniel T Hawkins, Jiayin Wang, Giovanni Pa
 
 The documentation is available at https://digital-cell-sorter.readthedocs.io/.
 
+
 - [Getting Started](#getting-started)
   * [Prerequisites](#prerequisites)
   * [Loading the package](#loading-the-package)
@@ -28,6 +29,7 @@ The documentation is available at https://digital-cell-sorter.readthedocs.io/.
     + [Main cell types](#main-cell-types)
     + [Cell sub-types](#cell-sub-types)
   * [Output](#output)
+
 
 ## Getting Started
 
@@ -239,7 +241,7 @@ See example below:
 
 ```Human.MitoCarta2.0.csv```: An ```csv``` spreadsheet with human mitochondrial genes, created within work 
 [MitoCarta2.0: an updated inventory of mammalian mitochondrial proteins](https://doi.org/10.1093/nar/gkv1003 "MitoCarta2.0")
-Sarah E. Calvo, Karl R. Clauser, Vamsi K. Mootha, *Nucleic Acids Research*, Volume 44, Issue D1, 4 January 2016, Pages D1251вЂ“D1257.
+Sarah E. Calvo, Karl R. Clauser, Vamsi K. Mootha, *Nucleic Acids Research*, Volume 44, Issue D1, 4 January 2016, Pages D1251–D1257.
 
 
 ## Functionality
