@@ -146,7 +146,7 @@ class VisualizationFunctions:
 
         return
 
-    def makeMarkerSubplots(self, df, X_tsne, hugo_cd_dict, NoFrameOnFigures=False, HideClusterLabels=False, outlineClusters=True, analyzeBy='cluster'):
+    def internalMarkerSubplots(self, df, X_tsne, hugo_cd_dict, NoFrameOnFigures=False, HideClusterLabels=False, outlineClusters=True, analyzeBy='cluster'):
 
         '''Produce subplots on each marker and its expression on all clusters
 
@@ -598,7 +598,7 @@ class VisualizationFunctions:
 
     def makeStackedBarplot(self, clusterName):
         
-        '''Produce stacked barplot on subclustering
+        '''Produce stacked barplot with cell fractions
 
         Parameters:
             dataName: str

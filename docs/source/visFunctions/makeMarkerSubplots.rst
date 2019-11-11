@@ -10,7 +10,7 @@ From submodule `VisualizationFunctions`:
 .. autoclass:: DigitalCellSorter.VisualizationFunctions.VisualizationFunctions
     :noindex:
 
-    .. automethod:: makeMarkerSubplots
+    .. automethod:: internalMarkerSubplots
 
 
 **Example output:**

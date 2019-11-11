@@ -1,5 +1,5 @@
 **t-test plot**
-=============
+===============
 
 This visualization function can be launched from `class DigitalCellSorter` at the stage of post-processing.
 

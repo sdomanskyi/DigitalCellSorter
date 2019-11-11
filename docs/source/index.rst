@@ -27,9 +27,12 @@ Sergii Domanskyi, Anthony Szedlak, Nathaniel T Hawkins, Jiayin Wang, Giovanni Pa
    :caption: Contents:
 
    overview
+   gettingStarted
+   userFunctions
    DigitalCellSorterClass
    VisualizationFunctions
    GenericFunctions
+   dependencies
    dataPrepFunctions
    data
    examples

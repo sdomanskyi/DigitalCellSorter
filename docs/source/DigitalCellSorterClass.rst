@@ -5,12 +5,18 @@
 
 **Submodule core**
 
+.. container:: toggle
 
-.. automodule:: DigitalCellSorter.core
-    :members:
-    :undoc-members:
-    :show-inheritance:
-    :exclude-members: DigitalCellSorter
+    .. container:: header
+
+       **Description of the package functionality**
+
+    .. automodule:: DigitalCellSorter.core
+        :exclude-members: DigitalCellSorter
+        :noindex:
+
+|
+|
 
 
 .. autoclass:: DigitalCellSorter.core.DigitalCellSorter

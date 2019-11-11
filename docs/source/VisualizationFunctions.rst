@@ -1,7 +1,12 @@
-**Visualization functions**
-===========================
+**Visualization functions API**
+===============================
 
-The package contains a set of standard visualization functions that can be launched at the stage of post-processing.
+The package contains a set of visualization functions that are used  
+at the stage of post-processing. 
+
+.. note:: These functions are not intended to be accessed directly 
+   by a user. See **User Functions** for the list of visualization tools that utilize 
+   visualization functions detailed here.
 
 
 **Submodule VisualizationFunctions** 
