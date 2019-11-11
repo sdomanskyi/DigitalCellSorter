@@ -212,7 +212,32 @@ Let us demonstrate this on the input of type 1:
 ```markersDCS.xlsx```: An excel book with marker data. Rows are markers and columns are cell types. 
 '1' means that the gene is a marker for that cell type, and '0' otherwise.
 This gene marker file included in the package is used by Default. 
-If you use your own file it has to be prepared in the same format (including tabs names, etc.).
+If you use your own file it has to be prepared in the same format (including the two-line header). Note that only the first worksheet will be read,
+and its name can be arbitrary. The first column should contain gene names. The second row should contain cell types, and the first row how 
+those cell types are grouped. If any of the cell types need to be skipped, have "NA" in the corresponding cell of the first row of that cell type.
+See example below:
+
+|A       |B            |C             |D           |E          |F                |G                         |H                           |I                        |J                         |K                  |L               |M                 |...      |
+|--------|-------------|--------------|------------|-----------|-----------------|--------------------------|----------------------------|-------------------------|--------------------------|-------------------|----------------|------------------|---------|
+|        |B cells      |B cells       |B cells     |T cells    |T cells          |T cells                   |T cells                     |T cells                  |T cells                   |T cells            |NK cells        |NK cells          |...      |
+|Marker  |B cells naive|B cells memory|Plasma cells|T cells CD8|T cells CD4 naive|T cells CD4 memory resting|T cells CD4 memory activated|T cells follicular helper|T cells regulatory (Tregs)|T cells gamma delta|NK cells resting|NK cells activated|...      |
+|ABCB4   |1            |0             |0           |0          |0                |0                         |0                           |0                        |0                         |0                  |0               |0                 |...      |
+|ABCB9   |0            |0             |1           |0          |0                |0                         |0                           |0                        |0                         |0                  |0               |0                 |...      |
+|ACAP1   |0            |0             |0           |0          |1                |0                         |0                           |0                        |0                         |0                  |0               |0                 |...      |
+|ACHE    |0            |0             |0           |0          |0                |0                         |0                           |0                        |0                         |0                  |0               |0                 |...      |
+|ACP5    |0            |0             |0           |0          |0                |0                         |0                           |0                        |0                         |0                  |0               |0                 |...      |
+|ADAM28  |1            |1             |0           |0          |0                |0                         |0                           |0                        |0                         |0                  |0               |0                 |...      |
+|ADAMDEC1|0            |0             |0           |0          |0                |0                         |0                           |0                        |0                         |0                  |0               |0                 |...      |
+|ADAMTS3 |0            |0             |0           |0          |0                |0                         |0                           |0                        |0                         |0                  |0               |0                 |...      |
+|ADRB2   |0            |0             |0           |0          |0                |0                         |0                           |0                        |0                         |0                  |0               |0                 |...      |
+|AIF1    |0            |0             |0           |0          |0                |0                         |0                           |0                        |0                         |0                  |0               |0                 |...      |
+|AIM2    |0            |1             |0           |0          |0                |0                         |0                           |0                        |0                         |0                  |0               |0                 |...      |
+|ALOX15  |0            |0             |0           |0          |0                |0                         |0                           |0                        |0                         |0                  |0               |0                 |...      |
+|ALOX5   |0            |1             |0           |0          |0                |0                         |0                           |0                        |0                         |0                  |0               |0                 |...      |
+|AMPD1   |0            |0             |1           |0          |0                |0                         |0                           |0                        |0                         |0                  |0               |0                 |...      |
+|ANGPT4  |0            |0             |1           |0          |0                |0                         |0                           |0                        |0                         |0                  |0               |0                 |...      |
+|...     |...          |...           |...         |...        |...              |...                       |...                         |...                      |...                       |...                |...             |...               |...      |
+
 
 ```Human.MitoCarta2.0.csv```: An ```csv``` spreadsheet with human mitochondrial genes, created within work 
 [MitoCarta2.0: an updated inventory of mammalian mitochondrial proteins](https://doi.org/10.1093/nar/gkv1003 "MitoCarta2.0")
