@@ -5,13 +5,20 @@
 [![DOI](https://readthedocs.org/projects/digital-cell-sorter/badge/?version=latest)](https://digital-cell-sorter.readthedocs.io/en/latest/?badge=latest)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3538306.svg)](https://doi.org/10.5281/zenodo.3538306) 
 
-Identification of hematological cell types from heterogeneous single cell RNA-seq data.
+Digital Cell Sorter (DCS): a single cell RNA-seq analysis toolkit for clustering, cell type identification, and anomaly detection.
 
-[Polled Digital Cell Sorter (p-DCS): Automatic identification of hematological cell types from single cell RNA-sequencing clusters](
-https://doi.org/10.1186/s12859-019-2951-x 
-"Polled Digital Cell Sorter (p-DCS): Automatic identification of hematological cell types from single cell RNA-sequencing clusters")
-Sergii Domanskyi, Anthony Szedlak, Nathaniel T Hawkins, Jiayin Wang, Giovanni Paternostro & Carlo Piermarocchi, 
-*BMC Bioinformatics* volume 20, Article number: 369 (**2019**)
+> **Note:** We are currently preparing a manuscript describing the toolkit located this repository.
+> If you want to access the package detailed in our latest publication of Polled Digital Cell Sorter
+> go to https://zenodo.org/record/2603265 and download the package (v1.1).
+
+
+
+> **The latest publication describing the methodology of cell types identification:**
+>[Polled Digital Cell Sorter (p-DCS): Automatic identification of hematological cell types from single cell RNA-sequencing clusters](
+>https://doi.org/10.1186/s12859-019-2951-x 
+>"Polled Digital Cell Sorter (p-DCS): Automatic identification of hematological cell types from single cell RNA-sequencing clusters")
+>Sergii Domanskyi, Anthony Szedlak, Nathaniel T Hawkins, Jiayin Wang, Giovanni Paternostro & Carlo Piermarocchi, 
+>*BMC Bioinformatics* volume 20, Article number: 369 (**2019**)
 
 The documentation is available at https://digital-cell-sorter.readthedocs.io/.
 

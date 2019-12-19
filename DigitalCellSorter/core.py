@@ -130,7 +130,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
     def __init__(self, dataName='dataName', geneListFileName=None, mitochondrialGenes=None,
                 sigmaOverMeanSigma=0.3, nClusters=5, clusteringFunction=AgglomerativeClustering, nComponentsPCA=200, nSamplesDistribution=10000, 
-                saveDir=os.path.join(''), makeMarkerSubplots=False, availableCPUsCount=os.cpu_count(), zScoreCutoff=0.3,
+                saveDir=os.path.join(''), makeMarkerSubplots=False, availableCPUsCount=min(12, os.cpu_count()), zScoreCutoff=0.3,
                 subclusteringName=None, doQualityControl=True, doBatchCorrection=True, makePlots=True,
                 minimumNumberOfMarkersPerCelltype=10, minimumScoreForUnknown=0.3):
 
@@ -164,13 +164,13 @@ class DigitalCellSorter(VisualizationFunctions):
 
         self.toggleRecordAllExpression = True
 
-        self.toggleDoQualityControl  =  doQualityControl
+        self.toggleRemoveLowQualityCells  =  doQualityControl
         self.toggleDoBatchCorrection = doBatchCorrection
 
         self.toggleMakeHistogramNullDistributionPlot = makePlots
         self.toggleMakeVotingResultsMatrixPlot = makePlots
         self.toggleMakeMarkerExpressionPlot = makePlots
-        self.toggleMakeTSNEplotQC = makePlots
+        self.toggleMakeTSNEplotsQC = makePlots
         self.toggleMakeTSNEplotClusters = makePlots
         self.toggleMakeTSNEplotAnnotatedClusters = makePlots
         self.toggleMakeTSNEplotBatches = makePlots
@@ -607,14 +607,13 @@ class DigitalCellSorter(VisualizationFunctions):
         ##############################################################################################
         # Calculate QC measures
         ##############################################################################################
-        if self.toggleDoQualityControl:
-            if self.mitochondrialGenes is None:
-                self.mitochondrialGenes = pd.read_csv(os.path.join(self.defualtGeneListsDir, 'Human.MitoCarta2.0.csv'), index_col=None, header=0)['Symbol'].values.squeeze().tolist()
-            print('Calculating quality control measures (count depth, number of genes, fraction of mitochondrial genes) for each cell')
-            df_QC = pd.concat([(df_expr).sum(axis=0), (df_expr > 0).sum(axis=0), (df_expr.loc[self.mitochondrialGenes] > 0).sum(axis=0) / (df_expr > 0).sum(axis=0)], axis=1, sort=False)
-            df_QC.columns = ['count_depth', 'number_of_genes', 'fraction_of_mitochondrialGenes']
-            df_QC.to_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='QC', mode='a', complevel=4, complib='zlib')
-            timeMark()
+        if self.mitochondrialGenes is None:
+            self.mitochondrialGenes = pd.read_csv(os.path.join(self.defualtGeneListsDir, 'Human.MitoCarta2.0.csv'), index_col=None, header=0)['Symbol'].values.squeeze().tolist()
+        print('Calculating quality control measures (count depth, number of genes, fraction of mitochondrial genes) for each cell')
+        df_QC = pd.concat([(df_expr).sum(axis=0), (df_expr > 0).sum(axis=0), (df_expr.loc[self.mitochondrialGenes] > 0).sum(axis=0) / (df_expr > 0).sum(axis=0)], axis=1, sort=False)
+        df_QC.columns = ['count_depth', 'number_of_genes', 'fraction_of_mitochondrialGenes']
+        df_QC.to_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='QC', mode='a', complevel=4, complib='zlib')
+        timeMark()
 
         ##############################################################################################
         # Normalize
@@ -659,14 +658,15 @@ class DigitalCellSorter(VisualizationFunctions):
         print('Recording xpca, pcs, tsne of df_expr')
         pd.DataFrame(data=X_pca, columns=df_expr.columns).to_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_xpca', mode='a', complevel=4, complib='zlib')
         pd.DataFrame(data=PCs, columns=df_expr.index).to_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_pcs', mode='a', complevel=4, complib='zlib')
-        pd.DataFrame(data=X_tsne2, columns=df_expr.columns).to_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_tsne_pre_QC' if self.toggleDoQualityControl else 'df_tsne', mode='a', complevel=4, complib='zlib')
+        pd.DataFrame(data=X_tsne2, columns=df_expr.columns).to_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_tsne_pre_QC' if self.toggleRemoveLowQualityCells else 'df_tsne', mode='a', complevel=4, complib='zlib')
         timeMark()
 
         ##############################################################################################
         # Remove low quality cells
         ##############################################################################################
-        if self.toggleDoQualityControl:
-            df_expr = df_expr[df_expr.columns.intersection(self.getIndexOfGoodQualityCells(self.saveDir, self.dataName)).sort_values()]
+        index = self.getIndexOfGoodQualityCells(self.saveDir, self.dataName)
+        if self.toggleRemoveLowQualityCells:
+            df_expr = df_expr[df_expr.columns.intersection(index).sort_values()]
             print('Removed low quality cells. Data size: %s genes, %s cells' % df_expr.shape)
             X_pca, PCs = self.project(df_expr, PCAonly=True)
             pd.DataFrame(data=X_pca, columns=df_expr.columns).to_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_xpca', mode='a', complevel=4, complib='zlib')
@@ -810,7 +810,7 @@ class DigitalCellSorter(VisualizationFunctions):
         ##############################################################################################
         # Make tSNE plots
         ##############################################################################################
-        if self.toggleMakeTSNEplotQC and self.toggleDoQualityControl:
+        if self.toggleMakeTSNEplotsQC:
             self.getTSNEplotsQC()
             timeMark()    
 
@@ -956,7 +956,10 @@ class DigitalCellSorter(VisualizationFunctions):
         print('Making tSNE plots of QC')
 
         df_QC = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='QC', mode='r')
-        df_tsne = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_tsne_pre_QC', mode='r')
+        if self.toggleRemoveLowQualityCells:
+            df_tsne = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_tsne_pre_QC', mode='r')
+        else:
+            df_tsne = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_tsne', mode='r')
 
         goodQUalityCells = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_tsne', mode='r').columns
 
@@ -1194,8 +1197,14 @@ class DigitalCellSorter(VisualizationFunctions):
             DCS.getExprOfGene('SDC1')
         '''
 
+        fileName = os.path.join(self.saveDir, self.dataName + '_processed.h5')
+
+        if not os.path.isfile(fileName):
+            print('Processed data file not found')
+            return
+
         try:
-            df_markers_expr = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_expr', mode='r').xs(key=gene, axis=0, level=2).T
+            df_markers_expr = pd.read_hdf(fileName, key='df_expr', mode='r').xs(key=gene, axis=0, level=2).T
         except:
             print('Gene %s not in index'%(gene))
             return
@@ -1437,6 +1446,43 @@ class DigitalCellSorter(VisualizationFunctions):
             
         return cutoff
 
+    def alignSeries(self, se1, se2, tagForMissing):
+
+        '''Align two pandas.Series
+
+        Parameters:
+            se1: pandas.Series
+                Series with the first set of items
+
+            se2: pandas.Series 
+                Series with the second set of items
+
+            tagForMissing: str, Default 'Missing'
+                Label to assign to non-overlapping items
+
+        Returns:
+            pandas.DataFrame
+                Contains two aligned pandas.Series
+        
+        Usage:
+            DCS = DigitalCellSorter.DigitalCellSorter()
+
+            df = alignSeries(pd.Index(['A', 'B', 'C', 'D']).to_series(), pd.Index(['B', 'C', 'D', 'E', 'F']).to_series())
+        '''
+        
+        se1.index.name = 'index'
+        se2.index.name = 'index'
+
+        append = lambda se1, se2: pd.concat([se1, pd.Series(index=se2.index.difference(se1.index), data=[tagForMissing] * len(se2.index.difference(se1.index)))], axis=0, sort=False)
+
+        se1 = append(se1, se2)
+        se2 = append(se2, se1)
+
+        se1.name = 'se1'
+        se2.name = 'se2'
+
+        return pd.concat((se1, se2.loc[se1.index]), axis=1, sort=True)
+
     def getCountsDataframe(self, se1, se2, tagForMissing='Missing'):
 
         '''Get a pandas.DataFrame with cross-counts (overlaps) between two pandas.Series
@@ -1461,26 +1507,7 @@ class DigitalCellSorter(VisualizationFunctions):
             df = DCS.getCountsDataframe(se1, se2)
         '''
 
-        def alignSeries(se1, se2, tagForMissing):
-
-            '''Unit test:
-                se1, se2 = alignSeries(pd.Index(['A', 'B', 'C', 'D']).to_series(), pd.Index(['B', 'C', 'D', 'E', 'F']).to_series())
-            '''
-
-            append = lambda se1, se2: pd.concat([se1, pd.Series(index=se2.index.difference(se1.index), data=[tagForMissing] * len(se2.index.difference(se1.index)))], axis=0, sort=False)
-
-            se1 = append(se1, se2)
-            se2 = append(se2, se1)
-
-            se1.name = 'se1'
-            se2.name = 'se2'
-
-            return se1, se2.loc[se1.index]
-
-        se1.index.name = 'index'
-        se2.index.name = 'index'
-
-        df = pd.concat(alignSeries(se1, se2, tagForMissing), axis=1, sort=True)
+        df = self.alignSeries(se1, se2, tagForMissing)
 
         counts = {group[0]:{k:len(v) for k, v in group[1].groupby(by='se1').groups.items()} for group in df.reset_index().drop(columns=['index']).set_index('se2').groupby('se2')}
 

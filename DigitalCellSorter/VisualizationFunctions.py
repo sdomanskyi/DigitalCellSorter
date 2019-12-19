@@ -853,7 +853,7 @@ class VisualizationFunctions:
         if not title is None:
             fig.update_layout(title_text=title, font_size=10)
 
-        fig.write_image(os.path.join(self.dataName + '.png'), width=600, height=600, scale=quality)
+        fig.write_image(os.path.join(self.saveDir, self.dataName + '.png'), width=600, height=600, scale=quality)
 
         if interactive:
             fig.show()
