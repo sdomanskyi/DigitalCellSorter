@@ -1626,7 +1626,12 @@ class DigitalCellSorter(VisualizationFunctions):
 
             return None
 
-        self.df_expr = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_expr', mode='r')
+        print('Loading processed data', flush=True)
+        self.df_expr = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_expr', mode='r').unstack(level=2, fill_value=0).T
+        self.df_expr.index = self.df_expr.index.get_level_values(-1)
+
+        df_clusters = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_clusters', mode='r')
+        self.df_expr = pd.concat([df_clusters, self.df_expr.T], sort=False, axis=1).reset_index().set_index(['batch', 'cell', 'cluster']).T
 
         df_gene_cluster_centroids = self.df_expr.groupby(level=['cluster'], sort=True, axis=1).mean()
 
@@ -1645,12 +1650,11 @@ class DigitalCellSorter(VisualizationFunctions):
 
         if not cluster is None:
 
-            clusterGenes = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_gene_cluster_centroids', mode='r')[cluster].sort_values(ascending=False)
+            clusterGenes = df_gene_cluster_centroids[cluster].sort_values(ascending=False)
+            #clusterGenes = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_gene_cluster_centroids', mode='r')[cluster].sort_values(ascending=False)
             clusterGenes = clusterGenes[clusterGenes >= zScoreCutoff].iloc[:top]
 
             return {'genes':clusterGenes.index.values.tolist(), 'zscore':clusterGenes.values.tolist()}
-
-        df_gene_cluster_centroids_merged = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_new_marker_genes', mode='r')
 
         if removeUnknown and 'Unknown' in df_gene_cluster_centroids_merged.columns:
             df_gene_cluster_centroids_merged.drop(columns=['Unknown'], inplace=True)

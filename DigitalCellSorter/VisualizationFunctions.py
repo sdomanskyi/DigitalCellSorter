@@ -399,9 +399,9 @@ class VisualizationFunctions:
             for j in range(num_of_cell_types):
                 if np.round(zscores[i,j],1) > 0:
                     if zscores[i,j] == np.max(zscores[i,:]):
-                        ax.text(j,i,np.round(zscores[i,j],1), color='w', fontsize=4 * min([num_of_cell_types, num_of_clusters]),ha='center',va='center').set_path_effects([path_effects.Stroke(linewidth=4, foreground='red'),path_effects.Normal()])
+                        ax.text(j,i,np.round(zscores[i,j],1), color='w', fontsize=125*4 / max([num_of_cell_types, num_of_clusters]),ha='center',va='center').set_path_effects([path_effects.Stroke(linewidth=4, foreground='red'),path_effects.Normal()])
                     else:
-                        ax.text(j,i,np.round(zscores[i,j],1), color='w', fontsize=3 * min([num_of_cell_types, num_of_clusters]),ha='center',va='center').set_path_effects([path_effects.Stroke(linewidth=2, foreground='black'),path_effects.Normal()])
+                        ax.text(j,i,np.round(zscores[i,j],1), color='w', fontsize=125*3 / max([num_of_cell_types, num_of_clusters]),ha='center',va='center').set_path_effects([path_effects.Stroke(linewidth=2, foreground='black'),path_effects.Normal()])
 
         ax.set_xticks(range(num_of_cell_types))
         ax.set_yticks(range(num_of_clusters))

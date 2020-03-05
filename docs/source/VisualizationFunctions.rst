@@ -15,6 +15,7 @@ at the stage of post-processing.
    :maxdepth: 2
    :caption: Contents:
 
+   visFunctions/makeMarkerPiePlot
    visFunctions/makeProjectionPlot
    visFunctions/makeMarkerSubplots
    visFunctions/makeQualityControlHistogramPlot
