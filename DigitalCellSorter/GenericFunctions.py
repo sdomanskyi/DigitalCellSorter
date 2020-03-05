@@ -97,4 +97,3 @@ def getElapsedTime(start):
     '''
 
     return print('Elapsed time: ' + str(np.round((time.time() - start) / 60.,1)) + ' min' + '\n')
-

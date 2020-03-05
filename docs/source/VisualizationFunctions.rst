@@ -15,7 +15,7 @@ at the stage of post-processing.
    :maxdepth: 2
    :caption: Contents:
 
-   visFunctions/makeTSNEplot
+   visFunctions/makeProjectionPlot
    visFunctions/makeMarkerSubplots
    visFunctions/makeQualityControlHistogramPlot
    visFunctions/makeHistogramNullDistributionPlot

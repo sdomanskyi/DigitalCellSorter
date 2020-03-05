@@ -1,5 +1,5 @@
-**TSNE plot**
-=============
+**Projection plot**
+===================
 
 This visualization function can be launched from `class DigitalCellSorter` at the stage of post-processing.
 
@@ -10,7 +10,7 @@ From submodule `VisualizationFunctions`:
 .. autoclass:: DigitalCellSorter.VisualizationFunctions.VisualizationFunctions
     :noindex:
 
-    .. automethod:: makeTSNEplot
+    .. automethod:: makeProjectionPlot
 
 
 **Example output:**

@@ -282,10 +282,10 @@ correction, dimensionality reduction, clustering and cell type annotation.
 
 .. currentmodule:: DigitalCellSorter.core.DigitalCellSorter
 .. autosummary:: 
-     getTSNEplotAnnotated
-     getTSNEplotByBatches
-     getTSNEplotByClusters
-     getTSNEplotsQC
+     getProjectionPlotAnnotated
+     getProjectionPlotByBatches
+     getProjectionPlotByClusters
+     getProjectionPlotsQC
      getMarkerSubplots
      getAnomalyScoresPlot
      getIndividualGeneTtestPlot
@@ -307,9 +307,9 @@ correction, dimensionality reduction, clustering and cell type annotation.
 
     .. container:: header
 
-       **Function** ``getTSNEplotAnnotated()``: Produce t-SNE plot colored by cell types
+       **Function** ``getProjectionPlotAnnotated()``: Produce t-SNE plot colored by cell types
 
-    .. automethod:: DigitalCellSorter.core.DigitalCellSorter.getTSNEplotAnnotated
+    .. automethod:: DigitalCellSorter.core.DigitalCellSorter.getProjectionPlotAnnotated
      	:noindex:
 
 Example output:
@@ -328,9 +328,9 @@ Example output:
 
     .. container:: header
 
-       **Function** ``getTSNEplotByBatches()``: Produce t-SNE plot colored by batches
+       **Function** ``getProjectionPlotByBatches()``: Produce t-SNE plot colored by batches
 
-    .. automethod:: DigitalCellSorter.core.DigitalCellSorter.getTSNEplotByBatches
+    .. automethod:: DigitalCellSorter.core.DigitalCellSorter.getProjectionPlotByBatches
      	:noindex:
 
 Example output:
@@ -349,9 +349,9 @@ Example output:
 
     .. container:: header
 
-       **Function** ``getTSNEplotByClusters()``: Produce t-SNE plot colored by clusters
+       **Function** ``getProjectionPlotByClusters()``: Produce t-SNE plot colored by clusters
 
-    .. automethod:: DigitalCellSorter.core.DigitalCellSorter.getTSNEplotByClusters
+    .. automethod:: DigitalCellSorter.core.DigitalCellSorter.getProjectionPlotByClusters
      	:noindex:
 
 Example output:
@@ -414,9 +414,9 @@ Example output:
 
     .. container:: header
 
-       **Function** ``getTSNEplotsQC()``: Produce Quality Control t-SNE plots
+       **Function** ``getProjectionPlotsQC()``: Produce Quality Control t-SNE plots
 
-    .. automethod:: DigitalCellSorter.core.DigitalCellSorter.getTSNEplotsQC
+    .. automethod:: DigitalCellSorter.core.DigitalCellSorter.getProjectionPlotsQC
      	:noindex:
 
 Example output:
@@ -580,7 +580,7 @@ Example output:
 
     .. container:: header
 
-       **Function** ``getIndividualGeneExpressionPlot()``: Produce individual gene expression plot on a tSNE layout
+       **Function** ``getIndividualGeneExpressionPlot()``: Produce individual gene expression plot on a 2D layout
 
     .. automethod:: DigitalCellSorter.core.DigitalCellSorter.getIndividualGeneExpressionPlot
      	:noindex:
