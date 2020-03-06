@@ -3,7 +3,9 @@
 
 import os
 import pickle
+import zipfile
 import gzip
+import shutil
 import time
 import numpy as np
 
@@ -97,3 +99,43 @@ def getElapsedTime(start):
     '''
 
     return print('Elapsed time: ' + str(np.round((time.time() - start) / 60.,1)) + ' min' + '\n')
+
+def extractFromZipOfGz(filepath, removeDownloadedZipFile=False):
+
+    print('Extracting files at:', filepath)
+
+    extractPath = os.path.join(os.path.dirname(filepath), os.path.splitext(os.path.basename(filepath))[0])
+
+    filename = os.path.basename(filepath)
+    filepath = os.path.dirname(filepath)
+
+    if not os.path.exists(extractPath):
+        os.makedirs(extractPath)
+
+    with zipfile.ZipFile(os.path.join(filepath, filename), "r") as zipFile:
+
+        for finfo in zipFile.infolist():
+
+            ifile = zipFile.open(finfo)
+            zipFile.extract(ifile.name, path=filepath)
+
+            with gzip.open(os.path.join(filepath, ifile.name), "r") as fileIn:
+                extractName = os.path.join(extractPath, os.path.splitext(os.path.basename(fileIn.name))[0])
+                
+                print("Extracting to:", extractName)
+
+                with open(extractName, 'wb') as fileOut:
+                    shutil.copyfileobj(fileIn, fileOut)
+
+            shutil.rmtree(os.path.join(filepath, os.path.dirname(ifile.name)))
+
+    if removeDownloadedZipFile:
+
+        print('Removing the downloaded ZIP file')
+
+        try:
+            os.remove(os.path.join(filepath, filename))
+        except:
+            print('Could not remove the file')
+
+    return extractPath
