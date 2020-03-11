@@ -386,7 +386,7 @@ class VisualizationFunctions:
 
         fig = plt.figure(figsize=_figsize)
         
-        ax = fig.add_axes([0.15, 0.1, 0.65, 0.85])
+        ax = fig.add_axes([0.15, 0.125, 0.65, 0.85])
         axx = fig.add_axes([0.76, 0.1, 0.19, 0.85])
 
         #ax = plt.subplot(gs[0])
@@ -411,11 +411,11 @@ class VisualizationFunctions:
             ytickslabels[i] = str(assigned_names_of_clusters[i]) + ' (' + str(indicis_of_clusters[i]) + ')'
 
         xtickslabels = np.array(copy.deepcopy(cellTypes))
-        for i in range(len(xtickslabels)):
-            if i % 3 == 1: xtickslabels[i] = '\n' + xtickslabels[i]
-            if i % 3 == 2: xtickslabels[i] = '\n\n' + xtickslabels[i]
+        #for i in range(len(xtickslabels)):
+        #    if i % 3 == 1: xtickslabels[i] = '\n' + xtickslabels[i]
+        #    if i % 3 == 2: xtickslabels[i] = '\n\n' + xtickslabels[i]
 
-        ax.set_xticklabels(xtickslabels, rotation=0, fontsize=20, ha='center')
+        ax.set_xticklabels(xtickslabels, rotation=30, fontsize=20, ha='right')
         ax.set_yticklabels(ytickslabels, fontsize=20, rotation=0) 
         ax.set_xlim([-0.5,num_of_cell_types - 0.5])
         ax.set_ylim([-0.5,num_of_clusters - 0.5])
@@ -1141,6 +1141,8 @@ class VisualizationFunctions:
 
         all = t1p.union(t2p).union(t1n).union(t2n)
 
+        total_count = len(all)
+
         sets = [p0, p1, p2, p3, p4, p5, p6, p7]
 
         titles = ['Positive in %s:'%(type1),
@@ -1223,6 +1225,8 @@ class VisualizationFunctions:
 
         fig.suptitle('%s & %s'%(type1, type2), fontsize=11, color='b')
         ax.axis('equal')
+
+        ax.text(0., 0., str(total_count), color='k', fontsize=10, ha='center', va='center').set_path_effects([path_effects.Stroke(linewidth=1, foreground='blue'),path_effects.Normal()])
 
         if self.saveDir is not None:
             fig.savefig(os.path.join(self.saveDir, self.dataName + 'Markers_of_%s_vs_%s_(%s)_%s.png'%(type1.replace('/',''), 

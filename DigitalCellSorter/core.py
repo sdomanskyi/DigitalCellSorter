@@ -670,7 +670,7 @@ class DigitalCellSorter(VisualizationFunctions):
         
         tempFile = os.path.join(self.saveDir, self.dataName + '_processed.h5')
 
-        if (not cellTypeIdentificationOnly) or (not self.KeyInFile('df_expr', tempFile)) or (not self.KeyInFile('df_clusters', tempFile)):
+        if (not cellTypeIdentificationOnly) or (not self.KeyInFile('df_expr', tempFile)):
 
             if self.saveDir!=os.path.join('') and not os.path.exists(self.saveDir):
                 os.makedirs(self.saveDir)
@@ -719,15 +719,15 @@ class DigitalCellSorter(VisualizationFunctions):
                         print('Setting negative values to zeros', flush=True)
                         self.df_expr[self.df_expr < 0.0] = 0.
 
-            ##############################################################################################
-            # Compress and record DataFrame to dense matrix
-            ##############################################################################################
-            if self.toggleRecordAllExpression:
-                print('Recording compressed DataFrame', flush=True)
-                self.df_expr.replace(0, np.nan).T.stack().to_frame().to_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_expr', mode='a', complevel=4, complib='zlib')
-
-            self.df_expr = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_expr', mode='r').unstack().T.fillna(0.)
-            self.df_expr.index = self.df_expr.index.get_level_values(1)
+            ###############################################################################################
+            ## Compress and record DataFrame to dense matrix
+            ###############################################################################################
+            #if self.toggleRecordAllExpression:
+            #    print('Recording compressed DataFrame', flush=True)
+            #    self.df_expr.replace(0, np.nan).T.stack().to_frame().to_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_expr', mode='a', complevel=4, complib='zlib')
+            #
+            #self.df_expr = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_expr', mode='r').unstack().T.fillna(0.)
+            #self.df_expr.index = self.df_expr.index.get_level_values(1)
 
             ##############################################################################################
             # Calculate PCA and 2D projection
@@ -744,6 +744,7 @@ class DigitalCellSorter(VisualizationFunctions):
             index = self.getIndexOfGoodQualityCells(self.saveDir, self.dataName)
             if self.toggleRemoveLowQualityCells:
                 self.df_expr = self.df_expr[self.df_expr.columns.intersection(index).sort_values()]
+                self.df_expr = self.df_expr[self.df_expr.sum(axis=1) > 0]
                 print('Removed low quality cells. Data size: %s genes, %s cells' % self.df_expr.shape, flush=True)
                 X_pca, PCs = self.project(PCAonly=True)
                 pd.DataFrame(data=X_pca, columns=self.df_expr.columns).to_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_xpca', mode='a', complevel=4, complib='zlib')
@@ -762,12 +763,19 @@ class DigitalCellSorter(VisualizationFunctions):
             df_clusters.columns = ['cluster']
             df_clusters.to_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_clusters', mode='a', complevel=4, complib='zlib')
 
-        print('Loading processed data', flush=True)
-        self.df_expr = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_expr', mode='r').unstack(level=2, fill_value=0).T
-        self.df_expr.index = self.df_expr.index.get_level_values(-1)
+            self.df_expr = pd.concat([df_clusters, self.df_expr.T], sort=False, axis=1).reset_index().set_index(['batch', 'cell', 'cluster']).T
 
-        df_clusters = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_clusters', mode='r')
-        self.df_expr = pd.concat([df_clusters, self.df_expr.T], sort=False, axis=1).reset_index().set_index(['batch', 'cell', 'cluster']).T
+            ##############################################################################################
+            # Compress and record DataFrame to dense matrix
+            ##############################################################################################
+            if self.toggleRecordAllExpression:
+                print('Recording compressed DataFrame', flush=True)
+                self.df_expr.replace(0, np.nan).T.stack().to_frame().to_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_expr', mode='a', complevel=4, complib='zlib')
+
+        print('Loading processed data', flush=True)
+        self.df_expr = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_expr', mode='r').unstack(level=-1, fill_value=0.).T
+        self.df_expr.index = self.df_expr.index.get_level_values(-1)
+        self.df_expr.sort_index(inplace=True)
 
         ##############################################################################################
         # Get dictionary to map from markers to cell types. Select genes from the marker list only
@@ -1885,8 +1893,10 @@ class DigitalCellSorter(VisualizationFunctions):
 
         df_markers_expr_copy = df_markers_expr.copy()
 
-        uclusters = np.unique(df_markers_expr_copy.columns.get_level_values(2))
-        uindex = pd.Series(df_markers_expr_copy.columns.get_level_values(2)).replace(dict(zip(uclusters, range(len(uclusters))))).values
+        print(df_markers_expr)
+
+        uclusters = np.unique(df_markers_expr_copy.columns.get_level_values(2).astype(str))
+        uindex = pd.Series(df_markers_expr_copy.columns.get_level_values(2).astype(str)).replace(dict(zip(uclusters, range(len(uclusters))))).values
         df_markers_expr_copy.columns = pd.MultiIndex.from_arrays([df_markers_expr_copy.columns.get_level_values(0),
                                                                   df_markers_expr_copy.columns.get_level_values(1),
                                                                   uindex], names=df_markers_expr_copy.columns.names)
