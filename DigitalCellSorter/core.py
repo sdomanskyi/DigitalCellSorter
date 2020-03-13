@@ -140,16 +140,17 @@ class DigitalCellSorter(VisualizationFunctions):
         df_data = DCS.Clean(df_data)
     '''
 
-    gnc = GeneNameConverter.GeneNameConverter(dictDir=os.path.join('DigitalCellSorter', 'pickledGeneConverterDict', 'ensembl_hugo_entrez_alias_dict.pythdat'))
-
     def __init__(self, df_expr=None, dataName='dataName', geneNamesType='alias', geneListFileName=None, dataIsNormalized=False, mitochondrialGenes=None,
                 sigmaOverMeanSigma=0.3, nClusters=5, nFineClusters=3, doFineClustering=True, minSizeForFineClustering=50, 
                 clusteringFunction=AgglomerativeClustering, nComponentsPCA=200, nSamplesDistribution=10000, 
                 saveDir=os.path.join(''), makeMarkerSubplots=False, availableCPUsCount=min(12, os.cpu_count()), zScoreCutoff=0.3,
                 subclusteringName=None, doQualityControl=True, doBatchCorrection=True, makePlots=True,
-                minimumNumberOfMarkersPerCelltype=10, minimumScoreForUnknown=0.3, layout='TSNE'):
+                minimumNumberOfMarkersPerCelltype=10, minimumScoreForUnknown=0.3, layout='TSNE',
+                withNullModel=True, adjustNullModel=True):
 
         '''Initialization function. Automatically called when an instance on Digital Cell Sorter is created'''
+
+        self.gnc = GeneNameConverter.GeneNameConverter(dictDir=os.path.join(os.path.dirname(__file__), 'pickledGeneConverterDict', 'ensembl_hugo_entrez_alias_dict.pythdat'))
 
         defaultGeneList = 'CIBERSORT' # 'CIBERSORT' 'markersDCS'
 
@@ -180,6 +181,9 @@ class DigitalCellSorter(VisualizationFunctions):
         self.nComponentsPCA = nComponentsPCA
         self.zScoreCutoff = zScoreCutoff
         self.minimumNumberOfMarkersPerCelltype = minimumNumberOfMarkersPerCelltype
+
+        self.withNullModel = withNullModel
+        self.adjustNullModel = adjustNullModel
 
         self.layout = layout
 
@@ -719,16 +723,6 @@ class DigitalCellSorter(VisualizationFunctions):
                         print('Setting negative values to zeros', flush=True)
                         self.df_expr[self.df_expr < 0.0] = 0.
 
-            ###############################################################################################
-            ## Compress and record DataFrame to dense matrix
-            ###############################################################################################
-            #if self.toggleRecordAllExpression:
-            #    print('Recording compressed DataFrame', flush=True)
-            #    self.df_expr.replace(0, np.nan).T.stack().to_frame().to_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_expr', mode='a', complevel=4, complib='zlib')
-            #
-            #self.df_expr = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_expr', mode='r').unstack().T.fillna(0.)
-            #self.df_expr.index = self.df_expr.index.get_level_values(1)
-
             ##############################################################################################
             # Calculate PCA and 2D projection
             ##############################################################################################
@@ -741,7 +735,7 @@ class DigitalCellSorter(VisualizationFunctions):
             ##############################################################################################
             # Remove low quality cells
             ##############################################################################################
-            index = self.getIndexOfGoodQualityCells(self.saveDir, self.dataName)
+            index = self.getIndexOfGoodQualityCells()
             if self.toggleRemoveLowQualityCells:
                 self.df_expr = self.df_expr[self.df_expr.columns.intersection(index).sort_values()]
                 self.df_expr = self.df_expr[self.df_expr.sum(axis=1) > 0]
@@ -1284,12 +1278,14 @@ class DigitalCellSorter(VisualizationFunctions):
             return
         
         try:
-            df_markers_expr = pd.read_hdf(fileName, key='df_expr', mode='r').xs(key=gene, axis=0, level=2).T
+            df_markers_expr = pd.read_hdf(fileName, key='df_expr', mode='r').xs(key=gene, axis=0, level=-1).T
         except:
             print('Gene %s not in index'%(gene))
             return
 
         df_markers_expr.index = [gene]
+
+        df_markers_expr.columns = pd.MultiIndex.from_arrays([df_markers_expr.columns.get_level_values('batch'), df_markers_expr.columns.get_level_values('cell')])
 
         labelled = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_markers_expr', mode='r').columns
         
@@ -1417,17 +1413,11 @@ class DigitalCellSorter(VisualizationFunctions):
 
         return selectedCells
 
-    def getIndexOfGoodQualityCells(self, saveDir, dataName, count_depth_cutoff=0.5, number_of_genes_cutoff=0.5, mitochondrial_genes_cutoff_upper_bound=3.0):
+    def getIndexOfGoodQualityCells(self, count_depth_cutoff=0.5, number_of_genes_cutoff=0.5, mitochondrial_genes_cutoff_upper_bound=3.0):
 
         '''Get index of sells that satisfy the QC criteria
 
         Parameters:
-            saveDir: str
-                Directory for output files
-
-            dataName: str 
-                Name used in output files
-
             count_depth_cutoff: float, Default 0.5
                 Fraction of median to take as count depth cutoff
 
@@ -1444,20 +1434,20 @@ class DigitalCellSorter(VisualizationFunctions):
         Usage:
             DCS = DigitalCellSorter.DigitalCellSorter()
 
-            index = DCS.get_index_of_good_quality_cells(saveDir, dataName)
+            index = DCS.get_index_of_good_quality_cells()
         '''
 
-        df_QC = pd.read_hdf(os.path.join(saveDir, dataName + '_processed.h5'), key='QC', mode='r')
+        df_QC = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='QC', mode='r')
 
-        plotsDir = os.path.join(saveDir, 'QC_plots', '')
+        plotsDir = os.path.join(self.saveDir, 'QC_plots', '')
 
         if not os.path.exists(plotsDir):
             os.makedirs(plotsDir)
 
         # Calculate cutoffs
-        cutoff_count_depth = self.getQualityControlCutoff(df_QC['count_depth'], count_depth_cutoff, plotPathAndName=os.path.join(plotsDir, '%s_count_depth' % (dataName)), MakeHistogramPlot=True)
-        cutoff_number_of_genes = self.getQualityControlCutoff(df_QC['number_of_genes'], number_of_genes_cutoff, plotPathAndName=os.path.join(plotsDir, '%s_number_of_genes' % (dataName)), MakeHistogramPlot=True)
-        cutoff_fraction_of_mitochondrialGenes = self.getQualityControlCutoff(df_QC['fraction_of_mitochondrialGenes'], mitochondrial_genes_cutoff_upper_bound, plotPathAndName=os.path.join(plotsDir, '%s_fraction_of_mitochondrialGenes' % (dataName)), mito=True, MakeHistogramPlot=True)
+        cutoff_count_depth = self.getQualityControlCutoff(df_QC['count_depth'], count_depth_cutoff, plotPathAndName=os.path.join(plotsDir, '%s_count_depth' % (self.dataName)), MakeHistogramPlot=True)
+        cutoff_number_of_genes = self.getQualityControlCutoff(df_QC['number_of_genes'], number_of_genes_cutoff, plotPathAndName=os.path.join(plotsDir, '%s_number_of_genes' % (self.dataName)), MakeHistogramPlot=True)
+        cutoff_fraction_of_mitochondrialGenes = self.getQualityControlCutoff(df_QC['fraction_of_mitochondrialGenes'], mitochondrial_genes_cutoff_upper_bound, plotPathAndName=os.path.join(plotsDir, '%s_fraction_of_mitochondrialGenes' % (self.dataName)), mito=True, MakeHistogramPlot=True)
 
         df_QC['isGoodQuality'] = np.zeros(len(df_QC)).astype(bool)
 
@@ -1810,7 +1800,7 @@ class DigitalCellSorter(VisualizationFunctions):
             df = getV((df_marker_celltype, df_markers_expr, cluster_index, 0.3))
         '''
 
-        df_M, df_markers_expr, cluster_index, zscore_cutoff = args
+        df_M, df_markers_expr, cluster_index, zscore_cutoff, giveZ = args
 
         df_expr_cluster_centroids = pd.DataFrame(data=df_markers_expr.values, index=df_markers_expr.index, columns=cluster_index).groupby(level=0, sort=True, axis=1).mean()
 
@@ -1824,16 +1814,15 @@ class DigitalCellSorter(VisualizationFunctions):
 
         df_V = df_M.dot(df_Z)
 
-        G = ((df_M>0.).dot(df_Z))
-        R = ((df_M<0.).dot(df_Z))
-        A = (df_Z>0.).sum(axis=0)
-
-        df_V *= (G + R) / A
-
         df_V = df_V.stack()
         df_V[np.isnan(df_V)] = 0.
 
-        return pd.Series(index=df_V.index, data=df_V.values)
+        result = pd.Series(index=df_V.index, data=df_V.values)
+
+        if giveZ:
+            return result, df_Z
+
+        return result
 
     def dcsVotingScheme(self, df_markers_expr, df_marker_cell_type):
         
@@ -1855,22 +1844,11 @@ class DigitalCellSorter(VisualizationFunctions):
             Function should be called internally only
         '''
 
-        #def norm(s):
-            
-        #    pos_sum = np.abs(s.iloc[np.where(s>0.)[0]].sum())
-        #    neg_sum = np.abs(s.iloc[np.where(s<0.)[0]].sum())
+        df_marker_cell_type_full = self.readMarkerFile().T.loc[df_marker_cell_type.index]
+        df_marker_cell_type_full[df_marker_cell_type_full<.0] = 0.
+        df_marker_cell_type_full /= (df_marker_cell_type_full>0.).sum(axis=0).fillna(1.).replace(0., 1.)
 
-        #    s.iloc[np.where(s>0.)[0]] /= pos_sum if pos_sum>0. else 1.
-        #    s.iloc[np.where(s<0.)[0]] /= neg_sum if neg_sum>0. else 1.
-
-        #    return s
-
-        #df_marker_cell_type[df_marker_cell_type<0.] = 0.
-
-        ### Normalize markers by the number of cell types expressing that marker (i.e. the "specificity")
-        ##df_marker_cell_type = df_marker_cell_type.apply(lambda q: q / (np.sum(q[q==1]) if np.sum(q[q==1])>0. else 1.) , axis=0)
-        ## Normalize cell types so that the absolute number of known markers in a given cell type is irrelevant
-        #df_marker_cell_type = df_marker_cell_type.apply(norm, axis=1)
+        print(df_marker_cell_type_full)
 
         df_positive = df_marker_cell_type.copy()
         df_negative = df_marker_cell_type.copy()
@@ -1878,7 +1856,6 @@ class DigitalCellSorter(VisualizationFunctions):
         df_negative[df_marker_cell_type>.0] = 0.
         df_positive /= (df_positive>0.).sum(axis=0).fillna(1.).replace(0., 1.)
         df_negative /= (df_negative<0.).sum(axis=0).fillna(1.).replace(0., 1.)
-
         df_marker_cell_type = df_positive + df_negative
 
         print(df_marker_cell_type)
@@ -1888,66 +1865,87 @@ class DigitalCellSorter(VisualizationFunctions):
         df_marker_cell_type.sort_index(inplace=True, axis=1)
 
         # Calculate score (Vkc) for the best clustering
-        df_V = self.calculateV((df_marker_cell_type, df_markers_expr, df_markers_expr.columns.get_level_values('cluster').values, self.zScoreCutoff)).unstack()
+        temp = self.calculateV((df_marker_cell_type, df_markers_expr, df_markers_expr.columns.get_level_values('cluster').values, self.zScoreCutoff, True))
+        df_V = temp[0].unstack()
         df_V.index.name = None
+        df_Z_best = temp[1]
 
-        df_markers_expr_copy = df_markers_expr.copy()
+        if self.withNullModel:
+            df_markers_expr_copy = df_markers_expr.copy()
 
-        print(df_markers_expr)
+            uclusters = np.unique(df_markers_expr_copy.columns.get_level_values(2).astype(str))
+            uindex = pd.Series(df_markers_expr_copy.columns.get_level_values(2).astype(str)).replace(dict(zip(uclusters, range(len(uclusters))))).values
+            df_markers_expr_copy.columns = pd.MultiIndex.from_arrays([df_markers_expr_copy.columns.get_level_values(0),
+                                                                      df_markers_expr_copy.columns.get_level_values(1),
+                                                                      uindex], names=df_markers_expr_copy.columns.names)
 
-        uclusters = np.unique(df_markers_expr_copy.columns.get_level_values(2).astype(str))
-        uindex = pd.Series(df_markers_expr_copy.columns.get_level_values(2).astype(str)).replace(dict(zip(uclusters, range(len(uclusters))))).values
-        df_markers_expr_copy.columns = pd.MultiIndex.from_arrays([df_markers_expr_copy.columns.get_level_values(0),
-                                                                  df_markers_expr_copy.columns.get_level_values(1),
-                                                                  uindex], names=df_markers_expr_copy.columns.names)
+            batch_size = self.availableCPUsCount * 80
 
-        # Generate random cluster index
-        randomClusterIndex = np.vstack([np.random.choice(df_markers_expr_copy.columns.get_level_values('cluster'), size=df_markers_expr_copy.shape[1], replace=False) for i in range(self.nSamplesDistribution)]).astype(int)
+            if self.nSamplesDistribution < batch_size:
+                self.nSamplesDistribution = batch_size
+                print('Distribution size too small. Increasing it to minimum batch size: %s'%(self.nSamplesDistribution))
 
-        # Generate random cluster configurations and calculate scores (Pkc) of those
-        print('Generating null distribution')
+            N_batches = int(self.nSamplesDistribution / batch_size)
 
-        def process_batch(batch_range):
+            if self.nSamplesDistribution != batch_size*N_batches:
+                self.nSamplesDistribution = batch_size*N_batches
+                print('Adjusting distribution size: %s'%(self.nSamplesDistribution))
 
-            print('\t', batch_range)
+            # Generate random cluster index
+            randomClusterIndex = np.vstack([np.random.choice(df_markers_expr_copy.columns.get_level_values('cluster'), size=df_markers_expr_copy.shape[1], replace=False) for i in range(self.nSamplesDistribution)]).astype(int)
 
-            tuples =  [(df_marker_cell_type, df_markers_expr_copy, randomClusterIndex[i], self.zScoreCutoff) for i in batch_range]
+            # Generate random cluster configurations and calculate scores (Pkc) of those
+            print('Generating null distribution')
 
-            pool = multiprocessing.Pool(processes = self.availableCPUsCount)
-            temp_random_df_V = pd.concat(pool.map(self.calculateV, tuples), sort=False, axis=1)
-            pool.close()
-            pool.join()
+            def process_batch(batch_range):
 
-            return temp_random_df_V
+                print('\t', batch_range)
 
-        batch_size = self.availableCPUsCount * 80
-        N_batches = int(self.nSamplesDistribution / batch_size)
+                tuples =  [(df_marker_cell_type, df_markers_expr_copy, randomClusterIndex[i], self.zScoreCutoff, False) for i in batch_range]
 
-        random_df_V = pd.concat([process_batch(range(i*batch_size,(i+1)*batch_size)) for i in range(N_batches)], sort=False, axis=1)
+                pool = multiprocessing.Pool(processes = self.availableCPUsCount)
+                temp_random_df_V = pd.concat(pool.map(self.calculateV, tuples), sort=False, axis=1)
+                pool.close()
+                pool.join()
 
-        random_df_V.index = pd.MultiIndex.from_arrays([random_df_V.index.get_level_values(0),
-                                                pd.Series(random_df_V.index.get_level_values(1)).replace(dict(zip(range(len(uclusters)), uclusters))).values], 
-                                                names=[random_df_V.index.names[0], 'cluster'])
+                return temp_random_df_V
 
-        min_value = np.nanmin(random_df_V.values)
-        max_value = np.nanmax(random_df_V.values)
+            random_df_V = pd.concat([process_batch(range(i*batch_size,(i+1)*batch_size)) for i in range(N_batches)], sort=False, axis=1)
 
-        print('Min:', min_value, '\t', 'Max:', max_value)
+            random_df_V.index = pd.MultiIndex.from_arrays([random_df_V.index.get_level_values(0),
+                                                    pd.Series(random_df_V.index.get_level_values(1)).replace(dict(zip(range(len(uclusters)), uclusters))).values], 
+                                                    names=[random_df_V.index.names[0], 'cluster'])
 
-        Nbins = 300
+            min_value = np.nanmin(random_df_V.values)
+            max_value = np.nanmax(random_df_V.values)
 
-        # Calculate null distribution histograms data for plots
-        df_null_distributions = random_df_V.apply(lambda s: scipy.stats.rv_histogram(np.histogram(s, bins=Nbins, range=(min_value,max_value)))._hpdf / Nbins, axis=1).apply(pd.Series).T
-        df_null_distributions.columns.names = ['CellType', 'Cluster']
-        df_null_distributions.index = [min_value] + (scipy.stats.rv_histogram(np.histogram(random_df_V.iloc[0], bins=Nbins, range=(min_value,max_value)))._hbins).tolist()
+            print('Min:', min_value, '\t', 'Max:', max_value)
 
-        # Calculate z-score (Lkc) for the best clustering
-        print('Processing voting results')
-        sigma = pd.Series(data=np.std(random_df_V.values, axis=1), index=random_df_V.index).replace(0., np.inf).unstack()
-        mean = pd.Series(data=np.mean(random_df_V.values, axis=1), index=random_df_V.index).unstack()
-        df_L = (df_V - mean) / sigma
+            Nbins = 300
+
+            # Calculate null distribution histograms data for plots
+            df_null_distributions = random_df_V.apply(lambda s: scipy.stats.rv_histogram(np.histogram(s, bins=Nbins, range=(min_value,max_value)))._hpdf / Nbins, axis=1).apply(pd.Series).T
+            df_null_distributions.columns.names = ['CellType', 'Cluster']
+            df_null_distributions.index = [min_value] + (scipy.stats.rv_histogram(np.histogram(random_df_V.iloc[0], bins=Nbins, range=(min_value,max_value)))._hbins).tolist()
+
+            # Calculate z-score (Lkc) for the best clustering
+            print('Processing voting results')
+            sigma = pd.Series(data=np.std(random_df_V.values, axis=1), index=random_df_V.index).replace(0., np.inf).unstack()
+            mean = pd.Series(data=np.mean(random_df_V.values, axis=1), index=random_df_V.index).unstack()
+            df_L = (df_V - mean) / sigma
+        
+            df_L[df_L<self.minimumScoreForUnknown] = 0.
+            df_L[df_V<0.] = 0.
+
+            if self.adjustNullModel:
+                df_L *= df_V / df_marker_cell_type_full.sum(axis=1).values[:, None]
+        else:
+            df_null_distributions = pd.DataFrame()
+            df_L = df_V / df_marker_cell_type_full.sum(axis=1).values[:, None]
 
         df_L.index.name = None
+
+        df_L = df_L.fillna(0.)
 
         # Determine winning score
         winning_score = np.array([df_V.iloc[ind[0], ind[1]] for ind in np.flip(np.array(list(enumerate(np.argmax(df_L.values, axis=0)))), axis=1)])
@@ -1957,7 +1955,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         # Properly rename winning cell type
         T = df_L.index[np.argmax(df_L.values, axis=0)].values
-        T[(df_L.values < self.minimumScoreForUnknown).all(axis=0)] = 'Unknown'
+        T[(df_L.values <= 0.).all(axis=0)] = 'Unknown'
         T = pd.Index(T) + ' #0'
         for i in range(len(T)):
             T = T.where(~T.duplicated(), T.str.replace(' #%s' % (i), ' #%s' % (i + 1)))
@@ -1976,120 +1974,38 @@ class DigitalCellSorter(VisualizationFunctions):
 
         # Determine all markers hits for each cluster
         df_custer_centroids = df_markers_expr.groupby(level='cluster', sort=True, axis=1).mean()
-        
-        r = np.mean(df_custer_centroids.values, axis=1) / np.std(df_custer_centroids.values, axis=1)
-        #df_custer_centroids_sig = df_custer_centroids.apply(self.zScoreOfSeries, axis=1) > (self.zScoreCutoff)*0.3/r[:,None]
-        df_custer_centroids_sig = df_custer_centroids.apply(self.zScoreOfSeries, axis=1) > (self.zScoreCutoff)*r[:,None]
-        #df_custer_centroids_sig = df_custer_centroids.apply(self.zScoreOfSeries, axis=1) > (self.zScoreCutoff)*(3. - r[:,None])/3.
+        dict_expressed_markers = {cluster:df_Z_best.index[df_Z_best[cluster] > 0].values for cluster in df_Z_best}
 
-        dict_supporting_markers = {cluster:df_custer_centroids_sig.index[df_custer_centroids_sig[cluster] > 0].values for cluster in df_custer_centroids_sig}
-        all_markers_in_cluster = [(' // ').join(dict_supporting_markers[cluster].tolist()) for cluster in df_V.columns]
+        all_markers_in_cluster = [(' // ').join(dict_expressed_markers[cluster].tolist()) for cluster in df_V.columns]
         df_V.loc['All markers'] = df_L.loc['All markers'] = all_markers_in_cluster
 
-        all_markers = {celltype:df_marker_cell_type.T.index[df_marker_cell_type.T[celltype] > 0].values for celltype in columns_scores}
-        all_markers['Unknown'] = np.array([])
+        all_supp_markers = {celltype:df_marker_cell_type.T.index[df_marker_cell_type.T[celltype] > 0].values for celltype in columns_scores}
+        all_cont_markers = {celltype:df_marker_cell_type.T.index[df_marker_cell_type.T[celltype] < 0].values for celltype in columns_scores}
+        all_supp_markers['Unknown'] = np.array([])
+        all_cont_markers['Unknown'] = np.array([])
 
-        supporting_markers = [(' // ').join((np.intersect1d(all_markers[df_V.loc['Predicted cell type'].loc[cluster].split(' #')[0]],
+        supporting_markers = [(' // ').join((np.intersect1d(all_supp_markers[df_V.loc['Predicted cell type'].loc[cluster].split(' #')[0]],
                                                             df_V.loc['All markers'].loc[cluster].split(' // '))).tolist()) for cluster in df_V.columns]
+        contradicting_markers = [(' // ').join((np.intersect1d(all_cont_markers[df_V.loc['Predicted cell type'].loc[cluster].split(' #')[0]],
+                                                            df_V.loc['All markers'].loc[cluster].split(' // '))).tolist()) for cluster in df_V.columns]
+
         df_V.loc['Supporting markers'] = df_L.loc['Supporting markers'] = supporting_markers
+        df_V.loc['Contradicting markers'] = df_L.loc['Contradicting markers'] = contradicting_markers
         
         # Record the DataFrames
         fileName = os.path.join(self.saveDir, self.dataName + '_voting.xlsx')
         print('Recording voting results to:', fileName)
         writer = pd.ExcelWriter(fileName)
         df_L.columns.name = 'cluster'
-        df_L.T.to_excel(writer, 'z-scores', columns=['Predicted cell type', '# cells in cluster', 'Winning score', 'Supporting markers', 'All markers'] + columns_scores)
+        df_L.T.to_excel(writer, 'z-scores', columns=['Predicted cell type', '# cells in cluster', 'Winning score', 'Supporting markers', 'Contradicting markers', 'All markers'] + columns_scores)
         df_V.columns.name = 'cluster'
-        df_V.T.to_excel(writer, 'Voting scores', columns=['Predicted cell type', '# cells in cluster', 'Winning score', 'Supporting markers', 'All markers'] + columns_scores)
+        df_V.T.to_excel(writer, 'Voting scores', columns=['Predicted cell type', '# cells in cluster', 'Winning score', 'Supporting markers', 'Contradicting markers', 'All markers'] + columns_scores)
         df_custer_centroids.T.to_excel(writer, 'Cluster centroids')
         df_null_distributions.to_excel(writer, 'Null distributions')
         df_marker_cell_type.to_excel(writer, 'Marker cell type weight matrix')
         writer.save()
 
         return df_V.loc['Predicted cell type'].to_dict()
-    
-    def dcsVotingSchemeEEH(self, df_markers_expr, df_marker_cell_type):
-        
-        '''Produce cluster voting results
-
-        Parameters:
-            df_markers_expr: pandas.DataFrame 
-                Data with marker genes by cells expression
-
-            df_marker_cell_type: pandas.DataFrame 
-                Data with marker genes by cell types
-
-        Returns:
-            dictionary
-                Voting results, a dictionary in form of:
-                {cluster label: assigned cell type}
-        
-        Usage:
-            Function should be called internally only
-        '''
-
-        df_marker_cell_type[~(df_marker_cell_type==1.)] = 0.
-
-        means = []
-        temp_df = pd.DataFrame(data=df_markers_expr.values, index=df_markers_expr.index, columns=df_markers_expr.columns.get_level_values('cluster'))
-        for i in range(100):
-            print(i, end=' ', flush=True)
-            np.random.shuffle(temp_df.columns.values)
-            means.append(temp_df.groupby(level=0, sort=True, axis=1).mean().stack().values)
-        means = np.array(means)
-        print()
-
-        df_V = df_markers_expr.groupby(level=2, sort=True, axis=1).mean().stack()
-
-        df_R = (pd.DataFrame(data=means, columns=df_V.index).apply(self.zScoreOfSeries, axis=0) > self.zScoreCutoff)*1.
-        df_R = df_R.xs(key='0.0', level=1, axis=1)
-        print(df_R)
-
-        def norm(s):
-            
-            pos_sum = np.abs(s.iloc[np.where(s>0.)[0]].sum())
-            neg_sum = np.abs(s.iloc[np.where(s<0.)[0]].sum())
-
-            s.iloc[np.where(s>0.)[0]] /= pos_sum if pos_sum>0. else 1.
-            s.iloc[np.where(s<0.)[0]] /= neg_sum if neg_sum>0. else 1.
-
-            return s
-
-        # Normalize markers by the number of cell types expressing that marker (i.e. the "specificity")
-        df_marker_cell_type = df_marker_cell_type.apply(lambda q: q / (np.sum(q[q==1]) if np.sum(q[q==1])>0. else 1.) , axis=0)
-        # Normalize cell types so that the absolute number of known markers in a given cell type is irrelevant
-        df_marker_cell_type = df_marker_cell_type.apply(norm, axis=1)
-        df_marker_cell_type = df_marker_cell_type[df_R.columns]
-        print(df_marker_cell_type)
-
-
-        df_Pr = df_marker_cell_type.dot(df_R.T)
-        print(df_Pr)
-
-        v0 = df_marker_cell_type.dot(df_V.to_frame().xs(key='0.0', level=1, axis=0))
-        (v0.T - np.mean(df_Pr, axis=1)) / np.std(df_Pr, axis=1)
-
-
-
-        df_L = (df_V - np.mean(means, axis=0)) / np.std(means, axis=0)
-        df_L = df_L.unstack().fillna(0.).replace(np.inf, 0.)
-
-        #df_L[df_L<0.] = 0.
-        #df_L = df_L.replace(0., np.nan)
-        print('\n', df_L)
-
-
-        genes1 = df_marker_cell_type.columns[df_marker_cell_type.loc['T Cell']==1].values
-        genes2 = df_marker_cell_type.columns[df_marker_cell_type.loc['Erythrocyte']==1].values
-        genesIn0 = (df_L['0.0']>0.).index[(df_L['0.0']>0.)].values
-        w1 = len(np.intersect1d(genesIn0, genes1)) # 244 / 67 = 3.6
-        w2 = len(np.intersect1d(genesIn0, genes2)) # 17 / 5 = 3.4
-
-        df_Score = df_marker_cell_type[df_L.index].dot(df_L)/df_marker_cell_type.sum(axis=1).values[:, None]
-        print(df_Score)
-
-        res = list(zip(df_Score.index[np.argmax(df_Score.values, axis=0)].values, df_markers_expr.groupby(level=2, sort=True, axis=1).count().iloc[0].values))
-        print(res)
 
     def createReverseDictionary(self, inputDictionary):
 

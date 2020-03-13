@@ -359,7 +359,7 @@ class VisualizationFunctions:
 
         df_votingResults = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_voting.xlsx'), sheet_name='z-scores')
 
-        cellTypes = sorted([x for x in df_votingResults.columns.values.tolist() if x not in ['cluster', 'Predicted cell type', '# cells in cluster', 'Winning score', 'Supporting markers', 'All markers']])
+        cellTypes = sorted([x for x in df_votingResults.columns.values.tolist() if x not in ['cluster', 'Predicted cell type', '# cells in cluster', 'Winning score', 'Supporting markers', 'Contradicting markers', 'All markers']])
 
         #df_votingResults['order'] =
         #scipy.cluster.hierarchy.dendrogram(scipy.cluster.hierarchy.linkage(df_votingResults[cellTypes].values,
@@ -387,7 +387,7 @@ class VisualizationFunctions:
         fig = plt.figure(figsize=_figsize)
         
         ax = fig.add_axes([0.15, 0.125, 0.65, 0.85])
-        axx = fig.add_axes([0.76, 0.1, 0.19, 0.85])
+        axx = fig.add_axes([0.76, 0.125, 0.19, 0.85])
 
         #ax = plt.subplot(gs[0])
         #axx = plt.subplot(gs[1])
@@ -457,7 +457,18 @@ class VisualizationFunctions:
             DCS.MakeHistogramNullDistributionPlot()
         '''
 
-        df_noise_dict = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_voting.xlsx'), sheet_name='Null distributions', index_col=0, header=[0,1], skiprows=[2])
+        try:
+            df_noise_dict = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_voting.xlsx'), sheet_name='Null distributions', index_col=0, header=[0,1], skiprows=[2])
+        except:
+            print('Error loading distributions from the results file')
+
+            return
+
+        if len(df_noise_dict)==0:
+            print('Null distribution is empty in the results file')
+
+            return
+
         df_votingResultsV = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_voting.xlsx'), sheet_name='Voting scores', dtype={'cluster':str}).reset_index().set_index('cluster')
         df_votingResultsZ = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_voting.xlsx'), sheet_name='z-scores', dtype={'cluster':str}).reset_index().set_index('cluster')
 
@@ -521,7 +532,7 @@ class VisualizationFunctions:
                     ax.set_title(cell_types[i], fontdict={'color': 'b', 'size':'6'})
 
                 if i == 0:
-                    ax.text(-0.27 * maxx, maxy + 0.05*maxy, predicted_cell_type_cluster[j] + ' (Cluster %s)' % j, rotation=0, 
+                    ax.text(0. * maxx, maxy + 0.05*maxy, predicted_cell_type_cluster[j] + ' (Cluster %s)' % j, rotation=0, 
                             fontsize=fontsize, weight='bold', va='bottom', ha='left', color='k')
                     
                     ax.set_ylabel('Probability', fontsize=fontsize)
@@ -661,13 +672,14 @@ class VisualizationFunctions:
 
         return
 
-    def makeStackedBarplot(self, clusterName):
+    def makeStackedBarplot(self, clusterName=None):
         
         '''Produce stacked barplot with cell fractions
 
         Parameters:
-            clusterName: str
-                Label to include at the bar bottom
+            clusterName: str, Deafult None
+                Label to include at the bar bottom.
+                If None the self.dataName value will be used
 
         Returns:
             None
@@ -707,6 +719,9 @@ class VisualizationFunctions:
 
             return df_main, colors, clusterName
 
+        if clusterName is None:
+            clusterName = self.dataName
+
         df_Main, colors, clusterName = get_stacked_data_and_colors(self.saveDir)
 
         saveName = os.path.join(self.saveDir, "%s_subclustering_stacked_barplot_%s.png" % (self.dataName, ('All cell clusters' if clusterName == None else clusterName).replace(' ', '_').replace('*', '')))
@@ -742,7 +757,7 @@ class VisualizationFunctions:
 
         return
     
-    def makeQualityControlHistogramPlot(self, subset, cutoff, plotPathAndName=None, N_bins=100, mito=False, displayMeasures=True, precision=4):
+    def makeQualityControlHistogramPlot(self, subset, cutoff, plotPathAndName=None, N_bins=100, mito=False, displayMeasures=True, precision=4, quantilePlotCutoff=0.99):
 
         '''Function to calculate QC quality cutoff and visualize it on a histogram
 
@@ -768,6 +783,9 @@ class VisualizationFunctions:
             precision: int, Default 4
                 Number of digits after decimal
 
+            quantilePlotCutoff: float, Default 0.99
+                Distributions are cut to display the range from 0 to quantilePlotCutoff
+
         Returns:
             None
         
@@ -781,7 +799,11 @@ class VisualizationFunctions:
             plotPathAndName = 'QC_Plot'
 
         range_min = np.min(subset)
-        range_max = max(1.1*cutoff, 0.2) if mito else 5000
+
+        if mito:
+            range_max = max(1.1*cutoff, np.quantile(subset, quantilePlotCutoff) + 0.05)
+        else:
+            range_max = np.quantile(subset, quantilePlotCutoff)
 
         hist_of_subset = scipy.stats.rv_histogram(np.histogram(subset, bins=N_bins, range=(range_min, range_max)))
         hist_data = hist_of_subset._hpdf / N_bins
@@ -792,7 +814,12 @@ class VisualizationFunctions:
         bar_bin_width = range_max / N_bins
         ax.bar(hist_bins, hist_data[:-1], width=0.9 * bar_bin_width, color='b', align='center')
 
-        ax.set_title(plotPathAndName, fontdict={'color': 'b'})
+        try:
+            title = os.path.basename(plotPathAndName)
+        except:
+            title = plotPathAndName
+
+        ax.set_title(title, fontdict={'color': 'b'})
         ax.set_xlabel('Fraction' if mito else 'Count', fontsize=8)
         ax.set_ylabel('Density', fontsize=8)
         ax.set_ylim(0.,ax.get_ylim()[1])
@@ -837,6 +864,9 @@ class VisualizationFunctions:
 
             ax.annotate(r'$\sigma=%s$' % (dist_std), (dist_median + dist_std, 0.86 * yspan), (dist_median, 0.86 * yspan), arrowprops={'width':0, 'headwidth':0, 'headlength':0})
             ax.annotate('', (dist_median + dist_std, 0.85 * yspan), (dist_median, 0.85 * yspan), arrowprops={'arrowstyle':'<|-|>'})
+
+            if not mito:
+                ax.text(0.65*xspan, 0.98*yspan, '%s%% of distribution is shown'%(100.*quantilePlotCutoff))
 
         fig.savefig(plotPathAndName + '_histogram.png', dpi=300)
 
@@ -1061,7 +1091,8 @@ class VisualizationFunctions:
 
         return None
     
-    def makeCellMarkersPiePlot(self, type1, type2, df_marker_cell_type='all', nameToAppend=None):
+    def makeCellMarkersPiePlot(self, type1, type2, df_marker_cell_type='all', nameToAppend=None, 
+                               listUnexpressedMarkers=True, orthogonalSectorsShift=0.1, rotationAngle=0):
 
         '''Make summary of markers comparison between two cell types.
 
@@ -1080,6 +1111,17 @@ class VisualizationFunctions:
             nameToAppend: str, Default None
                 String to append to the figure file name.
 
+            listUnexpressedMarkers: boolean, Default True
+                List (highlight) markers that are not expressed. This option is ignored
+                unless df_marker_cell_type=='all'
+
+            orthogonalSectorsShift: float, Default 0.1
+                Sectors marked as '+/-' and '-/+' are shifted off-center.
+                Set this parameter to zero to have round continuous pie chart.
+
+            rotationAngle: int or float, Default 0
+                Angle in degrees that will rotate the whole pie chart counterclockwise.
+
         Returns:
             Marker lists split into categories.
         
@@ -1089,10 +1131,25 @@ class VisualizationFunctions:
             DCS.makeCellMarkersPiePlot('T cells', 'B cells')
         '''
 
+        try:
+            df_marker_expression = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_voting.xlsx'), 
+                                                    sheet_name='Marker cell type weight matrix', index_col=0, header=0).T
+        except:
+            print('Marker expression data unavailable')
+            df_marker_expression = None
+            listUnexpressedMarkers = False
+
         if type(df_marker_cell_type) is str:
             if df_marker_cell_type=='expressed':
-                df_marker_cell_type = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_voting.xlsx'), 
-                                                    sheet_name='Marker cell type weight matrix', index_col=0, header=0).T
+                listUnexpressedMarkers = False
+
+                if not df_marker_expression is None:
+                    df_marker_cell_type = df_marker_expression
+                else:
+                    print("Try using option 'all'")
+
+                    return
+
                 additional_name = 'expressed'
             elif df_marker_cell_type=='all':
                 df_marker_cell_type = self.readMarkerFile()
@@ -1108,43 +1165,54 @@ class VisualizationFunctions:
 
         df_marker_cell_type = df_marker_cell_type.fillna(0.)
 
-        try:
-            t1p = set(df_marker_cell_type.index[(df_marker_cell_type.loc[:, type1]>.0)].values)
-            t1n = set(df_marker_cell_type.index[(df_marker_cell_type.loc[:, type1]<0.)].values)
-        except:
-            print('Cell type %s not found'%(type1))
-            print('Available celltypes are: %s'%(df_marker_cell_type.columns.values.tolist()))
-            return None
+        def getSet(df, celltype):
 
-        try:
-            t2p = set(df_marker_cell_type.index[(df_marker_cell_type.loc[:, type2]>0.)].values)
-            t2n = set(df_marker_cell_type.index[(df_marker_cell_type.loc[:, type2]<0.)].values)
-        except:
-            print('Cell type %s not found'%(type2))
-            print('Available celltypes are: %s'%(df_marker_cell_type.columns.values.tolist()))
-            return None
+            try:
+                pos = set(df.index[(df.loc[:, celltype]>0.)].values)
+                neg = set(df.index[(df.loc[:, celltype]<0.)].values)
+            except:
+                print('Cell type %s not found'%(celltype))
+                print('Available celltypes are: %s'%(df.columns.values.tolist()))
 
-        diff = lambda a, b: a.difference(b)
-        inter = lambda a, b: a.intersection(b)
+                return
+
+            return pos, neg
+
+        def getEightAll(t1p, t2p, t1n, t2n):
+
+            p1 = t1p.intersection(t2n)
+            p3 = t1n.intersection(t2n)
+            p5 = t1n.intersection(t2p)
+            p7 = t1p.intersection(t2p)
+
+            p0 = t1p - p1 - p7
+            p2 = t2n - p1 - p3
+            p4 = t1n - p3 - p5
+            p6 = t2p - p5 - p7
+
+            all = t1p.union(t2p).union(t1n).union(t2n)
+
+            return [p0, p1, p2, p3, p4, p5, p6, p7], all
+        
+        try:
+            t1p, t1n = getSet(df_marker_cell_type, type1)
+            t2p, t2n = getSet(df_marker_cell_type, type2)
+
+            sets, all = getEightAll(t1p, t2p, t1n, t2n)
+        except:
+            return
+
+        if listUnexpressedMarkers:
+            try:
+                t1pe, t1ne = getSet(df_marker_expression, type1)
+                t2pe, t2ne = getSet(df_marker_expression, type2)
+                
+                setsE, allE = getEightAll(t1pe, t2pe, t1ne, t2ne)
+            except:
+                listUnexpressedMarkers = False
 
         labels = '+/*', '+/-', '*/-', '-/-', '-/*', '-/+', '*/+', '+/+'
-        colors = 'limegreen', 'thistle', 'lightcoral', 'red', 'lightcoral', 'thistle', 'limegreen', 'green'
-
-        p1 = t1p.intersection(t2n)
-        p3 = t1n.intersection(t2n)
-        p5 = t1n.intersection(t2p)
-        p7 = t1p.intersection(t2p)
-        p0 = t1p - p1 - p7
-        p2 = t2n - p1 - p3
-        p4 = t1n - p3 - p5
-        p6 = t2p - p5 - p7
-
-        all = t1p.union(t2p).union(t1n).union(t2n)
-
-        total_count = len(all)
-
-        sets = [p0, p1, p2, p3, p4, p5, p6, p7]
-
+        colors = ['limegreen', 'thistle', 'lightcoral', 'red', 'lightcoral', 'thistle', 'limegreen', 'green']
         titles = ['Positive in %s:'%(type1),
                   'Positive in %s, Negative in %s:'%(type1, type2),
                   'Negative in %s:'%(type2),
@@ -1153,8 +1221,9 @@ class VisualizationFunctions:
                   'Negative in %s, Positive in %s:'%(type1, type2),
                   'Positive in %s:'%(type2),
                   'Positive in both:']
-
-        str_sets = [str(sorted([i for i in list(item)])).replace("'", "").replace(']','').replace('[','').replace(' ','') for item in sets]
+        sizes = [len(item) for item in sets]
+        labels = [(label if size>0 else '') for label, size in zip(labels, sizes)]
+        explode = (0.0, orthogonalSectorsShift, 0.0, 0.0, 0.0, orthogonalSectorsShift, 0.0, 0.0)
 
         def findAll(a, b):
 
@@ -1172,14 +1241,19 @@ class VisualizationFunctions:
 
             return
 
+        if listUnexpressedMarkers:
+            str_sets = [str(sorted([i for i in list(setsE[j])])).replace("'", "").replace(']','').replace('[','').replace(' ','') for j in range(8)]
+        else:
+            str_sets = [str(sorted([i for i in list(sets[j])])).replace("'", "").replace(']','').replace('[','').replace(' ','') for j in range(8)]
+
         for i, item in enumerate(str_sets):
 
-            all = item.split(',')
-            new_item = all[0]
-            temp_item = all[0]
+            all_temp = item.split(',')
+            new_item = all_temp[0]
+            temp_item = all_temp[0]
             limit = 75
 
-            for gene in all[1:]:
+            for gene in all_temp[1:]:
                 if len(temp_item)>limit:
                     temp_item = '\n' + gene
                     new_item += '\n' + gene
@@ -1187,19 +1261,64 @@ class VisualizationFunctions:
                     new_item += ', ' + gene
                     temp_item += ', ' + gene
 
-            str_sets[i] = titles[i] + '\n' + new_item
+            if listUnexpressedMarkers:
+                str_sets[i] = titles[i] + ' (%s):'%(len(all_temp)) + '\n' + new_item
+            else:
+                str_sets[i] = titles[i] + '\n' + new_item
 
-        sizes = [len(item) for item in sets]
-        labels = [(label if size>0 else '') for label, size in zip(labels, sizes)]
-        explode = (0.0, 0.02, 0.0, 0.0, 0.0, 0.02, 0.0, 0.0)
+        if listUnexpressedMarkers:
+            str_setsU = [str(sorted([i for i in list(sets[j].difference(setsE[j]))])).replace("'", "").replace(']','').replace('[','').replace(' ','') for j in range(8)]
+        
+            for i, item in enumerate(str_setsU):
+
+                all_temp = item.split(',')
+                new_item = all_temp[0]
+                temp_item = all_temp[0]
+                limit = 75
+
+                for gene in all_temp[1:]:
+                    if len(temp_item)>limit:
+                        temp_item = '\n' + gene
+                        new_item += '\n' + gene
+                    else:
+                        new_item += ', ' + gene
+                        temp_item += ', ' + gene
+
+                if len(new_item)>1:
+                    str_sets[i] += '\n' + 'Not expressed (%s):'%(len(all_temp)) + '\n' + new_item
 
         fig = plt.figure(figsize=(8,4))
         ax = fig.add_axes([0.25,0.25,0.5,0.5])
 
+        currentWedge = 0
+
+        def autopctFunc(value):
+
+            nonlocal currentWedge
+
+            n = int(np.round((float(value)/100.*float(np.sum(sizes))), 0))
+
+            if listUnexpressedMarkers:
+                u = len(sets[currentWedge].difference(setsE[currentWedge]))
+            else:
+                u = 0
+
+            if n>0:
+                if u>0:
+                    format = "{:d}\n({:d})".format(n,u)
+                else:
+                    format = "{:d}".format(n)
+            else:
+                format = ""
+
+            currentWedge += 1
+
+            return format
+
         wedges, texts, autotexts = ax.pie(sizes, explode=explode, labels=labels, colors=colors, labeldistance=1.05, 
                                           textprops={'size':6, 'weight':'semibold', 'color':'b'},
-                                          autopct=lambda pct: "{:d}".format(int(pct/100.*np.sum(sizes))) if pct>0 else '', wedgeprops={'linewidth': 0.5, 'edgecolor':'aqua', 'width': 0.7},
-                                          shadow=False, startangle=-180, frame=False, rotatelabels=False)
+                                          autopct=autopctFunc, wedgeprops={'linewidth': 0.5, 'edgecolor':'aqua', 'width': 0.7},
+                                          shadow=False, startangle=-180 + rotationAngle, frame=False, rotatelabels=False)
 
         plt.setp(autotexts, size=6, weight="semibold", color='k')
 
@@ -1221,12 +1340,13 @@ class VisualizationFunctions:
 
             kw["arrowprops"].update({"connectionstyle": connectionstyle})
 
-            ax.annotate(str_sets[i], xy=(x, y), xytext=(1.6*np.sign(x), 1.8*y), fontsize=3.5, horizontalalignment=horizontalalignment, **kw)
+            ax.annotate(str_sets[i], xy=(x, y), xytext=(1.6*np.sign(x), 1.8*y), fontsize=3.5, ha=horizontalalignment, **kw)
 
         fig.suptitle('%s & %s'%(type1, type2), fontsize=11, color='b')
         ax.axis('equal')
 
-        ax.text(0., 0., str(total_count), color='k', fontsize=10, ha='center', va='center').set_path_effects([path_effects.Stroke(linewidth=1, foreground='blue'),path_effects.Normal()])
+        ax.text(0., 0., '%s\n(%s)'%(len(all), len(all.difference(allE))) if listUnexpressedMarkers else '%s'%(len(all)), 
+                color='k', fontsize=8, ha='center', va='center').set_path_effects([path_effects.Stroke(linewidth=1, foreground='blue'),path_effects.Normal()])
 
         if self.saveDir is not None:
             fig.savefig(os.path.join(self.saveDir, self.dataName + 'Markers_of_%s_vs_%s_(%s)_%s.png'%(type1.replace('/',''), 
@@ -1234,4 +1354,4 @@ class VisualizationFunctions:
                                                                                                   nameToAppend, 
                                                                                                   additional_name)), dpi=300)
 
-        return dict(zip(labels, sets))
+        return dict(zip(labels, list(sets)))
