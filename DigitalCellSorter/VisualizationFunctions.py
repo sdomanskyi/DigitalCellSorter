@@ -93,14 +93,14 @@ class VisualizationFunctions:
             DCS.MakeMarkerExpressionPlot()
         '''
 
-        df_votingResults = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_voting.xlsx'), sheet_name='z-scores')
+        df_votingResults = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_annotation.xlsx'), sheet_name='z-scores')
         votingResults = dict(zip(df_votingResults['cluster'].values, df_votingResults['Predicted cell type'].values))
         predictedCelltypes = dict(zip(df_votingResults['cluster'].values, df_votingResults['Predicted cell type'].str.split(' #', expand=True)[0]))
         supportingMarkersList = dict(zip(df_votingResults['cluster'].values, df_votingResults['Supporting markers'].str.split(' // ')))
         allMarkersList = dict(zip(df_votingResults['cluster'].values, df_votingResults['All markers'].str.split(' // ')))
-        df_markers_cluster_centroids = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_voting.xlsx'), sheet_name='Cluster centroids', index_col=0, header=0).T
+        df_markers_cluster_centroids = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_annotation.xlsx'), sheet_name='Cluster centroids', index_col=0, header=0).T
 
-        df_markers = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_voting.xlsx'), sheet_name='Marker cell type weight matrix', index_col=0)
+        df_markers = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_annotation.xlsx'), sheet_name='Marker cell type weight matrix', index_col=0)
         df_markers[df_markers>=0.] = np.nan
         df_markers[df_markers<0.] = -1.
 
@@ -205,7 +205,7 @@ class VisualizationFunctions:
         axx.set_ylim(-0.5, len(cells_in_clusters) - 0.5)
 
         if self.saveDir is not None: 
-            fig.savefig(os.path.join(self.saveDir, self.dataName + '_voting.png'), dpi=600)
+            fig.savefig(os.path.join(self.saveDir, self.dataName + '_annotation.png'), dpi=600)
 
         return
 
@@ -329,7 +329,7 @@ class VisualizationFunctions:
 
         votingAnalyzeBy = 'Predicted cell type' if analyzeBy=='label' else analyzeBy
 
-        df_votingResults = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_voting.xlsx'), sheet_name='z-scores')
+        df_votingResults = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_annotation.xlsx'), sheet_name='z-scores')
         votingResults = dict(zip(df_votingResults[votingAnalyzeBy].values, df_votingResults['Predicted cell type'].values))
 
         cellClusterIndexLabel = df.columns.get_level_values(analyzeBy).values
@@ -357,7 +357,7 @@ class VisualizationFunctions:
             DCS.MakeVotingResultsMatrixPlot()
         '''
 
-        df_votingResults = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_voting.xlsx'), sheet_name='z-scores')
+        df_votingResults = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_annotation.xlsx'), sheet_name='z-scores')
 
         cellTypes = sorted([x for x in df_votingResults.columns.values.tolist() if x not in ['cluster', 'Predicted cell type', '# cells in cluster', 'Winning score', 'Supporting markers', 'Contradicting markers', 'All markers']])
 
@@ -458,7 +458,7 @@ class VisualizationFunctions:
         '''
 
         try:
-            df_noise_dict = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_voting.xlsx'), sheet_name='Null distributions', index_col=0, header=[0,1], skiprows=[2])
+            df_noise_dict = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_annotation.xlsx'), sheet_name='Null distributions', index_col=0, header=[0,1], skiprows=[2])
         except:
             print('Error loading distributions from the results file')
 
@@ -469,8 +469,8 @@ class VisualizationFunctions:
 
             return
 
-        df_votingResultsV = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_voting.xlsx'), sheet_name='Voting scores', dtype={'cluster':str}).reset_index().set_index('cluster')
-        df_votingResultsZ = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_voting.xlsx'), sheet_name='z-scores', dtype={'cluster':str}).reset_index().set_index('cluster')
+        df_votingResultsV = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_annotation.xlsx'), sheet_name='Voting scores', dtype={'cluster':str}).reset_index().set_index('cluster')
+        df_votingResultsZ = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_annotation.xlsx'), sheet_name='z-scores', dtype={'cluster':str}).reset_index().set_index('cluster')
 
         predicted_cell_type_cluster = df_votingResultsZ['Predicted cell type'].values
         predicted_cell_type = df_votingResultsZ['Predicted cell type'].str.split(' #', expand=True)[0].values
@@ -696,7 +696,7 @@ class VisualizationFunctions:
                 colors = np.vstack([(color.strip('\n').split('\t')) for color in colors])
                 colors = pd.DataFrame(colors.T[1], index=colors.T[0]).apply(lambda x: tuple(np.float_(x[0][1:][:-1].split(','))), axis=1)
 
-            df = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_voting.xlsx'))
+            df = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_annotation.xlsx'))
             index = df['Predicted cell type']
 
             if not clusterName is None:
@@ -714,7 +714,7 @@ class VisualizationFunctions:
 
             s = 'sums'
             df_main[s] = np.array(np.sum(df_main, axis=1))
-            df_main.loc['Unknown',s] = 0
+            df_main.loc[self.nameForUnknown,s] = 0
             df_main = df_main.apply(lambda x: 100. * x / np.sum(df_main, axis=0), axis=1).loc[np.sum(df_main, axis=1) > 0].sort_values(by=[s]).drop(columns=[s])
 
             return df_main, colors, clusterName
@@ -872,7 +872,7 @@ class VisualizationFunctions:
 
         return None
 
-    def makeSankeyDiagram(self, df, colormapForIndex=None, colormapForColumns=None, linksColor='rgba(100,100,100,0.6)', title='', interactive=False, quality=4):
+    def makeSankeyDiagram(self, df, colormapForIndex=None, colormapForColumns=None, linksColor='rgba(100,100,100,0.6)', title='', interactive=False, quality=4, nameAppend=''):
 
         '''Make a Sankey diagram, also known as 'river plot' with two groups of nodes
 
@@ -913,12 +913,12 @@ class VisualizationFunctions:
             df.index = temp_index
             df.columns = temp_columns
         except:
-            print('Colormap error. Using default node colors')
+            print('Using default node colors')
             colormapForIndex = None
             colormapForColumns = None
 
         if (colormapForIndex is None) or (colormapForColumns is None):
-            nodeColors = None
+            nodeColors = ['rgba(150,0,10,0.8)']*len(df.index) + ['rgba(10,0,150,0.8)']*len(df.columns)
             nodeLabels = df.index.to_list() + df.columns.to_list()
         else:
             nodeLabels = df.index.get_level_values('label').to_list() + df.columns.get_level_values('label').to_list()
@@ -946,7 +946,7 @@ class VisualizationFunctions:
         if not title is None:
             fig.update_layout(title_text=title, font_size=10)
 
-        fig.write_image(os.path.join(self.saveDir, self.dataName + '.png'), width=600, height=600, scale=quality)
+        fig.write_image(os.path.join(self.saveDir, self.dataName + nameAppend + '.png'), width=600, height=600, scale=quality)
 
         if interactive:
             fig.show()
@@ -1132,7 +1132,7 @@ class VisualizationFunctions:
         '''
 
         try:
-            df_marker_expression = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_voting.xlsx'), 
+            df_marker_expression = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_annotation.xlsx'), 
                                                     sheet_name='Marker cell type weight matrix', index_col=0, header=0).T
         except:
             print('Marker expression data unavailable')
