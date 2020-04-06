@@ -16,19 +16,72 @@ import matplotlib.patheffects as path_effects
 from matplotlib import cm
 
 import plotly.graph_objects
+from adjustText import adjust_text
 
 class VisualizationFunctions:
 
     '''Class of visualization functions for DigitalCellSorter'''
 
-    def __init__(self, dataName='dataName', saveDir=os.path.join('')):
+    def __init__(self, dataName = 'dataName', saveDir = os.path.join('')):
 
         self.saveDir = saveDir
         self.dataName = dataName
 
         return
 
-    def makeHeatmapGeneExpressionPlot(self, df, nameToAppend=''):
+    def saveFigure(self, fig, saveDir, label='Figure', extension='png', dpi=300, close=True):
+
+        '''Function primarily used internally to save and close figures
+        Parameters:
+            saveDir: str
+                Path of directories to save the object to
+            extension: str, Default '.png'
+                Path of directories to save the object to
+            
+            dpi: int, Default 300
+                Figure resolution if rasterized
+            close: boolean: Default True
+                Whether to close the figure after saving
+
+        Returns:
+            None
+
+        Usage:
+            saveFigure(fig, saveDir, label, extension, dpi)
+        '''
+
+        if saveDir != os.path.join('') and not os.path.exists(saveDir):
+            os.makedirs(saveDir)
+
+        try:
+            if not extension[0]=='.':
+                extension = ''.join(['.', extension])
+        except:
+            print('Figure extension/format error')
+            print('Example of acceptable extension: \".png\"')
+
+            return
+
+        if extension in ['.png', '.jpeg', '.tiff']:
+
+            fig.savefig(os.path.join(saveDir, label + extension), dpi=dpi)
+    
+        elif extension in ['.svg', '.eps', '.pdf']:
+
+            fig.savefig(os.path.join(saveDir, label + extension))
+
+        else:
+            print('Unsupported format. Figure not saved')
+
+        if close:
+            try:
+                plt.close(fig)
+            except:
+                print('Error while closing figure')
+
+        return
+
+    def makeHeatmapGeneExpressionPlot(self, df = None, genes = None, nameToAppend = 'heatmap', dpi = 300, extension = 'png'):
 
         '''Make heatmap gene expression plot from a provided gene expression matrix.
 
@@ -48,20 +101,59 @@ class VisualizationFunctions:
             DCS.makeHeatmapGeneExpressionPlot()
         '''
 
+        if df is None:
+            if self.df_expr is None:
+                self.loadExpressionData()
+
+            if self.df_expr is None:
+                return
+            else:
+                if not genes is None:
+                    converted = []
+                    for gene in genes:
+                        converted.extend(self.getHugoName(gene, printAliases=True))
+
+                    converted = np.unique(converted)
+
+                    common = self.df_expr.index.intersection(converted)
+
+                    df = self.df_expr.loc[common].copy()
+                else:
+                    print('Plotting all expressed genes not supported. Provide a smaller list of genes')
+
+                    return
+
+        counts = df.loc[[df.index[0]]].groupby(axis=1, level='cluster').count()
+        means = df.mean(axis=1)
+
+        df = df.groupby(axis=1, level='cluster').mean()
+        #df = df.replace(0., np.nan).groupby(axis=1, level='cluster').mean().fillna(0.)
+        df.columns = df.columns.get_level_values('cluster')
+        df.columns = list(zip(df.columns.values, counts.values[0]))
+
         for i in range(df.shape[0]):
             df.iloc[i,:] -= np.min(df.iloc[i,:])
             df.iloc[i,:] /= np.max(df.iloc[i,:])
-
+        
         df = df.T.iloc[scipy.cluster.hierarchy.dendrogram(scipy.cluster.hierarchy.linkage(df.T, 'ward'), no_plot=True, get_leaves=True)['leaves']].T
+
+        df.insert(0, ('Mean', 'All'), means)
 
         fig, ax = plt.subplots(figsize=(8,8))
 
-        ax.imshow(df.T.values, cmap='Blues', interpolation='None', aspect='auto')
+        ax.imshow(df.T.values[1:,:], cmap='Blues', interpolation='None', aspect='auto', 
+                  extent=(-0.5, df.shape[0]-0.5, df.shape[1]-0.5, +0.5))
+
+        ax.imshow(df.T.values[:1,:], cmap='Reds', interpolation='None', aspect='auto', 
+                  extent=(-0.5, df.shape[0]-0.5, -0.5, +0.5))
+
+        ax.axhline(y=0.5, c='k', lw=1.5)
 
         ax.set_xticks(range(df.shape[0]))
         ax.set_yticks(range(df.shape[1]))
 
-        ylabels = ['(' + str(col[1]) + ')%s#'%('    ' if len(col[0])<=3 else '  ') + str(col[0]) for col in df.columns]
+        ylabels = ['(' + str(col[1]) + ')%s#' % ('    ' if len(col[0]) <= 3 else '  ') + str(col[0]) for col in df.columns]
+        ylabels[0] = 'Mean across all cells'
 
         ax.set_xticklabels(df.index, rotation=90, fontsize=10)
         ax.set_yticklabels(ylabels, rotation=0, fontsize=10)
@@ -71,12 +163,11 @@ class VisualizationFunctions:
 
         fig.tight_layout()
 
-        if self.saveDir is not None: 
-            fig.savefig(os.path.join(self.saveDir, self.dataName + '_' + nameToAppend + '_genes.png'), dpi=300)
+        self.saveFigure(fig, self.saveDir, self.dataName + '_' + nameToAppend + '_genes', extension=extension, dpi=dpi)
 
         return
     
-    def makeMarkerExpressionPlot(self):
+    def makeMarkerExpressionPlot(self, dpi = 600, extension = 'png'):
 
         '''Produce image on marker genes and their expression on all clusters.
         Uses files generated by function DCS.Vote
@@ -101,12 +192,15 @@ class VisualizationFunctions:
         df_markers_cluster_centroids = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_annotation.xlsx'), sheet_name='Cluster centroids', index_col=0, header=0).T
 
         df_markers = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_annotation.xlsx'), sheet_name='Marker cell type weight matrix', index_col=0)
-        df_markers[df_markers>=0.] = np.nan
-        df_markers[df_markers<0.] = -1.
+        df_markers_weighted = df_markers.copy()
+        df_markers[df_markers >= 0.] = np.nan
+        df_markers[df_markers < 0.] = -1.
 
         # Y_mc.T
         X_markers_cluster_means_transpose = df_markers_cluster_centroids.values.T
 
+        df_means = df_markers_cluster_centroids.copy()
+        
         # Normalization
         for i in range(X_markers_cluster_means_transpose.shape[1]):
             X_markers_cluster_means_transpose[:,i] -= np.min(X_markers_cluster_means_transpose[:,i])
@@ -114,6 +208,8 @@ class VisualizationFunctions:
 
         ORDER = scipy.cluster.hierarchy.dendrogram(scipy.cluster.hierarchy.linkage(X_markers_cluster_means_transpose, 'ward'), no_plot=True, get_leaves=True)['leaves']
         ORDER2 = scipy.cluster.hierarchy.dendrogram(scipy.cluster.hierarchy.linkage(X_markers_cluster_means_transpose.T, 'ward'), no_plot=True, get_leaves=True)['leaves']
+
+        df_markers_weighted = df_markers_weighted.iloc[:, ORDER2]
 
         X_markers_cluster_means_sorted = X_markers_cluster_means_transpose[ORDER,:][:,ORDER2]
 
@@ -134,7 +230,7 @@ class VisualizationFunctions:
             if not supportingMarkersList[cluster] is np.nan:
                 for gene in allMarkersList[cluster]:
                 #for gene in df_markers.columns:
-                    if df_markers.loc[predictedCelltypes[cluster], gene]==-1.:
+                    if df_markers.loc[predictedCelltypes[cluster], gene] == -1.:
                         df_neg_supp_marker_hits.loc[gene, cluster] = 1
 
         X_marker_hits = df_all_marker_hits.values.T[ORDER,:][:,ORDER2]
@@ -146,70 +242,96 @@ class VisualizationFunctions:
 
         _figsize[1] *= 1.5
 
-        gs = matplotlib.gridspec.GridSpec(1, 2, width_ratios=[20,1], left=0.13, right=0.99, top=0.99, bottom=0.25, wspace=0.01, hspace=0.01)
+        height_ratio = df_markers_cluster_centroids.shape[1] / (1. * df_markers_weighted.shape[0])
+
+        gs = matplotlib.gridspec.GridSpec(2, 2, width_ratios=[20,1], height_ratios=[height_ratio,1], 
+                                          left=0.13, right=0.99, top=0.99, bottom=0.25, wspace=0.01, hspace=0.04)
 
         fig = plt.figure(figsize=_figsize)
-        ax = plt.subplot(gs[0])
 
-        ax.imshow(X_markers_cluster_means_sorted,cmap='Blues',interpolation='None', aspect='auto')
+        if True:
+            ax = plt.subplot(gs[0])
 
-        i_list,j_list = np.where(X_marker_hits.T > 0)
-        color = 'w' #(1., 1., 0.7)
-        ax.plot(i_list, j_list, 'k*', mec=color, mew=0.5, markersize=4)
+            cell_counts = df_votingResults['# cells in cluster'].values.copy()[ORDER]
+            means = (df_means.iloc[ORDER2,ORDER] * cell_counts / cell_counts.sum()).sum(axis=1)
 
-        i_list_supp,j_list_supp = np.where(X_supp_marker_hits.T > 0)
-        i_list_neg_supp,j_list_neg_supp = np.where(X_neg_supp_marker_hits.T > 0)
-        ax.plot(i_list_supp, j_list_supp, 'k*', mec='lime', mew=0.7, markersize=4) #mec='k', alpha=0.5, markersize=6
-        ax.plot(i_list_neg_supp, j_list_neg_supp, 'k*', mec='red', mew=0.7, markersize=4) #mec='k', alpha=0.5, markersize=6
+            ax.imshow(means.values[None, :], cmap='Reds', interpolation='None', aspect='auto', 
+                      extent=(-0.5, means.shape[0]-0.5, -0.5, +0.5))
 
-        ax.set_xticks(range(X_markers_cluster_means_transpose.shape[1]))
-        ax.set_yticks(range(X_markers_cluster_means_transpose.shape[0]))
+            ax.imshow(X_markers_cluster_means_sorted,cmap='Blues', interpolation='None', aspect='auto',
+                      extent=(-0.5, X_markers_cluster_means_sorted.shape[1]-0.5, X_markers_cluster_means_sorted.shape[0]-0.5 + 1.0, +0.5))
 
-        xtickslabels = np.array(df_markers_cluster_centroids.index[ORDER2])
-        for i in range(0,len(xtickslabels),2):
-            xtickslabels[i] += " ─────────"
+            i_list,j_list = np.where(X_marker_hits.T > 0)
+            color = 'w' #(1., 1., 0.7)
+            ax.plot(i_list, j_list + 1., 'k*', mec=color, mew=0.5, markersize=4)
 
-        ax.set_xticklabels(xtickslabels,rotation=90, fontsize=5)
+            i_list_supp, j_list_supp = np.where(X_supp_marker_hits.T > 0)
+            i_list_neg_supp, j_list_neg_supp = np.where(X_neg_supp_marker_hits.T > 0)
+            ax.plot(i_list_supp, j_list_supp + 1., 'k*', mec='lime', mew=0.7, markersize=4) #mec='k', alpha=0.5, markersize=6
+            ax.plot(i_list_neg_supp, j_list_neg_supp + 1., 'k*', mec='red', mew=0.7, markersize=4) #mec='k', alpha=0.5, markersize=6
 
-        clusterNames = list(votingResults.values())
-        clusterIndices = list(votingResults.keys())
+            ax.set_xticks([])
+            ax.set_yticks(range(X_markers_cluster_means_transpose.shape[0] + 1))
 
-        ax.set_yticklabels([str(clusterNames[i]) + ' (' + str(clusterIndices[i]) + ')' for i in ORDER], rotation=0, fontsize=8)
-        #ax.set_yticklabels(['Cluster '+str(i) for i in ORDER], rotation=45,
-        #fontsize=10)
+            clusterNames = list(votingResults.values())
+            clusterIndices = list(votingResults.keys())
 
-        ax.set_xlim([-0.5,X_markers_cluster_means_transpose.shape[1] - 0.5])
-        ax.set_ylim([-0.5,X_markers_cluster_means_transpose.shape[0] - 0.5])
+            ax.set_yticklabels(['Mean'] + [str(clusterNames[i]) + ' (' + str(clusterIndices[i]) + ')' for i in ORDER], rotation=0, fontsize=8)
+            ax.set_xlim([-0.5,X_markers_cluster_means_transpose.shape[1] - 0.5])
+            ax.set_ylim([-0.5,X_markers_cluster_means_transpose.shape[0] + 1 - 0.5])
 
+        if True:
+            ax2 = plt.subplot(gs[1])
+            fontsize = 5
+            cells_in_clusters = df_votingResults['# cells in cluster'].values.copy()[ORDER]
+            numberOfCells = cells_in_clusters.sum()
 
+            with open(os.path.join(self.saveDir, 'ColormapForCellTypes.txt'), 'r') as temp_file:
+                colormap = {item.strip().split('\t')[0]:eval(item.strip().split('\t')[1]) for item in temp_file.readlines()}
+            celltypes = df_votingResults['Predicted cell type'].str.split(' #', expand=True)[0].values.copy()[ORDER]
 
-        axx = plt.subplot(gs[1])
-        fontsize = 5
-        cells_in_clusters = df_votingResults['# cells in cluster'].values.copy()[ORDER]
-        numberOfCells = cells_in_clusters.sum()
+            ax2.barh(y=range(len(cells_in_clusters)), width=cells_in_clusters, height=0.8, align='center', color=[colormap[i] for i in celltypes])
+            for i in range(len(cells_in_clusters)):
+                ax2.text(np.max(cells_in_clusters), i, cells_in_clusters[i], ha='right',va='top', color='k', weight='bold', fontsize=fontsize)
+                ax2.text(0.02 * numberOfCells, i, str(round(100 * cells_in_clusters[i] / numberOfCells, 1)) + '%', ha='left',va='bottom', color='b', fontsize=fontsize)
+            ax2.set_xticklabels(cells_in_clusters, fontsize=fontsize)
+            ax2.set_yticklabels(cells_in_clusters, alpha=0)
+            ax2.set_xticklabels(cells_in_clusters, alpha=0)
+            ax2.set_xticks([])
+            ax2.set_yticks([])
+            ax2.set_xlabel('Number of\ncells in clusters', fontsize=fontsize)
+            ax2.set_ylim(-1.5, len(cells_in_clusters) - 0.5)
 
-        with open(os.path.join(self.saveDir, 'ColormapForCellTypes.txt'), 'r') as temp_file:
-            colormap = {item.strip().split('\t')[0]:eval(item.strip().split('\t')[1]) for item in temp_file.readlines()}
-        celltypes = df_votingResults['Predicted cell type'].str.split(' #', expand=True)[0].values.copy()[ORDER]
+        if True:
+            ax3 = plt.subplot(gs[2])
 
-        axx.barh(y=range(len(cells_in_clusters)), width=cells_in_clusters, height=0.8, align='center', color=[colormap[i] for i in celltypes])
-        for i in range(len(cells_in_clusters)):
-            axx.text(np.max(cells_in_clusters), i, cells_in_clusters[i], ha='right',va='top', color='k', weight='bold', fontsize=fontsize)
-            axx.text(0.02 * numberOfCells, i, str(round(100 * cells_in_clusters[i] / numberOfCells, 1)) + '%', ha='left',va='bottom', color='b', fontsize=fontsize)
-        axx.set_xticklabels(cells_in_clusters, fontsize=fontsize)
-        axx.set_yticklabels(cells_in_clusters, alpha=0)
-        axx.set_xticklabels(cells_in_clusters, alpha=0)
-        axx.set_xticks([])
-        axx.set_yticks([])
-        axx.set_xlabel('Number of\ncells in clusters', fontsize=fontsize)
-        axx.set_ylim(-0.5, len(cells_in_clusters) - 0.5)
+            masked = np.ma.array(df_markers_weighted.values, mask=(df_markers_weighted.values==0.))
 
-        if self.saveDir is not None: 
-            fig.savefig(os.path.join(self.saveDir, self.dataName + '_annotation.png'), dpi=600)
+            cmap = plt.cm.PiYG
+            #cmap = matplotlib.colors.LinearSegmentedColormap.from_list('RedGreen', [(1, 0, 0), (0, 1, 0)], N=100)
+            cmap.set_bad('white')
+
+            value = 0.5 * np.abs(df_markers_weighted).max().max()
+            ax3.imshow(masked, cmap=cmap, vmin=-value, vmax=+value, interpolation='None', aspect='auto')
+
+            ax3.set_xticks(range(X_markers_cluster_means_transpose.shape[1]))
+            ax3.set_yticks(range(df_markers_weighted.shape[0]))
+
+            xtickslabels = np.array(df_markers_cluster_centroids.index[ORDER2])
+            for i in range(0,len(xtickslabels),2):
+                xtickslabels[i] += " ─────────"
+
+            ax3.set_xticklabels(xtickslabels, rotation=90, fontsize=5)
+            ax3.set_yticklabels(df_markers_weighted.index.values, rotation=0, fontsize=8)
+
+            ax3.set_xlim([-0.5, df_markers_weighted.shape[1] - 0.5])
+            ax3.set_ylim([-0.5, df_markers_weighted.shape[0] - 0.5])
+
+        self.saveFigure(fig, self.saveDir, self.dataName + '_marker_expression', extension=extension, dpi=dpi)
 
         return
 
-    def internalMarkerSubplots(self, df, X_projection, hugo_cd_dict, NoFrameOnFigures=False, HideClusterLabels=False, outlineClusters=True, analyzeBy='cluster'):
+    def internalMarkerSubplots(self, df, X_projection, hugo_cd_dict, NoFrameOnFigures = False, HideClusterLabels = False, outlineClusters = True, analyzeBy = 'cluster'):
 
         '''Produce subplots on each marker and its expression on all clusters
 
@@ -303,7 +425,8 @@ class VisualizationFunctions:
             if self.saveDir is not None: 
                 #fig.savefig('%s/marker_subplots/%s_%s_%s.png' %
                 #(self.saveDir,self.dataName,marker,suffix.replace(',','_').replace('/','_')),dpi=150)
-                #fig.savefig(os.path.join(self.saveDir, 'marker_subplots', '%s_%s_%s.pdf' % (self.dataName,marker,suffix.replace(',','_').replace('/','_'))))
+                #fig.savefig(os.path.join(self.saveDir, 'marker_subplots', '%s_%s_%s.pdf' %
+                #(self.dataName,marker,suffix.replace(',','_').replace('/','_'))))
                 fig.savefig(os.path.join(self.saveDir, 'marker_subplots', '%s_%s_%s.png' % (self.dataName,marker,suffix.replace(',','_').replace('/','_'))), dpi=300)
                 print(marker, end=" ", flush=True)
 
@@ -322,12 +445,12 @@ class VisualizationFunctions:
         if not os.path.exists(directory):
             os.makedirs(directory)
 
-        if len(df.index)>1:
+        if len(df.index) > 1:
             print('\nSaving marker expression plots:\n')
         else:
             print('Saving expression plot of:', end=' ', flush=True)
 
-        votingAnalyzeBy = 'Predicted cell type' if analyzeBy=='label' else analyzeBy
+        votingAnalyzeBy = 'Predicted cell type' if analyzeBy == 'label' else analyzeBy
 
         df_votingResults = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_annotation.xlsx'), sheet_name='z-scores')
         votingResults = dict(zip(df_votingResults[votingAnalyzeBy].values, df_votingResults['Predicted cell type'].values))
@@ -341,7 +464,7 @@ class VisualizationFunctions:
 
         return
 
-    def makeVotingResultsMatrixPlot(self):
+    def makeVotingResultsMatrixPlot(self, dpi = 600, extension = 'png'):
 
         '''Produce voting results voting matrix plot
 
@@ -399,9 +522,9 @@ class VisualizationFunctions:
             for j in range(num_of_cell_types):
                 if np.round(zscores[i,j],1) > 0:
                     if zscores[i,j] == np.max(zscores[i,:]):
-                        ax.text(j,i,np.round(zscores[i,j],1), color='w', fontsize=125*4 / max([num_of_cell_types, num_of_clusters]),ha='center',va='center').set_path_effects([path_effects.Stroke(linewidth=4, foreground='red'),path_effects.Normal()])
+                        ax.text(j,i,np.round(zscores[i,j],1), color='w', fontsize=125 * 4 / max([num_of_cell_types, num_of_clusters]),ha='center',va='center').set_path_effects([path_effects.Stroke(linewidth=4, foreground='red'),path_effects.Normal()])
                     else:
-                        ax.text(j,i,np.round(zscores[i,j],1), color='w', fontsize=125*3 / max([num_of_cell_types, num_of_clusters]),ha='center',va='center').set_path_effects([path_effects.Stroke(linewidth=2, foreground='black'),path_effects.Normal()])
+                        ax.text(j,i,np.round(zscores[i,j],1), color='w', fontsize=125 * 3 / max([num_of_cell_types, num_of_clusters]),ha='center',va='center').set_path_effects([path_effects.Stroke(linewidth=2, foreground='black'),path_effects.Normal()])
 
         ax.set_xticks(range(num_of_cell_types))
         ax.set_yticks(range(num_of_clusters))
@@ -437,11 +560,13 @@ class VisualizationFunctions:
         axx.set_ylim(-0.5, num_of_clusters - 0.5)
         
         #fig.tight_layout()
-        fig.savefig(os.path.join(self.saveDir, self.dataName + '_matrix_voting.png'), dpi=150)
+        fig.savefig(os.path.join(self.saveDir, self.dataName + '_scores_matrix.png'), dpi=150)
+
+        plt.close(fig)
  
         return 
 
-    def makeHistogramNullDistributionPlot(self):
+    def makeHistogramNullDistributionPlot(self, dpi = 600, extension = 'png'):
 
         '''Produce histogram plot of the voting null distributions
 
@@ -464,7 +589,7 @@ class VisualizationFunctions:
 
             return
 
-        if len(df_noise_dict)==0:
+        if len(df_noise_dict) == 0:
             print('Null distribution is empty in the results file')
 
             return
@@ -500,7 +625,7 @@ class VisualizationFunctions:
         for i in range(num_of_cell_types):
 
             try:
-                minx, maxx = np.round(df_noise_dict.index.values[np.where(df_noise_dict.xs(key=cell_types[i], level=0, axis=1).values.sum(axis=1)!=0.)[0][[0,-1]]], 3)
+                minx, maxx = np.round(df_noise_dict.index.values[np.where(df_noise_dict.xs(key=cell_types[i], level=0, axis=1).values.sum(axis=1) != 0.)[0][[0,-1]]], 3)
                 #maxx += 0.1
                 maxx = np.round(maxx, 3)
             except:
@@ -518,21 +643,21 @@ class VisualizationFunctions:
                 ax = plt.subplot(gs[i + num_of_cell_types * j])
 
                 ax.bar(df_noise_dict.index.values, df_noise_dict[(cell_types[i], clusters[j])].values, 
-                       width=df_noise_dict.index.values[2]-df_noise_dict.index.values[1], align='center', color=colormap[cell_types[i]])
+                       width=df_noise_dict.index.values[2] - df_noise_dict.index.values[1], align='center', color=colormap[cell_types[i]])
 
                 valueV = df_votingResultsV.loc[clusters[j], cell_types[i]]
                 valueZ = df_votingResultsZ.loc[clusters[j], cell_types[i]]
                 ax.axvline(x=valueV, ymin=0, ymax=1, color='k', lw=0.2)
                 color = 'k' if predicted_cell_type[j] != cell_types[i] else 'r'
-                xloc = 0.02*minx + minx #valueV
-                ax.text(xloc, maxy - 0.02*maxy, r'$V_{%s,%s}=$' % (i,j) + str(np.round(valueV,2)), fontsize=fontsize, va='top', ha='left', color=color, zorder=np.inf)
-                ax.text(xloc, maxy - 0.2*maxy, r'$\Lambda_{%s,%s}=$' % (i,j) + str(np.round(valueZ,2)), fontsize=fontsize, va='top', ha='left', color=color, zorder=np.inf)
+                xloc = 0.02 * minx + minx #valueV
+                ax.text(xloc, maxy - 0.02 * maxy, r'$V_{%s,%s}=$' % (i,j) + str(np.round(valueV,2)), fontsize=fontsize, va='top', ha='left', color=color, zorder=np.inf)
+                ax.text(xloc, maxy - 0.2 * maxy, r'$\Lambda_{%s,%s}=$' % (i,j) + str(np.round(valueZ,2)), fontsize=fontsize, va='top', ha='left', color=color, zorder=np.inf)
 
                 if j == 0:
                     ax.set_title(cell_types[i], fontdict={'color': 'b', 'size':'6'})
 
                 if i == 0:
-                    ax.text(0. * maxx, maxy + 0.05*maxy, predicted_cell_type_cluster[j] + ' (Cluster %s)' % j, rotation=0, 
+                    ax.text(0. * maxx, maxy + 0.05 * maxy, predicted_cell_type_cluster[j] + ' (Cluster %s)' % j, rotation=0, 
                             fontsize=fontsize, weight='bold', va='bottom', ha='left', color='k')
                     
                     ax.set_ylabel('Probability', fontsize=fontsize)
@@ -544,8 +669,8 @@ class VisualizationFunctions:
                     #ax.set_xlabel('Voting score', fontsize=fontsize)
                     ax.set_xticklabels([minx, maxx], fontsize=fontsize)
 
-                    if maxx>0.0 and minx<0.0:
-                        ax.text(0.0, -0.2*maxy, '0.0', fontsize=fontsize, va='top', ha='center', color='k')
+                    if maxx > 0.0 and minx < 0.0:
+                        ax.text(0.0, -0.2 * maxy, '0.0', fontsize=fontsize, va='top', ha='center', color='k')
                 else:
                     ax.set_xticklabels([], fontsize=fontsize)
 
@@ -561,11 +686,13 @@ class VisualizationFunctions:
         
         fig.savefig(os.path.join(self.saveDir, self.dataName + '_null_distributions.png'), dpi=1200)
 
+        plt.close(fig)
+
         matplotlib.rcParams['axes.linewidth'] = origWidth
 
         return
 
-    def makeProjectionPlot(self, Xprojection, cellClusterIndexLabel, suffix, colormap=cm.jet, legend=True, labels=True, colorbar=False, fontsize=10, plotNaNs=True, rightShift=0.3):
+    def makeProjectionPlot(self, Xprojection, cellClusterIndexLabel, suffix, colormap = cm.jet, legend = True, labels = True, colorbar = False, fontsize = 10, plotNaNs = True, rightShift = 0.3, dpi = 600, extension = 'png'):
 
         '''Produce projection plot (2D layout) with a specified coloring scheme
 
@@ -609,9 +736,9 @@ class VisualizationFunctions:
             DCS.makeProjectionPlot(projection, cellClusterIndexLabel, suffix)
         '''
 
-        def add_colorbar(fig, labels, cmap=matplotlib.colors.LinearSegmentedColormap.from_list('GR', [(0, 1, 0), (1, 0, 0)], N=100), fontsize=10):
+        def add_colorbar(fig, labels, cmap = matplotlib.colors.LinearSegmentedColormap.from_list('GR', [(0, 1, 0), (1, 0, 0)], N=100), fontsize = 10):
     
-            mapp=cm.ScalarMappable(norm=matplotlib.colors.Normalize(vmin=np.min(labels), vmax=np.max(labels)), cmap=cmap)
+            mapp = cm.ScalarMappable(norm=matplotlib.colors.Normalize(vmin=np.min(labels), vmax=np.max(labels)), cmap=cmap)
             mapp.set_array(labels)
             sp = np.linspace(np.max(labels), np.min(labels), num=6, endpoint=True)
 
@@ -628,11 +755,11 @@ class VisualizationFunctions:
 
         maxs, mins = np.max(Xprojection,axis=1), np.min(Xprojection,axis=1)
 
-        missing = np.where(cellClusterIndexLabel!=cellClusterIndexLabel)[0]
-        if len(missing)>0:
+        missing = np.where(cellClusterIndexLabel != cellClusterIndexLabel)[0]
+        if len(missing) > 0:
             ax.plot(Xprojection[0, missing], Xprojection[1, missing], 'o', color='grey', mew=0.5, alpha=0.2, markeredgecolor='k', label='NaN')
 
-        nonMissing = np.where(cellClusterIndexLabel==cellClusterIndexLabel)[0]
+        nonMissing = np.where(cellClusterIndexLabel == cellClusterIndexLabel)[0]
         cellClusterIndexLabel = np.array(cellClusterIndexLabel)[nonMissing]
         Xprojection = Xprojection[:, nonMissing]
 
@@ -640,6 +767,8 @@ class VisualizationFunctions:
 
         if labels:
             print(possible_cluster_labels)
+
+        texts = []
 
         for ilabel, label in enumerate(possible_cluster_labels):
             color = colormap(ilabel / len(possible_cluster_labels)) if type(colormap) is matplotlib.colors.LinearSegmentedColormap else colormap[label.split(' #')[0]]
@@ -649,13 +778,19 @@ class VisualizationFunctions:
             ax.plot(XprojectionC[0,:], XprojectionC[1,:], 'o', color=color, mew=0.5, alpha=0.3, markeredgecolor='k', label=label)
 
             if labels:
-                ax.text(np.mean(XprojectionC[0,:]), np.mean(XprojectionC[1,:]), 
-                    label, fontsize=fontsize, ha='center',va='center').set_path_effects([path_effects.Stroke(linewidth=3, foreground='white'), path_effects.Normal()])
+                text = ax.text(np.median(XprojectionC[0,:]), np.median(XprojectionC[1,:]), 
+                    label, fontsize=fontsize, ha='center',va='center')
+                text.set_path_effects([path_effects.Stroke(linewidth=3, foreground='white'), path_effects.Normal()])
+                texts.append(text)
+
+        adjust_text(texts, # arrowprops=dict(arrowstyle='-', color='k', lw=0.3, alpha=0.75), 
+                    expand_text=(0.9, 0.9), expand_points=(0.91, 0.9),
+                    force_text=(0.01, 0.01), force_points=(0.01, 0.01))
 
         ax.set_xticks([])
         ax.set_yticks([])
         
-        ax.set_xlim([mins[0] - (maxs[0] - mins[0]) * 0.05, (1 + rightShift)*(maxs[0] + (maxs[0] - mins[0]) * 0.05)])
+        ax.set_xlim([mins[0] - (maxs[0] - mins[0]) * 0.05, (1 + rightShift) * (maxs[0] + (maxs[0] - mins[0]) * 0.05)])
         ax.set_ylim([mins[1] - (maxs[1] - mins[1]) * 0.05, maxs[1] + (maxs[1] - mins[1]) * 0.05])
 
         if legend:
@@ -670,9 +805,11 @@ class VisualizationFunctions:
         if self.saveDir is not None: 
             fig.savefig(os.path.join(self.saveDir, '%s_clusters_%s.png' % (self.dataName, suffix)), dpi=300)
 
+        plt.close(fig)
+
         return
 
-    def makeStackedBarplot(self, clusterName=None):
+    def makeStackedBarplot(self, clusterName = None, legendStyle = False, includeLowQC = True, dpi = 600, extension = 'png'):
         
         '''Produce stacked barplot with cell fractions
 
@@ -696,7 +833,7 @@ class VisualizationFunctions:
                 colors = np.vstack([(color.strip('\n').split('\t')) for color in colors])
                 colors = pd.DataFrame(colors.T[1], index=colors.T[0]).apply(lambda x: tuple(np.float_(x[0][1:][:-1].split(','))), axis=1)
 
-            df = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_annotation.xlsx'))
+            df = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_annotation.xlsx'), sheet_name='z-scores')
             index = df['Predicted cell type']
 
             if not clusterName is None:
@@ -706,6 +843,7 @@ class VisualizationFunctions:
 
             index = [index[i][:len(index[i]) if index[i].find('#') - 1 == -2 else index[i].find('#') - 1].strip('*').strip('#').strip(' ') for i in range(len(index))]
             df_BM_temp = pd.DataFrame(data=df['# cells in cluster'].values, index=index, columns=[barName])
+            df_BM_temp = df_BM_temp.groupby(level=0, axis=0, sort=False).sum()
         
             df_main = pd.DataFrame(data=np.zeros((len(colors),1)), index=colors.index, columns=[barName])
 
@@ -714,7 +852,23 @@ class VisualizationFunctions:
 
             s = 'sums'
             df_main[s] = np.array(np.sum(df_main, axis=1))
-            df_main.loc[self.nameForUnknown,s] = 0
+            df_main.loc[self.nameForUnknown, s] = 0
+
+            if includeLowQC:
+                try:
+                    cells_all = pd.read_hdf(self.fileHDFpath, key='df_projection_pre_QC', mode='r').columns.get_level_values('cell')
+                    cells_high = pd.read_hdf(self.fileHDFpath, key='df_projection', mode='r').columns.get_level_values('cell')
+                    cells_low_count = len(cells_all.difference(cells_high))
+
+                    del cells_all, cells_high
+
+                    df_main.loc[self.nameForLowQC, df_main.columns[0]] = cells_low_count
+                    df_main.loc[self.nameForLowQC, df_main.columns[1]] = -1
+
+                    colors[self.nameForLowQC] = (0.6, 0.6, 0.6, 1.)
+                except:
+                    print('QC data not found')
+
             df_main = df_main.apply(lambda x: 100. * x / np.sum(df_main, axis=0), axis=1).loc[np.sum(df_main, axis=1) > 0].sort_values(by=[s]).drop(columns=[s])
 
             return df_main, colors, clusterName
@@ -726,15 +880,24 @@ class VisualizationFunctions:
 
         saveName = os.path.join(self.saveDir, "%s_subclustering_stacked_barplot_%s.png" % (self.dataName, ('All cell clusters' if clusterName == None else clusterName).replace(' ', '_').replace('*', '')))
 
-        fig,ax = plt.subplots(figsize=(4.5,8)) #4.15
+        if legendStyle:
+            fig,ax = plt.subplots(figsize=(4.5,8)) #4.15
+        else:
+            fig = plt.figure(figsize=(4.5,8))
+            ax = fig.add_axes([0.2, 0.05, 0.1, 0.9])
 
-        barWidth = 0.85
+        barWidth = 1.0
         cellTypes = df_Main.index
         bottom = np.zeros((len(df_Main.columns)))
 
+        centers = []
+        fractions = []
         for i in range(len(cellTypes)):
-            bottom += df_Main.loc[cellTypes[i - 1]] if i > 0 else 0
+            bottom += df_Main.loc[cellTypes[i - 1]].values if i > 0 else 0
             ax.bar(range(len(df_Main.columns)), list(df_Main.loc[cellTypes[i]]), bottom=list(bottom), color=colors.loc[cellTypes[i]], edgecolor='white', width=barWidth, label=cellTypes[i])
+
+            centers.append(bottom + 0.5 * df_Main.loc[cellTypes[i]].values[0])
+            fractions.append(df_Main.loc[cellTypes[i]].values[0])
  
         plt.xticks(range(len(df_Main.columns)), list(df_Main.columns), fontsize=12)
         plt.yticks([0,20,40,60,80,100], ['0','20%','40%','60%','80%','100%'], fontsize=12)
@@ -742,7 +905,22 @@ class VisualizationFunctions:
         handles, labels = ax.get_legend_handles_labels()
         ms = np.max([len(item) for item in labels]) - len('cell')
         labels = [item.replace(' ','\n').replace('B\n', 'B ').replace('T\n', 'T ') if len(item) >= ms else item for item in labels[::-1]]
-        ax.legend(handles[::-1], labels, loc='upper left', bbox_to_anchor=(1,1), ncol=1, frameon=False, fontsize=14, labelspacing=1, title = ''.join([' ' for _ in range(60)]))
+
+        if legendStyle:
+            ax.legend(handles[::-1], labels, loc='upper left', bbox_to_anchor=(1,1), ncol=1, frameon=False, fontsize=14, labelspacing=1, title = ''.join([' ' for _ in range(60)]))
+        else:
+            fractions = np.round(np.array(fractions)[::-1], 1)
+            centers = np.round(np.array(centers).T[0][::-1], 0)
+            centers_orig = centers.copy()
+            step = 5.
+
+            for i in range(len(centers) - 2,0,-1):
+                if (centers[i] - centers[i + 1]) < step:
+                    centers[i] = centers[i + 1] + step
+            
+            for i in range(len(centers)):
+                ax.text(1.3, centers[i], '%s%%  ' % (fractions[i]) + labels[i], fontsize=12, va='center', ha='left')
+                ax.plot([0.65, 1.2], [centers_orig[i], centers[i]], c='k', lw=0.75, clip_on=False)
 
         plt.xlim((-0.5, len(df_Main.columns) - 0.5))
         plt.ylim((0, 100))
@@ -750,14 +928,21 @@ class VisualizationFunctions:
         for spine in plt.gca().spines.values():
             spine.set_visible(False)
           
-        fig.tight_layout()
-        fig.savefig(saveName, dpi=300)
+        if legendStyle:
+            fig.tight_layout()
 
-        print('\n=================================\nDone saving stacked bar plot: %s!\n=================================' % ('All cell clusters' if clusterName == None else clusterName))
+        try:
+            fig.savefig(saveName, dpi=300)
+
+            plt.close(fig)
+        except:
+            return
+
+        print('Saved stacked bar plot: %s' % ('All cell clusters' if clusterName == None else clusterName))
 
         return
     
-    def makeQualityControlHistogramPlot(self, subset, cutoff, plotPathAndName=None, N_bins=100, mito=False, displayMeasures=True, precision=4, quantilePlotCutoff=0.99):
+    def makeQualityControlHistogramPlot(self, subset, cutoff, plotPathAndName = None, N_bins = 100, mito = False, displayMeasures = True, precision = 4, quantilePlotCutoff = 0.99, dpi = 300, extension = 'png', fontScale = 1.5, includeTitle = False):
 
         '''Function to calculate QC quality cutoff and visualize it on a histogram
 
@@ -801,7 +986,7 @@ class VisualizationFunctions:
         range_min = np.min(subset)
 
         if mito:
-            range_max = max(1.1*cutoff, np.quantile(subset, quantilePlotCutoff) + 0.05)
+            range_max = max(1.1 * cutoff, np.quantile(subset, quantilePlotCutoff) + 0.05)
         else:
             range_max = np.quantile(subset, quantilePlotCutoff)
 
@@ -819,11 +1004,15 @@ class VisualizationFunctions:
         except:
             title = plotPathAndName
 
-        ax.set_title(title, fontdict={'color': 'b'})
-        ax.set_xlabel('Fraction' if mito else 'Count', fontsize=8)
-        ax.set_ylabel('Density', fontsize=8)
+        if includeTitle:
+            ax.set_title(title, fontdict={'color': 'b'})
+
+        ax.set_xlabel('Fraction' if mito else 'Count', fontsize=10*fontScale)
+        ax.set_ylabel('Density', fontsize=10*fontScale)
         ax.set_ylim(0.,ax.get_ylim()[1])
         ax.set_xlim(range_min - 0.5 * bar_bin_width, range_max + 0.5 * bar_bin_width)
+
+        ax.tick_params(labelsize=8*fontScale)
 
         xs = np.linspace(hist_bins[0], hist_bins[-1], 1000)
         spline_data = np.vstack((xs, UnivariateSpline(hist_bins, hist_data[:-1], k=5, s=0)(xs))).T
@@ -839,11 +1028,18 @@ class VisualizationFunctions:
         ax.plot([x,x], [0,y], 'k', lw=2)
         ax.plot(x, y, 'ko', ms=10, alpha=0.8)
         ax.plot(x, y, 'ro', ms=7)
-        ax.text(x, -0.04 * spline_data.T[1].max(), str(np.round(cutoff, precision)), va='top', ha='center', color='r')
+
+        ax.text(x, -0.04 * spline_data.T[1].max(), str(np.round(cutoff, precision)), fontsize=8*fontScale, va='top', ha='center', color='r')
+
+        ax.ticklabel_format(axis='y', style='sci', scilimits=(0,0), useMathText=False)
+
+        ax.axvspan(cutoff, 1.5*range_max if mito else -1.5*range_min, alpha=0.1, color='red', hatch='\\', linewidth=0.1)
 
         fig.tight_layout()
 
         if displayMeasures:
+            texts = []
+
             dist_std, dist_median, dist_mean = np.round(np.std(subset),precision), np.round(np.median(subset),precision), np.round(np.mean(subset),precision)
             print(plotPathAndName, '\tstd:', dist_std,  '\tmedian:', dist_median,  '\tmean:', dist_mean)
 
@@ -851,28 +1047,44 @@ class VisualizationFunctions:
             yspan = ax.get_ylim()[1] - ax.get_ylim()[0]
         
             ax.axvline(x=dist_mean, color='k', lw=1.0, ls='--')
-            ax.text(dist_mean + 0.02 * xspan, 0.98 * yspan, r'$\mu=%s$' % (dist_mean), fontsize=10, va='top', ha='left', color='k')
-        
+            text = ax.text(dist_mean + 0.02 * xspan, 0.98 * yspan, r'$\mu=%s$' % (dist_mean), fontsize=fontScale*10, va='top', ha='left', color='k')
+            text.set_path_effects([path_effects.Stroke(linewidth=1, foreground='white'),path_effects.Normal()])
+            texts.append(text)
+
             ax.axvline(x=dist_median, color='k', lw=1.0, ls='--')
-            ax.text(dist_median + 0.02 * xspan, 0.94 * yspan, r'$M=%s$' % (dist_median), fontsize=10, va='top', ha='left', color='k')
+            text = ax.text(dist_median + 0.02 * xspan, 0.94 * yspan, r'$M=%s$' % (dist_median), fontsize=fontScale*10, va='top', ha='left', color='k')
+            text.set_path_effects([path_effects.Stroke(linewidth=1, foreground='white'),path_effects.Normal()])
+            texts.append(text)
         
             ax.axvline(x=dist_median - dist_std, color='k', lw=1.0, ls='--')
-            ax.text(dist_median - dist_std + 0.02 * xspan, 0.90 * yspan, r'$M-\sigma=%s$' % (np.round(dist_median - dist_std,precision)), fontsize=10, va='top', ha='left', color='k')
+            text = ax.text(dist_median - dist_std + 0.02 * xspan, 0.90 * yspan, r'$M-\sigma=%s$' % (np.round(dist_median - dist_std,precision)), fontsize=fontScale*10, va='top', ha='left', color='k')
+            text.set_path_effects([path_effects.Stroke(linewidth=1, foreground='white'),path_effects.Normal()])
+            texts.append(text)
         
             ax.axvline(x=dist_median + dist_std, color='k', lw=1.0, ls='--')
-            ax.text(dist_median + dist_std + 0.02 * xspan, 0.90 * yspan, r'$M+\sigma=%s$' % (np.round(dist_median + dist_std,precision)), fontsize=10, va='top', ha='left', color='k')
+            text = ax.text(dist_median + dist_std + 0.02 * xspan, 0.90 * yspan, r'$M+\sigma=%s$' % (np.round(dist_median + dist_std,precision)), fontsize=fontScale*10, va='top', ha='left', color='k')
+            text.set_path_effects([path_effects.Stroke(linewidth=1, foreground='white'),path_effects.Normal()])
+            texts.append(text)
 
-            ax.annotate(r'$\sigma=%s$' % (dist_std), (dist_median + dist_std, 0.86 * yspan), (dist_median, 0.86 * yspan), arrowprops={'width':0, 'headwidth':0, 'headlength':0})
-            ax.annotate('', (dist_median + dist_std, 0.85 * yspan), (dist_median, 0.85 * yspan), arrowprops={'arrowstyle':'<|-|>'})
+            text = ax.text(dist_median + 0.02 * xspan, 0.76 * yspan, r'$\sigma=%s$' % (np.round(dist_std,precision)), fontsize=fontScale*10, va='bottom', ha='left', color='k')
+            text.set_path_effects([path_effects.Stroke(linewidth=1, foreground='white'),path_effects.Normal()])
+            texts.append(text)
+
+            ax.annotate('', (dist_median + dist_std, 0.75 * yspan), (dist_median, 0.75 * yspan), arrowprops={'arrowstyle':'<|-|>'})
 
             if not mito:
-                ax.text(0.65*xspan, 0.98*yspan, '%s%% of distribution is shown'%(100.*quantilePlotCutoff))
+                text = ax.text(0.98, 0.65, 
+                               '%s%%\nof distribution \nis shown' % (100. * quantilePlotCutoff), 
+                               va='top', ha='right', fontsize=fontScale*10, transform=ax.transAxes)
+                text.set_path_effects([path_effects.Stroke(linewidth=0.5, foreground='white'),path_effects.Normal()])
+                
+            adjust_text(texts)
 
-        fig.savefig(plotPathAndName + '_histogram.png', dpi=300)
+        self.saveFigure(fig, os.path.dirname(plotPathAndName), label=os.path.basename(plotPathAndName) + '_histogram', extension=extension, dpi=dpi)
 
-        return None
+        return
 
-    def makeSankeyDiagram(self, df, colormapForIndex=None, colormapForColumns=None, linksColor='rgba(100,100,100,0.6)', title='', interactive=False, quality=4, nameAppend=''):
+    def makeSankeyDiagram(self, df, colormapForIndex = None, colormapForColumns = None, linksColor = 'rgba(100,100,100,0.6)', title = '', interactive = False, quality = 4, nameAppend = ''):
 
         '''Make a Sankey diagram, also known as 'river plot' with two groups of nodes
 
@@ -918,7 +1130,7 @@ class VisualizationFunctions:
             colormapForColumns = None
 
         if (colormapForIndex is None) or (colormapForColumns is None):
-            nodeColors = ['rgba(150,0,10,0.8)']*len(df.index) + ['rgba(10,0,150,0.8)']*len(df.columns)
+            nodeColors = ['rgba(150,0,10,0.8)'] * len(df.index) + ['rgba(10,0,150,0.8)'] * len(df.columns)
             nodeLabels = df.index.to_list() + df.columns.to_list()
         else:
             nodeLabels = df.index.get_level_values('label').to_list() + df.columns.get_level_values('label').to_list()
@@ -953,7 +1165,7 @@ class VisualizationFunctions:
 
         return
 
-    def makePlotOfNewMarkers(self, df_marker_cell_type, df_new_marker_cell_type):
+    def makePlotOfNewMarkers(self, df_marker_cell_type, df_new_marker_cell_type, dpi = 600, extension = 'png'):
 
         '''Produce plot of the new markers extracted from the annotated clusters
 
@@ -991,18 +1203,20 @@ class VisualizationFunctions:
 
         for i, celltype in enumerate(celltypes):
             if celltype in df_marker_cell_type.columns:
-                known_markers = df_marker_cell_type[celltype][df_marker_cell_type[celltype]>0].index.values
-                xy = np.array([np.array([np.where(genes==marker)[0][0], i]) for marker in known_markers if marker in genes])
-                print('Overlapping markers of %s: %s (%s)'%(celltype, len(xy), len(known_markers)))
-                if len(xy)>0:
+                known_markers = df_marker_cell_type[celltype][df_marker_cell_type[celltype] > 0].index.values
+                xy = np.array([np.array([np.where(genes == marker)[0][0], i]) for marker in known_markers if marker in genes])
+                print('Overlapping markers of %s: %s (%s)' % (celltype, len(xy), len(known_markers)))
+                if len(xy) > 0:
                     ax.plot(xy.T[0], xy.T[1], 'ro', ms=0.5)
 
         ax.set_title('Additional markers along with the overlapping part of the input (red)')
         fig.savefig(os.path.join(self.saveDir, self.dataName + '_new_markers.png'), dpi=600)
 
+        plt.close(fig)
+
         return None
 
-    def makeTtestPlot(self, df, dfp, label=None, reorder=True, p_value_cutoff=0.05):
+    def makeTtestPlot(self, df, dfp, label = None, reorder = True, p_value_cutoff = 0.05, dpi = 600, extension = 'png'):
 
         '''Produce heatmap plot of t-test p-Values calculated gene-pair-wise
         from the annotated clusters.
@@ -1053,7 +1267,7 @@ class VisualizationFunctions:
 
         ax.imshow(df.values.astype(float), cmap=cmap, interpolation='None', aspect='auto')
 
-        wh = np.where(dfp.values.T<=p_value_cutoff)
+        wh = np.where(dfp.values.T <= p_value_cutoff)
         ax.plot(wh[0], wh[1], '*k')
 
         ax.set_xticks(range(df.shape[1]))
@@ -1066,8 +1280,7 @@ class VisualizationFunctions:
         ax.xaxis.tick_top()
 
         if not label is None:
-            ax.text(-0.5, 1.5, label, transform=ax.transAxes, fontsize=10, color='k', ha='left', va='top').set_path_effects(
-                [path_effects.Stroke(linewidth=0.5, foreground='blue'),path_effects.Normal()])
+            ax.text(-0.5, 1.5, label, transform=ax.transAxes, fontsize=10, color='k', ha='left', va='top').set_path_effects([path_effects.Stroke(linewidth=0.5, foreground='blue'),path_effects.Normal()])
 
         ax.set_title('Two-tailed p-Value (t-test)')
 
@@ -1078,21 +1291,23 @@ class VisualizationFunctions:
 
         axisColor = fig.add_axes([0.22,0.75,0.08,0.02])
 
-        norm=matplotlib.colors.Normalize(vmin=dataMin, vmax=dataMax)
-        mapp=cm.ScalarMappable(norm=norm, cmap=cmap)
+        norm = matplotlib.colors.Normalize(vmin=dataMin, vmax=dataMax)
+        mapp = cm.ScalarMappable(norm=norm, cmap=cmap)
         mapp.set_array(data)
         fig.colorbar(mapp, cax=axisColor, ticks=[dataMax,dataMin], orientation='horizontal')
         axisColor.tick_params(labelsize=4)
-        axisColor.set_xlabel('Statistic\n*p-Value < %s'%(p_value_cutoff), fontsize=5)
+        axisColor.set_xlabel('Statistic\n*p-Value < %s' % (p_value_cutoff), fontsize=5)
 
         axisColor.set_yticklabels([np.round(dataMax,2), np.round(dataMin,2)])
 
-        fig.savefig(os.path.join(self.saveDir, self.dataName + '_ttest_%s.png'%(label.replace('\n', '_'))), dpi=300)
+        fig.savefig(os.path.join(self.saveDir, self.dataName + '_ttest_%s.png' % (label.replace('\n', '_'))), dpi=300)
+
+        plt.close(fig)
 
         return None
     
-    def makeCellMarkersPiePlot(self, type1, type2, df_marker_cell_type='all', nameToAppend=None, 
-                               listUnexpressedMarkers=True, orthogonalSectorsShift=0.1, rotationAngle=0):
+    def makeCellMarkersPiePlot(self, type1, type2, df_marker_cell_type = 'all', nameToAppend = None, 
+                               listUnexpressedMarkers = True, orthogonalSectorsShift = 0.1, rotationAngle = 0, dpi = 600, extension = 'png'):
 
         '''Make summary of markers comparison between two cell types.
 
@@ -1140,7 +1355,7 @@ class VisualizationFunctions:
             listUnexpressedMarkers = False
 
         if type(df_marker_cell_type) is str:
-            if df_marker_cell_type=='expressed':
+            if df_marker_cell_type == 'expressed':
                 listUnexpressedMarkers = False
 
                 if not df_marker_expression is None:
@@ -1151,7 +1366,7 @@ class VisualizationFunctions:
                     return
 
                 additional_name = 'expressed'
-            elif df_marker_cell_type=='all':
+            elif df_marker_cell_type == 'all':
                 df_marker_cell_type = self.readMarkerFile()
                 additional_name = 'all'
 
@@ -1168,11 +1383,11 @@ class VisualizationFunctions:
         def getSet(df, celltype):
 
             try:
-                pos = set(df.index[(df.loc[:, celltype]>0.)].values)
-                neg = set(df.index[(df.loc[:, celltype]<0.)].values)
+                pos = set(df.index[(df.loc[:, celltype] > 0.)].values)
+                neg = set(df.index[(df.loc[:, celltype] < 0.)].values)
             except:
-                print('Cell type %s not found'%(celltype))
-                print('Available celltypes are: %s'%(df.columns.values.tolist()))
+                print('Cell type %s not found' % (celltype))
+                print('Available celltypes are: %s' % (df.columns.values.tolist()))
 
                 return
 
@@ -1213,16 +1428,16 @@ class VisualizationFunctions:
 
         labels = '+/*', '+/-', '*/-', '-/-', '-/*', '-/+', '*/+', '+/+'
         colors = ['limegreen', 'thistle', 'lightcoral', 'red', 'lightcoral', 'thistle', 'limegreen', 'green']
-        titles = ['Positive in %s:'%(type1),
-                  'Positive in %s, Negative in %s:'%(type1, type2),
-                  'Negative in %s:'%(type2),
+        titles = ['Positive in %s:' % (type1),
+                  'Positive in %s, Negative in %s:' % (type1, type2),
+                  'Negative in %s:' % (type2),
                   'Negative in both:',
-                  'Negative in %s:'%(type1),
-                  'Negative in %s, Positive in %s:'%(type1, type2),
-                  'Positive in %s:'%(type2),
+                  'Negative in %s:' % (type1),
+                  'Negative in %s, Positive in %s:' % (type1, type2),
+                  'Positive in %s:' % (type2),
                   'Positive in both:']
         sizes = [len(item) for item in sets]
-        labels = [(label if size>0 else '') for label, size in zip(labels, sizes)]
+        labels = [(label if size > 0 else '') for label, size in zip(labels, sizes)]
         explode = (0.0, orthogonalSectorsShift, 0.0, 0.0, 0.0, orthogonalSectorsShift, 0.0, 0.0)
 
         def findAll(a, b):
@@ -1254,7 +1469,7 @@ class VisualizationFunctions:
             limit = 75
 
             for gene in all_temp[1:]:
-                if len(temp_item)>limit:
+                if len(temp_item) > limit:
                     temp_item = '\n' + gene
                     new_item += '\n' + gene
                 else:
@@ -1262,7 +1477,7 @@ class VisualizationFunctions:
                     temp_item += ', ' + gene
 
             if listUnexpressedMarkers:
-                str_sets[i] = titles[i] + ' (%s):'%(len(all_temp)) + '\n' + new_item
+                str_sets[i] = titles[i] + ' (%s):' % (len(all_temp)) + '\n' + new_item
             else:
                 str_sets[i] = titles[i] + '\n' + new_item
 
@@ -1277,15 +1492,15 @@ class VisualizationFunctions:
                 limit = 75
 
                 for gene in all_temp[1:]:
-                    if len(temp_item)>limit:
+                    if len(temp_item) > limit:
                         temp_item = '\n' + gene
                         new_item += '\n' + gene
                     else:
                         new_item += ', ' + gene
                         temp_item += ', ' + gene
 
-                if len(new_item)>1:
-                    str_sets[i] += '\n' + 'Not expressed (%s):'%(len(all_temp)) + '\n' + new_item
+                if len(new_item) > 1:
+                    str_sets[i] += '\n' + 'Not expressed (%s):' % (len(all_temp)) + '\n' + new_item
 
         fig = plt.figure(figsize=(8,4))
         ax = fig.add_axes([0.25,0.25,0.5,0.5])
@@ -1296,15 +1511,15 @@ class VisualizationFunctions:
 
             nonlocal currentWedge
 
-            n = int(np.round((float(value)/100.*float(np.sum(sizes))), 0))
+            n = int(np.round((float(value) / 100. * float(np.sum(sizes))), 0))
 
             if listUnexpressedMarkers:
                 u = len(sets[currentWedge].difference(setsE[currentWedge]))
             else:
                 u = 0
 
-            if n>0:
-                if u>0:
+            if n > 0:
+                if u > 0:
                     format = "{:d}\n({:d})".format(n,u)
                 else:
                     format = "{:d}".format(n)
@@ -1327,10 +1542,10 @@ class VisualizationFunctions:
 
         for i, p in enumerate(wedges):
 
-            if len(sets[i])==0:
+            if len(sets[i]) == 0:
                 continue
 
-            ang = (p.theta2 - p.theta1)/2. + p.theta1
+            ang = (p.theta2 - p.theta1) / 2. + p.theta1
             y = np.sin(np.deg2rad(ang))
             x = np.cos(np.deg2rad(ang))
 
@@ -1340,18 +1555,20 @@ class VisualizationFunctions:
 
             kw["arrowprops"].update({"connectionstyle": connectionstyle})
 
-            ax.annotate(str_sets[i], xy=(x, y), xytext=(1.6*np.sign(x), 1.8*y), fontsize=3.5, ha=horizontalalignment, **kw)
+            ax.annotate(str_sets[i], xy=(x, y), xytext=(1.6 * np.sign(x), 1.8 * y), fontsize=3.5, ha=horizontalalignment, **kw)
 
-        fig.suptitle('%s & %s'%(type1, type2), fontsize=11, color='b')
+        fig.suptitle('%s & %s' % (type1, type2), fontsize=11, color='b')
         ax.axis('equal')
 
-        ax.text(0., 0., '%s\n(%s)'%(len(all), len(all.difference(allE))) if listUnexpressedMarkers else '%s'%(len(all)), 
+        ax.text(0., 0., '%s\n(%s)' % (len(all), len(all.difference(allE))) if listUnexpressedMarkers else '%s' % (len(all)), 
                 color='k', fontsize=8, ha='center', va='center').set_path_effects([path_effects.Stroke(linewidth=1, foreground='blue'),path_effects.Normal()])
 
         if self.saveDir is not None:
-            fig.savefig(os.path.join(self.saveDir, self.dataName + 'Markers_of_%s_vs_%s_(%s)_%s.png'%(type1.replace('/',''), 
+            fig.savefig(os.path.join(self.saveDir, self.dataName + 'Markers_of_%s_vs_%s_(%s)_%s.png' % (type1.replace('/',''), 
                                                                                                   type2.replace('/',''), 
                                                                                                   nameToAppend, 
                                                                                                   additional_name)), dpi=300)
+
+            plt.close(fig)
 
         return dict(zip(labels, list(sets)))

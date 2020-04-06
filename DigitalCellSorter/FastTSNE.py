@@ -122,7 +122,6 @@ def fast_tsne(X, theta=.5, perplexity=30, map_dims=2, max_iter=1000,
     
     version_number = '1.1.0'
 
-
     # X should be a numpy array of 64-bit doubles
     X = np.array(X).astype(float)
 
@@ -164,9 +163,14 @@ def fast_tsne(X, theta=.5, perplexity=30, map_dims=2, max_iter=1000,
         no_momentum_during_exag = 1
     else:
         no_momentum_during_exag = 0
+
+    tempFilesDir = os.path.join(os.getcwd(), 'dev', 'tempTSNE')
+
+    if not os.path.exists(tempFilesDir):
+        os.makedirs(tempFilesDir)
     
     # write data file
-    with open(os.getcwd() + '/data.dat', 'wb') as f:
+    with open(os.path.join(tempFilesDir, 'data.dat'), 'wb') as f:
         n, d = X.shape
         f.write(struct.pack('=i', n))   
         f.write(struct.pack('=i', d))   
@@ -206,11 +210,13 @@ def fast_tsne(X, theta=.5, perplexity=30, map_dims=2, max_iter=1000,
                 f.write(initialization.tobytes()) 
                
     # run t-sne
-    subprocess.call([os.path.dirname(os.path.realpath(__file__)) + 
-        '/fast_tsne_bin/FItSNE', version_number, 'data.dat', 'result.dat', '{}'.format(nthreads)])
+    subprocess.call([os.path.join(os.path.dirname(os.path.realpath(__file__)), 'fast_tsne_bin', 'FItSNE'), 
+                     version_number, 
+                     os.path.join(tempFilesDir, 'data.dat'), os.path.join(tempFilesDir, 'result.dat'), 
+                     '{}'.format(nthreads)])
             
     # read data file
-    with open(os.getcwd()+'/result.dat', 'rb') as f:
+    with open(os.path.join(tempFilesDir, 'result.dat'), 'rb') as f:
         n, = struct.unpack('=i', f.read(4))  
         md, = struct.unpack('=i', f.read(4)) 
         sz = struct.calcsize('=d')
