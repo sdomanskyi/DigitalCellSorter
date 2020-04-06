@@ -1,8 +1,6 @@
-'''The main class for cell sorting functions and producing output images is DigitalCellSorter. The class includes tools for:
+'''The main class of DigitalCellSorter. The class includes tools for:
 
-  1. **Pre-preprocessing** of single cell mRNA sequencing data (gene expression data)
-       1. Cleaning: filling in missing values, zemoving all-zero genes and cells, converting gene index to a desired convention, etc.
-       2. Normalizing: rescaling all cells expression, log-transforming, etc.
+  1. **Pre-preprocessing** of single cell RNA sequencing data
 
   2. **Quality control**
 
@@ -12,24 +10,14 @@
 
   5. **Dimensionality reduction**
 
-  6. **Clustering** (Hierarchical, K-Means, knn-graph-based, etc.)
+  6. **Clustering**
 
-  7. **Annotating cell types**
+  7. **Annotation of cell types**
 
   8. **Vizualization**
-       1. 2D layout (projection) plot
-       2. Quality Control histogram plot
-       3. Marker expression projection subplot
-       4. Marker-centroids expression plot
-       5. Voting results matrix plot
-       6. Cell types stacked barplot
-       7. Anomaly scores plot
-       8. Histogram null distribution plot
-       9. New markers plot
-       10. Sankey diagram (a.k.a. river plot)
   
-  9. **Post-processing** functions, e.g. extract cells of interest, find significantly expressed genes, 
-  plot marker expression of the cells of interest, etc.
+  9. **Post-processing**
+
 '''
 
 import os
@@ -62,10 +50,14 @@ from .VisualizationFunctions import cm
 
 class DigitalCellSorter(VisualizationFunctions):
 
-    '''Class of Digital Cell Sorter with methods for processing single cell mRNA-seq data.
-    Includes analyses and visualization tools.
+    '''Class of Digital Cell Sorter with methods for processing single cell 
+    RNA-seq data. Includes analyses and visualization tools.
 
     Parameters:
+        df_expr: pandas.DataFrame, Defauld None
+            Gene expression in a form of a table, where genes are rows, and
+            cells/batches are columns
+
         dataName: str, Default 'dataName'
             Name used in output files
 
@@ -78,10 +70,10 @@ class DigitalCellSorter(VisualizationFunctions):
         mitochondrialGenes: list, Default None
             List of mitochondrial genes to use in quality control
 
-        sigmaOverMeanSigma: float, Default 0.3
+        sigmaOverMeanSigma: float, Default 0.1
             Threshold to consider a gene constant
 
-        nClusters: int, Default 5
+        nClusters: int, Default 10
             Number of clusters
 
         nFineClusters: int, Default 3
@@ -103,49 +95,92 @@ class DigitalCellSorter(VisualizationFunctions):
             {'k_neighbors':40, metric:'euclidean', 'clusterExpression':True},
             this way the best number of clusters will be determined automatically
 
-        nComponentsPCA: int, Default 100
+        nComponentsPCA: int, Default 200
             Number of pca components
 
-        nSamplesDistribution: int, Default 10000
-            Number of random samples in distribution
+        nSamples_pDCS: int, Default 3000
+            Number of random samples in distribution for pDCS annotation method
+
+        nSamples_Hopfield: int, Default 500
+            Number of repetitions for Hopfield annotation method
 
         saveDir: str, Default os.path.join('')
             Directory for output files
 
-        makeMarkerSubplots: boolean, Default True
+        makeMarkerSubplots: boolean, Default False
             Whether to make subplots on markers
 
         makePlots: boolean, Default True
             Whether to make all major plots
 
-        votingScheme: function, Default None
-            Voting shceme to use instead of the built-in
-
-        availableCPUsCount: int, Default os.cpu_count()
-            Number of CPUs available
+        availableCPUsCount: int, Default min(12, os.cpu_count())
+            Number of CPUs used in pDCS method
 
         zScoreCutoff: float, Default 0.3
-            Z-Score cutoff when calculating Z_mc
+            Z-Score cutoff when setting expression of a cluster as significant
 
-        minimumScoreForUnknown: float, Default 0.3
-            Z-Score cutoff when assigning label "Unknown"
+        thresholdForUnknown: float, Default 0.3
+            Threshold when assigning label "Unknown".
+            This option is used only with a combination of 2 or more annotation methods
 
-        annotationMethod: str, Default 'a'
-            Metod to use for annotation of cell types to clusters
-            Options are:
+        thresholdForUnknown_pDCS: float, Default 0.1
+            Threshold when assigning label "Unknown" in pDCS method
+            
+        thresholdForUnknown_ratio: float, Default 0.1
+            Threshold when assigning label "Unknown" in ratio method
+            
+        thresholdForUnknown_Hopfield: float, Default 0.1
+            Threshold when assigning label "Unknown" in Hopfield method
+
+        annotationMethod: str, Default 'ratio-pDCS-Hopfield'
+            Metod to use for annotation of cell types to clusters. Options are:
                 'pDCS': main DCS voting scheme with null testing
+
                 'ratio': simple voting score
-                'pDCS-ratio': 'pDCS' adjusted with 'ratio'
+
                 'Hopfield': Hopfield Network classifier
 
-        clusterName: str, Default None
-            Parameter used in subclustering
+                'pDCS-ratio': 'pDCS' adjusted with 'ratio'
+
+                'pDCS-Hopfield': 'pDCS' adjusted with 'Hopfield'
+
+                'ratio-Hopfield': 'ratio' adjusted with 'Hopfield'
+
+                'pDCS-ratio-Hopfield': 'pDCS' adjusted with 'ratio' and 'Hopfield'
+
+        subclusteringName: str, Default None
+            Parameter used in for certain labels on plots
 
         doQualityControl: boolean, Default True
             Whether to remove low quality cells
 
         doBatchCorrection: boolean, Default False
             Whether to correct data for batches
+
+        minimumNumberOfMarkersPerCelltype: int, Default 10
+            Minimum number of markers per cell type to keep that cell type in annotation options
+
+        nameForUnknown: str, Default 'Unassigned'
+            Name to use for clusters where label assignment yielded uncertain results
+
+        nameForLowQC: str, Default 'Failed QC'
+            Name to use for cell that do not pass quality control
+
+        layout: str, Default 'TSNE'
+            Projection layout used in visualization. Options are:
+                'TSNE': t-SNE layout
+                L.J.P. van der Maaten. Accelerating t-SNE using Tree-Based Algorithms. 
+                Journal of Machine Learning Research 15(Oct):3221-3245, 2014.
+
+                'PCA': use two largest principal components
+
+                'UMAP': use uniform manifold approximation,
+                McInnes, L., Healy, J., UMAP: Uniform Manifold Approximation and Projection for 
+                Dimension Reduction, ArXiv e-prints 1802.03426, 2018
+
+                'PHATE': use potential of heat diffusion for affinity-based transition embedding,
+                Moon, K.R., van Dijk, D., Wang, Z. et al. Visualizing structure and 
+                transitions in high-dimensional biological data. Nat Biotechnol 37, 1482–1492 (2019). 
     
     Usage:
         DCS = DigitalCellSorter.DigitalCellSorter()
@@ -155,13 +190,14 @@ class DigitalCellSorter(VisualizationFunctions):
 
     def __init__(self, df_expr = None, dataName = 'dataName', geneNamesType = 'alias', geneListFileName = None, mitochondrialGenes = None,
                 sigmaOverMeanSigma = 0.01, nClusters = 10, nFineClusters = 3, doFineClustering = True, minSizeForFineClustering = 50, 
-                clusteringFunction = AgglomerativeClustering, nComponentsPCA = 200, nSamplesDistribution = 3*10**3, 
+                clusteringFunction = AgglomerativeClustering, nComponentsPCA = 200, nSamples_pDCS = 3 * 10 ** 3,  nSamples_Hopfield = 500,
                 saveDir = os.path.join(''), makeMarkerSubplots = False, availableCPUsCount = min(12, os.cpu_count()), zScoreCutoff = 0.3,
                 subclusteringName = None, doQualityControl = True, doBatchCorrection = True, makePlots = True,
-                minimumNumberOfMarkersPerCelltype = 10, minimumScoreForUnknown = 0.3, nameForUnknown = 'Unassigned', nameForLowQC = "Failed QC", 
-                layout = 'TSNE', annotationMethod = 'a'):
+                minimumNumberOfMarkersPerCelltype = 10, nameForUnknown = 'Unassigned', nameForLowQC = "Failed QC", 
+                thresholdForUnknown_pDCS = 0., thresholdForUnknown_ratio = 0., thresholdForUnknown_Hopfield = 0., thresholdForUnknown = 0.2, 
+                layout = 'TSNE', HopfieldTemperature = 0.1, annotationMethod = 'ratio-pDCS-Hopfield'):
 
-        '''Initialization function. Automatically called when an instance on Digital Cell Sorter is created'''
+        '''Initialization function that is automatically called when an instance on Digital Cell Sorter is created'''
 
         self.gnc = GeneNameConverter.GeneNameConverter(dictDir=os.path.join(os.path.dirname(__file__), 
                                                                             'pickledGeneConverterDict', 
@@ -204,9 +240,16 @@ class DigitalCellSorter(VisualizationFunctions):
 
         self.layout = layout
 
-        self.minimumScoreForUnknown = minimumScoreForUnknown
+        self.thresholdForUnknown_pDCS = thresholdForUnknown_pDCS
+        self.thresholdForUnknown_ratio = thresholdForUnknown_ratio
+        self.thresholdForUnknown_Hopfield = thresholdForUnknown_Hopfield
+        self.thresholdForUnknown = thresholdForUnknown
 
-        self.nSamplesDistribution = nSamplesDistribution
+        self.HopfieldTemperature = HopfieldTemperature
+
+        self.nSamples_pDCS = nSamples_pDCS
+        self.nSamples_Hopfield = nSamples_Hopfield
+
         self.availableCPUsCount = availableCPUsCount
 
         self.clusteringFunction = clusteringFunction
@@ -234,7 +277,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         return None
 
-    # Main functions of class ##########################################################
+    # Primary functions of class #######################################################
     def prepare(self, obj):
 
         '''Prepare pandas.DataFrame for input to function process()
@@ -404,7 +447,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
     def clean(self):
 
-        '''Clean pandas.DataFrame: validate index,
+        '''Clean pandas.DataFrame: validate index, remove index duplicates,
         replace missing with zeros, remove all-zero rows and columns
 
         Parameters:
@@ -494,9 +537,10 @@ class DigitalCellSorter(VisualizationFunctions):
 
             do_fast_tsne: boolean, Default True
                 Do FI-tSNE instead of "exact" tSNE
+                This option is ignored if layout is not 'TSNE'
 
         Returns:
-            pandas.DataFrame
+            tuple
                 Processed data
         
         Usage:
@@ -693,34 +737,63 @@ class DigitalCellSorter(VisualizationFunctions):
         df_markers_expr = self.df_expr.loc[self.df_expr.index.intersection(df_marker_cell_type.index)]
         print('Selected genes common with the marker list. Data shape:', df_markers_expr.shape, flush=True)
 
-        if self.annotationMethod == 'pDCS':
-            annotationResults = self.annotateWithDCSVotingScheme(df_markers_expr, 
-                                                                 df_marker_cell_type.T, 
-                                                                 adjustNullModel = False, 
-                                                                 withNullModel = True)
+        methodsToUse = self.annotationMethod.split('-')
 
-        elif self.annotationMethod == 'ratio':
-            annotationResults = self.annotateWithDCSVotingScheme(df_markers_expr, 
-                                                                 df_marker_cell_type.T, 
-                                                                 adjustNullModel = False, 
-                                                                 withNullModel = False)
+        if 'pDCS' in methodsToUse:
+            print('\nCalculating results by %s method' % ('pDCS'), flush = True)
+            annotationResults_pDCS = list(self.annotateWith_pDCS_Scheme(df_markers_expr.copy(), df_marker_cell_type.T.copy()))
 
-        elif self.annotationMethod == 'pDCS-ratio':
-            annotationResults = self.annotateWithDCSVotingScheme(df_markers_expr, 
-                                                                 df_marker_cell_type.T, 
-                                                                 adjustNullModel = True, 
-                                                                 withNullModel = True)
+        if 'ratio' in methodsToUse:
+            print('\nCalculating results by %s method' % ('ratio'), flush = True)
+            annotationResults_ratio = list(self.annotateWith_ratio_Scheme(df_markers_expr.copy(), df_marker_cell_type.T.copy()))
 
-        elif self.annotationMethod == 'Hopfield':
-            annotationResults = self.annotateWithHopfieldNetwork(df_markers_expr, 
-                                                                 df_marker_cell_type)
+        if 'Hopfield' in methodsToUse:
+            print('\nCalculating results by %s method' % ('Hopfield'), flush = True)
+            annotationResults_Hopfield = list(self.annotateWith_Hopfield_Scheme(df_markers_expr.copy(), df_marker_cell_type.T.copy()))
+
+        if ('pDCS' in methodsToUse) and ('ratio' in methodsToUse) and ('Hopfield' in methodsToUse):
+            annotationResults = annotationResults_pDCS
+            annotationResults[2] *= annotationResults_ratio[2]
+            annotationResults[2] *= annotationResults_Hopfield[2]
+            annotationResults[2] = np.power(annotationResults[2], 1./3.)
+            annotationResults[2][annotationResults[2] < self.thresholdForUnknown] = 0.
+
+        elif ('pDCS' in methodsToUse) and ('ratio' in methodsToUse) and (not 'Hopfield' in methodsToUse):
+            annotationResults = annotationResults_pDCS
+            annotationResults[2] *= annotationResults_ratio[2]
+            annotationResults[2] = np.power(annotationResults[2], 1./2.)
+            annotationResults[2][annotationResults[2] < self.thresholdForUnknown] = 0.
+
+        elif ('pDCS' in methodsToUse) and (not 'ratio' in methodsToUse) and ('Hopfield' in methodsToUse):
+            annotationResults = annotationResults_pDCS
+            annotationResults[2] *= annotationResults_Hopfield[2]
+            annotationResults[2] = np.power(annotationResults[2], 1./2.)
+            annotationResults[2][annotationResults[2] < self.thresholdForUnknown] = 0.
+
+        elif (not 'pDCS' in methodsToUse) and ('ratio' in methodsToUse) and ('Hopfield' in methodsToUse):
+            annotationResults = annotationResults_ratio
+            annotationResults[2] *= annotationResults_Hopfield[2]
+            annotationResults[2] = np.power(annotationResults[2], 1./2.)
+            annotationResults[2][annotationResults[2] < self.thresholdForUnknown] = 0.
+
+        elif ('pDCS' in methodsToUse) and (not 'ratio' in methodsToUse) and (not 'Hopfield' in methodsToUse):
+            annotationResults = annotationResults_pDCS
+
+        elif (not 'pDCS' in methodsToUse) and ('ratio' in methodsToUse) and (not 'Hopfield' in methodsToUse):
+            annotationResults = annotationResults_ratio
+
+        elif (not 'pDCS' in methodsToUse) and (not 'ratio' in methodsToUse) and ('Hopfield' in methodsToUse):
+            annotationResults = annotationResults_Hopfield
 
         else:
-            print('Annotation method unknown')
+            print('Annotation method %s not supported' % (self.annotationMethod), flush=True)
 
             return
 
+        annotationResults = self.recordAnnotationResults(*tuple(annotationResults))
+
         print(annotationResults, flush=True)
+        print('Updating the expression data with annotation results', flush=True)
 
         df_markers_expr = df_markers_expr.T.reset_index().T
 
@@ -778,7 +851,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
     def visualize(self):
 
-        '''A convenient aggregate of visualization tools of this class.
+        '''Aggregate of visualization tools of this class.
 
         Parameters:
             None
@@ -798,40 +871,40 @@ class DigitalCellSorter(VisualizationFunctions):
         # Plot voting results matrix
         ##############################################################################################
         if self.toggleMakeVotingResultsMatrixPlot:
-            print('Making voting results matrix plot')
-            self.makeVotingResultsMatrixPlot()
+            print('Making voting results matrix plot', flush=True)
+            self.makeAnnotationResultsMatrixPlot()
 
         ##############################################################################################
         # Plot null distributions
         ##############################################################################################
         if self.toggleMakeHistogramNullDistributionPlot:
-            print('Making null distributions plot')
+            print('Making null distributions plot', flush=True)
             self.makeHistogramNullDistributionPlot()
         
         ##############################################################################################
         # Plot mean marker expression
         ##############################################################################################
         if self.toggleMakeMarkerExpressionPlot:
-            print('Making marker expression plot')
+            print('Making marker expression plot', flush=True)
             self.makeMarkerExpressionPlot()
 
         ##############################################################################################
         # Make 2D projection plots
         ##############################################################################################
         if self.toggleMakeProjectionPlotsQC:
-            self.getProjectionPlotsQC()
+            self.makeProjectionPlotsQualityControl()
 
         if self.toggleMakeProjectionPlotClusters:
-            self.getProjectionPlotByClusters()
+            self.makeProjectionPlotByClusters()
 
         if self.toggleMakeProjectionPlotBatches:
-            self.getProjectionPlotByBatches()
+            self.makeProjectionPlotByBatches()
 
         if self.toggleMakeProjectionPlotAnnotatedClusters:
-            self.getProjectionPlotAnnotated()
+            self.makeProjectionPlotAnnotated()
 
         if self.toggleAnomalyScoresProjectionPlot:
-            self.getAnomalyScoresPlot()
+            self.makeAnomalyScoresPlot()
            
         ##############################################################################################
         # Make stacked barplot of cell type fractions
@@ -844,13 +917,13 @@ class DigitalCellSorter(VisualizationFunctions):
         # marker)
         ##############################################################################################
         if self.toggleGetMarkerSubplots:
-            self.getMarkerSubplots()
+            self.makeMarkerSubplots()
 
         return None
 
 
-    # User functions of class ##########################################################
-    def getProjectionPlotAnnotated(self):
+    # Plotting user functions of class #################################################
+    def makeProjectionPlotAnnotated(self):
 
         '''Produce projection plot colored by cell types
               
@@ -865,7 +938,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
             DCS.process()
 
-            DCS.getProjectionPlotAnnotated()
+            DCS.makeProjectionPlotAnnotated()
         '''
 
         print('Making projection plot by clusters "True" labels')
@@ -883,7 +956,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         return None
     
-    def getProjectionPlotByBatches(self):
+    def makeProjectionPlotByBatches(self):
 
         '''Produce projection plot colored by batches
               
@@ -898,7 +971,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
             DCS.process()
 
-            DCS.getProjectionPlotByBatches()
+            DCS.makeProjectionPlotByBatches()
         '''
 
         print('Making projection plot by batches')
@@ -909,7 +982,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         return None
     
-    def getProjectionPlotByClusters(self):
+    def makeProjectionPlotByClusters(self):
 
         '''Produce projection plot colored by clusters
               
@@ -924,7 +997,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
             DCS.process()
 
-            DCS.getProjectionPlotByClusters()
+            DCS.makeProjectionPlotByClusters()
         '''
 
         print('Making projection plot by clusters')
@@ -936,7 +1009,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         return None
 
-    def getProjectionPlotsQC(self):
+    def makeProjectionPlotsQualityControl(self):
 
         '''Produce Quality Control projection plots
               
@@ -951,7 +1024,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
             DCS.process()
 
-            DCS.getProjectionPlotsQC()
+            DCS.makeProjectionPlotsQualityControl()
         '''
 
         print('Making projection plots of QC', flush=True)
@@ -971,7 +1044,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         return None
 
-    def getMarkerSubplots(self):
+    def makeMarkerSubplots(self):
 
         '''Produce subplots on each marker and its expression on all clusters
               
@@ -986,18 +1059,20 @@ class DigitalCellSorter(VisualizationFunctions):
 
             DCS.process()
 
-            DCS.getMarkerSubplots()
+            DCS.makeMarkerSubplots()
         '''
 
         df_projection = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_projection', mode='r')
         df_markers_expr = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_markers_expr', mode='r')
         df_projection = df_projection[pd.MultiIndex.from_arrays([df_markers_expr.columns.get_level_values('batch'), df_markers_expr.columns.get_level_values('cell')])]
+
         hugo_cd_dict = dict(zip(df_markers_expr.index.values.tolist(), self.gnc.Convert(list(df_markers_expr.index), 'hugo', 'alias', returnUnknownString=False)))
-        self.internalMarkerSubplots(df_markers_expr, df_projection.values, hugo_cd_dict)
+
+        self.internalMakeMarkerSubplots(df_markers_expr, df_projection.values, hugo_cd_dict)
 
         return
 
-    def getAnomalyScoresPlot(self, cells = 'All'):
+    def makeAnomalyScoresPlot(self, cells = 'All'):
 
         '''Make anomaly scores plot
 
@@ -1038,7 +1113,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         return None
     
-    def getIndividualGeneTtestPlot(self, gene, analyzeBy = 'label'):
+    def makeIndividualGeneTtestPlot(self, gene, analyzeBy = 'label'):
 
         '''Produce individual gene t-test plot of the two-tailed p-value.
 
@@ -1056,7 +1131,7 @@ class DigitalCellSorter(VisualizationFunctions):
         Usage:
             DCS = DigitalCellSorter.DigitalCellSorter()
 
-            DCS.getIndividualGeneTtestPlot('SDC1')
+            DCS.makeIndividualGeneTtestPlot('SDC1')
         '''
 
         df_markers_expr = self.getExprOfGene(gene, analyzeBy=analyzeBy)
@@ -1083,7 +1158,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         return None    
 
-    def getIndividualGeneExpressionPlot(self, gene, hideClusterLabels = False, outlineClusters = True):
+    def makeIndividualGeneExpressionPlot(self, gene, hideClusterLabels = False, outlineClusters = True):
 
         '''Produce individual gene expression plot on a 2D layout
 
@@ -1103,7 +1178,7 @@ class DigitalCellSorter(VisualizationFunctions):
         Usage:
             DCS = DigitalCellSorter.DigitalCellSorter()
 
-            DCS.getIndividualGeneExpressionPlot('CD4')
+            DCS.makeIndividualGeneExpressionPlot('CD4')
         '''
 
         df_markers_expr = self.getExprOfGene(gene, analyzeBy='cluster')
@@ -1116,7 +1191,7 @@ class DigitalCellSorter(VisualizationFunctions):
         
         hugo_cd_dict = {gene: self.gnc.Convert([gene], 'hugo', 'alias', returnUnknownString=False)[0]}
 
-        self.internalMarkerSubplots(df_markers_expr, 
+        self.internalMakeMarkerSubplots(df_markers_expr, 
                                 df_projection.values, 
                                 hugo_cd_dict, 
                                 NoFrameOnFigures=True, 
@@ -1125,6 +1200,8 @@ class DigitalCellSorter(VisualizationFunctions):
 
         return None
 
+    
+    # Extraction user functions of class ###############################################
     def getAnomalyScores(self, trainingSet, testingSet, printResults = False):
 
         '''Function to get anomaly score of cells based on some reference set
@@ -1146,7 +1223,7 @@ class DigitalCellSorter(VisualizationFunctions):
         Usage:
             DCS = DigitalCellSorter.DigitalCellSorter()
 
-            cutoff = DCS.checkCellsByIsolationForest(df_expr.iloc[:, 5:], df_expr.iloc[:, :5])
+            cutoff = DCS.getAnomalyScores(df_expr.iloc[:, 5:], df_expr.iloc[:, :5])
         '''
 
         instanceIsolationForest = IsolationForest(behaviour='new',
@@ -1397,7 +1474,7 @@ class DigitalCellSorter(VisualizationFunctions):
         Usage:
             DCS = DigitalCellSorter.DigitalCellSorter()
 
-            index = DCS.get_index_of_good_quality_cells()
+            index = DCS.getIndexOfGoodQualityCells()
         '''
 
         df_QC = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='QC', mode='r')
@@ -1447,7 +1524,7 @@ class DigitalCellSorter(VisualizationFunctions):
         Usage:
             DCS = DigitalCellSorter.DigitalCellSorter()
 
-            cutoff = DCS.getCutoff(se)
+            cutoff = DCS.getQualityControlCutoff(se)
         '''
 
         subset = se[~np.isnan(se.values)].values
@@ -1479,44 +1556,7 @@ class DigitalCellSorter(VisualizationFunctions):
             
         return cutoff
 
-    def alignSeries(self, se1, se2, tagForMissing):
-
-        '''Align two pandas.Series
-
-        Parameters:
-            se1: pandas.Series
-                Series with the first set of items
-
-            se2: pandas.Series 
-                Series with the second set of items
-
-            tagForMissing: str, Default 'Missing'
-                Label to assign to non-overlapping items
-
-        Returns:
-            pandas.DataFrame
-                Contains two aligned pandas.Series
-        
-        Usage:
-            DCS = DigitalCellSorter.DigitalCellSorter()
-
-            df = alignSeries(pd.Index(['A', 'B', 'C', 'D']).to_series(), pd.Index(['B', 'C', 'D', 'E', 'F']).to_series())
-        '''
-        
-        se1.index.name = 'index'
-        se2.index.name = 'index'
-
-        append = lambda se1, se2: pd.concat([se1, pd.Series(index=se2.index.difference(se1.index), data=[tagForMissing] * len(se2.index.difference(se1.index)))], axis=0, sort=False)
-
-        se1 = append(se1, se2)
-        se2 = append(se2, se1)
-
-        se1.name = 'se1'
-        se2.name = 'se2'
-
-        return pd.concat((se1, se2.loc[se1.index]), axis=1, sort=True)
-
-    def getCountsDataframe(self, se1, se2, tagForMissing = 'Missing'):
+    def getCountsDataframe(self, se1, se2, tagForMissing = 'N/A'):
 
         '''Get a pandas.DataFrame with cross-counts (overlaps) between two pandas.Series
 
@@ -1527,7 +1567,7 @@ class DigitalCellSorter(VisualizationFunctions):
             se2: pandas.Series 
                 Series with the second set of items
 
-            tagForMissing: str, Default 'Missing'
+            tagForMissing: str, Default 'N/A'
                 Label to assign to non-overlapping items
 
         Returns:
@@ -1662,78 +1702,7 @@ class DigitalCellSorter(VisualizationFunctions):
         return None
 
     
-    # Supporting functions of class ####################################################
-    @classmethod
-    def convertColormap(cls, colormap):
-
-        '''Convert colormap from the form (1.,1.,1.,1.) to 'rgba(255,255,255,1.)'
-
-        Parameters:
-            colormap: dictionary
-                Colormap to convert
-
-        Returns:
-            dictionary
-                Converted colomap
-        
-        Usage:
-            DCS = DigitalCellSorter.DigitalCellSorter()
-
-            colormap = DCS.convertColormap(colormap)
-        '''
-
-        return {k:'rgba' + str(tuple(list((np.array(v[:3]) * 255).astype(int)) + [v[3]])) for k, v in colormap.items()}
-
-    @classmethod
-    def zScoreOfSeries(cls, se):
-    
-        '''Calculate z-score of pandas.Series and modify the Series in place
-    
-        Parameters:
-            se: pandas.Series
-                Series to process
-
-        Returns:
-            pandas.Series
-                Processed series
-
-        Usage:
-            se = zScoreOfSeries(se)
-        '''
-
-        se.iloc[:] = scipy.stats.zscore(se.values)
-
-        return se
-       
-    @classmethod
-    def KeyInFile(cls, key, file):
-
-        '''Check is a key exists in a HDF file.
-    
-        Parameters:
-            key: str
-                Key name to check
-
-            file: str
-                HDF file name to check
-
-        Returns:
-            boolean
-                True if the key is found
-                False otherwise
-
-        Usage:
-            KeyInFile('df_expr', 'data/file.h5')
-        '''
-
-        if not os.path.isfile(file):
-            return False 
-
-        with pd.HDFStore(file) as file:
-            return True if "/" + key.strip("/") in file.keys() else False
-
-        return
-
+    # Annotation functions of class ####################################################
     @classmethod
     def calculateV(cls, args):
 
@@ -1746,7 +1715,7 @@ class DigitalCellSorter(VisualizationFunctions):
                 df_M: pandas.DataFrame
                     Marker cell type DataFrame
 
-                df_markers_expr: pandas.DataFrame
+                df_X: pandas.DataFrame
                     Markers expression DataFrame
 
                 cluster_index: 1d numpy.array
@@ -1758,12 +1727,18 @@ class DigitalCellSorter(VisualizationFunctions):
                 giveSignificant: boolean
                     Whether to return the significance matrix along with the scores
 
+                removeLowQCscores: boolean
+                    Whether to remove low quality scores, 
+                    i.e. those with less than 10% of markers that a re supporting
+
         Returns:
             pandas.DataFrame 
                 Contains voting scores per celltype per cluster 
 
         Usage:
-            df = getV((df_marker_celltype, df_markers_expr, cluster_index, 0.3))
+            Function is used internally.
+
+            df = calculateV((df_M, df_X, cluster_index, 0.3, False, True))
         '''
 
         df_M, df_X, cluster_index, cutoff, giveSignificant, removeLowQCscores = args
@@ -1772,7 +1747,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         if True:
             df_Z = (df_Y.copy() - np.mean(df_Y.values, axis=1)[:, None]) / np.std(df_Y.values, axis=1)[:, None]
-            df_Z = 1.*(df_Z > cutoff)
+            df_Z = 1. * (df_Z > cutoff)
         else:
             df_Z = df_Y > ((1. + cutoff) * np.mean(df_Y.values, axis=1)[:, None])
 
@@ -1781,7 +1756,7 @@ class DigitalCellSorter(VisualizationFunctions):
         # Remove scores with small number of supporting markers
         if removeLowQCscores:
             minimumFraction = 0.10
-            df_Q = (1.*(df_M>0.)).dot(1.*(df_Z>0.)) < (minimumFraction * (1.*(df_Z>0.)).sum(axis=0)[None, :]).astype(int)
+            df_Q = (1. * (df_M > 0.)).dot(1. * (df_Z > 0.)) < (minimumFraction * (1. * (df_Z > 0.)).sum(axis=0)[None, :]).astype(int)
             df_V[pd.Series(df_Q.stack().fillna(0.))] = 0.
 
         if giveSignificant:
@@ -1789,9 +1764,9 @@ class DigitalCellSorter(VisualizationFunctions):
 
         return df_V
 
-    def annotateWithDCSVotingScheme(self, df_markers_expr, df_marker_cell_type, withNullModel = True, adjustNullModel = True):
+    def annotateWith_pDCS_Scheme(self, df_markers_expr, df_marker_cell_type):
         
-        '''Produce cluster voting results
+        '''Produce cluster annotation results
 
         Parameters:
             df_markers_expr: pandas.DataFrame 
@@ -1801,17 +1776,11 @@ class DigitalCellSorter(VisualizationFunctions):
                 Data with marker genes by cell types
 
         Returns:
-            dictionary
-                Voting results, a dictionary in form of:
-                {cluster label: assigned cell type}
+            tuple
         
         Usage:
             Function should be called internally only
         '''
-
-        df_marker_cell_type_full = self.readMarkerFile().T.loc[df_marker_cell_type.index]
-        df_marker_cell_type_full[df_marker_cell_type_full < .0] = 0.
-        df_marker_cell_type_full /= (df_marker_cell_type_full > 0.).sum(axis=0).fillna(1.).replace(0., 1.)
 
         df_positive = df_marker_cell_type.copy()
         df_negative = df_marker_cell_type.copy()
@@ -1838,95 +1807,134 @@ class DigitalCellSorter(VisualizationFunctions):
 
         dict_expressed_markers = {cluster:df_Z_best.index[df_Z_best[cluster] > 0].values for cluster in df_Z_best}
 
-        if withNullModel:
-            np.random.seed(0)
+        np.random.seed(0)
 
-            df_markers_expr_copy = df_markers_expr.copy()
+        df_markers_expr_copy = df_markers_expr.copy()
 
-            uclusters = np.unique(df_markers_expr_copy.columns.get_level_values(2).astype(str))
-            uindex = pd.Series(df_markers_expr_copy.columns.get_level_values(2).astype(str)).replace(dict(zip(uclusters, range(len(uclusters))))).values
-            df_markers_expr_copy.columns = pd.MultiIndex.from_arrays([df_markers_expr_copy.columns.get_level_values(0),
-                                                                      df_markers_expr_copy.columns.get_level_values(1),
-                                                                      uindex], names=df_markers_expr_copy.columns.names)
+        uclusters = np.unique(df_markers_expr_copy.columns.get_level_values(2).astype(str))
+        uindex = pd.Series(df_markers_expr_copy.columns.get_level_values(2).astype(str)).replace(dict(zip(uclusters, range(len(uclusters))))).values
+        df_markers_expr_copy.columns = pd.MultiIndex.from_arrays([df_markers_expr_copy.columns.get_level_values(0),
+                                                                    df_markers_expr_copy.columns.get_level_values(1),
+                                                                    uindex], names=df_markers_expr_copy.columns.names)
 
-            batch_size = self.availableCPUsCount * 80
+        batch_size = self.availableCPUsCount * 80
 
-            if self.nSamplesDistribution < batch_size:
-                self.nSamplesDistribution = batch_size
-                print('Distribution size too small. Increasing it to minimum batch size: %s' % (self.nSamplesDistribution))
+        if self.nSamples_pDCS < batch_size:
+            self.nSamples_pDCS = batch_size
+            print('Distribution size too small. Increasing it to minimum batch size: %s' % (self.nSamples_pDCS))
 
-            N_batches = int(self.nSamplesDistribution / batch_size)
+        N_batches = int(self.nSamples_pDCS / batch_size)
 
-            if self.nSamplesDistribution != batch_size * N_batches:
-                self.nSamplesDistribution = batch_size * N_batches
-                print('Adjusting distribution size: %s' % (self.nSamplesDistribution))
+        if self.nSamples_pDCS != batch_size * N_batches:
+            self.nSamples_pDCS = batch_size * N_batches
+            print('Adjusting distribution size: %s' % (self.nSamples_pDCS))
 
-            # Generate random cluster index
-            randomClusterIndex = np.vstack([np.random.choice(df_markers_expr_copy.columns.get_level_values('cluster'), size=df_markers_expr_copy.shape[1], replace=False) for i in range(self.nSamplesDistribution)]).astype(int)
+        # Generate random cluster index
+        randomClusterIndex = np.vstack([np.random.choice(df_markers_expr_copy.columns.get_level_values('cluster'), size=df_markers_expr_copy.shape[1], replace=False) for i in range(self.nSamples_pDCS)]).astype(int)
 
-            # Generate random cluster configurations and calculate scores (Pkc) of those
-            print('Generating null distribution')
+        # Generate random cluster configurations and calculate scores (Pkc) of those
+        print('Generating null distribution')
 
-            def process_batch(batch_range):
+        def process_batch(batch_range):
 
-                print('\t', batch_range)
+            print('\t', batch_range)
 
-                tuples = [(df_marker_cell_type, df_markers_expr_copy, randomClusterIndex[i], self.zScoreCutoff, False, False) for i in batch_range]
+            tuples = [(df_marker_cell_type, df_markers_expr_copy, randomClusterIndex[i], self.zScoreCutoff, False, False) for i in batch_range]
 
-                pool = multiprocessing.Pool(processes = self.availableCPUsCount)
-                temp_random_df_V = pd.concat(pool.map(self.calculateV, tuples), sort=False, axis=1)
-                pool.close()
-                pool.join()
+            pool = multiprocessing.Pool(processes = self.availableCPUsCount)
+            temp_random_df_V = pd.concat(pool.map(self.calculateV, tuples), sort=False, axis=1)
+            pool.close()
+            pool.join()
 
-                return temp_random_df_V
+            return temp_random_df_V
 
-            random_df_V = pd.concat([process_batch(range(i * batch_size,(i + 1) * batch_size)) for i in range(N_batches)], sort=False, axis=1)
+        random_df_V = pd.concat([process_batch(range(i * batch_size,(i + 1) * batch_size)) for i in range(N_batches)], sort=False, axis=1)
 
-            random_df_V.index = pd.MultiIndex.from_arrays([random_df_V.index.get_level_values(0),
-                                                    pd.Series(random_df_V.index.get_level_values(1)).replace(dict(zip(range(len(uclusters)), uclusters))).values], 
-                                                    names=[random_df_V.index.names[0], 'cluster'])
+        random_df_V.index = pd.MultiIndex.from_arrays([random_df_V.index.get_level_values(0),
+                                                pd.Series(random_df_V.index.get_level_values(1)).replace(dict(zip(range(len(uclusters)), uclusters))).values], 
+                                                names=[random_df_V.index.names[0], 'cluster'])
 
-            random_df_V = random_df_V.replace(0., np.nan)
+        random_df_V = random_df_V.replace(0., np.nan)
 
-            min_value = np.nanmin(random_df_V.values)
-            max_value = np.nanmax(random_df_V.values)
+        min_value = np.nanmin(random_df_V.values)
+        max_value = np.nanmax(random_df_V.values)
 
-            print('Min:', min_value, '\t', 'Max:', max_value)
+        print('Min:', min_value, '\t', 'Max:', max_value)
 
-            Nbins = 300
+        Nbins = 300
 
-            # Calculate null distribution histograms data for plots
-            df_null_distributions = random_df_V.apply(lambda s: scipy.stats.rv_histogram(np.histogram(s, bins=Nbins, range=(min_value,max_value)))._hpdf / Nbins, axis=1).apply(pd.Series).T
-            df_null_distributions.columns.names = ['CellType', 'Cluster']
-            df_null_distributions.index = [min_value] + (scipy.stats.rv_histogram(np.histogram(random_df_V.iloc[0], bins=Nbins, range=(min_value,max_value)))._hbins).tolist()
+        # Calculate null distribution histograms data for plots
+        df_null_distributions = random_df_V.apply(lambda s: scipy.stats.rv_histogram(np.histogram(s, bins=Nbins, range=(min_value,max_value)))._hpdf / Nbins, axis=1).apply(pd.Series).T
+        df_null_distributions.columns.names = ['CellType', 'Cluster']
+        df_null_distributions.index = [min_value] + (scipy.stats.rv_histogram(np.histogram(random_df_V.iloc[0], bins=Nbins, range=(min_value,max_value)))._hbins).tolist()
 
-            # Calculate z-score (Lkc) for the best clustering
-            print('Processing voting results')
-            sigma = pd.Series(data=np.nanstd(random_df_V.values, axis=1), index=random_df_V.index).replace(0., np.inf).unstack()
-            mean = pd.Series(data=np.nanmean(random_df_V.values, axis=1), index=random_df_V.index).unstack()
-            df_L = (df_V - mean) / sigma
+        # Calculate z-score (Lkc) for the best clustering
+        print('Processing voting results')
+        sigma = pd.Series(data=np.nanstd(random_df_V.values, axis=1), index=random_df_V.index).replace(0., np.inf).unstack()
+        mean = pd.Series(data=np.nanmean(random_df_V.values, axis=1), index=random_df_V.index).unstack()
+        df_L = (df_V - mean) / sigma
         
-            df_L[df_L < self.minimumScoreForUnknown] = 0.
-            df_L[df_V < 0.] = 0.
+        df_L[df_L < self.thresholdForUnknown_pDCS] = 0.
+        df_L[df_V < 0.] = 0.
 
-            if adjustNullModel:
-                df_L *= df_V / df_marker_cell_type_full.sum(axis=1).values[:, None]
-        else:
-            df_null_distributions = None
-            df_L = df_V / df_marker_cell_type_full.sum(axis=1).values[:, None]
+        return (df_marker_cell_type, df_markers_expr, df_L, df_V, dict_expressed_markers, df_null_distributions)
 
-        annotationDictionary = self.recordAnnotationResults(df_marker_cell_type, 
-                                                            df_markers_expr, 
-                                                            df_L, 
-                                                            df_V, 
-                                                            dict_expressed_markers, 
-                                                            df_null_distributions)
+    def annotateWith_ratio_Scheme(self, df_markers_expr, df_marker_cell_type):
+        
+        '''Produce cluster annotation results
 
-        return annotationDictionary
+        Parameters:
+            df_markers_expr: pandas.DataFrame 
+                Data with marker genes by cells expression
 
-    def annotateWithHopfieldNetwork(self, df_markers_expr, df_marker_cell_type):
+            df_marker_cell_type: pandas.DataFrame 
+                Data with marker genes by cell types
 
-        '''Annotate clusters cell types 
+        Returns:
+            tuple
+        
+        Usage:
+            Function should be called internally only
+        '''
+
+        df_positive = df_marker_cell_type.copy()
+        df_negative = df_marker_cell_type.copy()
+        df_positive[df_marker_cell_type < .0] = 0.
+        df_negative[df_marker_cell_type > .0] = 0.
+        df_positive /= (df_positive > 0.).sum(axis=0).fillna(1.).replace(0., 1.).replace(0, 1.)
+        df_negative /= (df_negative < 0.).sum(axis=0).fillna(1.).replace(0., 1.).replace(0, 1.)
+        df_marker_cell_type = df_positive + df_negative
+        print(df_marker_cell_type.shape)
+
+        # Align df_markers_expr and df_marker_cell_type
+        df_markers_expr.sort_index(inplace=True, axis=0)
+        df_marker_cell_type.sort_index(inplace=True, axis=1)
+
+        # Calculate score (Vkc) for the best clustering
+        temp = self.calculateV((df_marker_cell_type, 
+                                df_markers_expr, 
+                                df_markers_expr.columns.get_level_values('cluster').values, 
+                                self.zScoreCutoff, True, True))
+        df_V = temp[0].unstack()
+        df_V.index.name = None
+        df_Z_best = temp[1]
+
+        dict_expressed_markers = {cluster:df_Z_best.index[df_Z_best[cluster] > 0].values for cluster in df_Z_best}
+
+        df_marker_cell_type_full = self.readMarkerFile().T.loc[df_marker_cell_type.index]
+        df_marker_cell_type_full[df_marker_cell_type_full < .0] = 0.
+        df_marker_cell_type_full /= (df_marker_cell_type_full > 0.).sum(axis=0).fillna(1.).replace(0., 1.)
+
+        df_L = df_V / df_marker_cell_type_full.sum(axis=1).values[:, None]
+
+        df_L[df_L < self.thresholdForUnknown_ratio] = 0.
+        df_L[df_V < 0.] = 0.
+
+        return (df_marker_cell_type, df_markers_expr, df_L, df_V, dict_expressed_markers, None)
+
+    def annotateWith_Hopfield_Scheme(self, df_markers_expr, df_marker_cell_type):
+
+        '''Produce cluster annotation results 
                 
         Parameters:
                 df_markers_expr: pandas.DataFrame
@@ -1936,18 +1944,19 @@ class DigitalCellSorter(VisualizationFunctions):
                     Marker cell type DataFrame
 
         Returns:
-            pandas.DataFrame 
-                Contains voting scores per celltype per cluster 
+            tuple
 
         Usage:
-            df = annotateWithHopfieldNetwork(df_markers_expr, df_marker_celltype)
+            Function should be called internally only
         '''
         
+        df_marker_cell_type = df_marker_cell_type.T
+
         np.random.seed(0)
 
         def propagateHopfield(sigma, xi, T = 0.2, tmax = 75, fractionToUpdate = 0.5, 
                               underlyingNetwork = None, typesNames = None, clustersNames = None, 
-                              recordTrajectories = False, id = None):
+                              recordTrajectories = False, id = None, printSwitchingFraction = False):
 
             '''Function used internally. Propagate Hopfield network 
             over a set number of time steps
@@ -1960,7 +1969,7 @@ class DigitalCellSorter(VisualizationFunctions):
                     Marker cell type DataFrame
 
                 T: float, Default 0.2
-                    Noise (a.k.a. Temperature) parameter
+                    Noise (Temperature) parameter
 
                 tmax: int, Default 200
                     Number of step to iterate through
@@ -1989,9 +1998,9 @@ class DigitalCellSorter(VisualizationFunctions):
             J = (xi).dot(xi_inv)            # m,m
             
             sigma_ = sigma.copy()
-            sigma_[sigma_<0.] = 0.
+            sigma_[sigma_ < 0.] = 0.
             initial = np.argmax((xi_inv).dot(sigma_), axis=0)
-            initial[np.where(np.max((xi_inv).dot(sigma_), axis=0) < 10.**-12)] = -1
+            initial[np.where(np.max((xi_inv).dot(sigma_), axis=0) < 10. ** -12)] = -1
 
             if recordTrajectories:
                 trajectories = np.zeros((tmax, sigma.shape[1], xi.shape[1] + 2))
@@ -2009,18 +2018,18 @@ class DigitalCellSorter(VisualizationFunctions):
                     times[:] = t
 
                     sigma_ = sigma.copy()
-                    sigma_[sigma_<0.] = 0.
+                    sigma_[sigma_ < 0.] = 0.
 
-                    energy = -(h*sigma_).sum(axis=0).reshape(sigma_.shape[1], 1) 
-                    energy /= (((sigma_!=0.).sum(axis=0))[:, None]/sigma_.shape[0])
+                    energy = -(h * sigma_).sum(axis=0).reshape(sigma_.shape[1], 1) 
+                    energy /= (((sigma_ != 0.).sum(axis=0))[:, None] / sigma_.shape[0])
                     coordinates = np.dot(_PCA.components_, sigma_).T
                     trajectories[t,:,:] = np.hstack([coordinates, times, energy])
 
-                    z.append(((sigma==0.)*1.).sum(axis=0))
+                    z.append(((sigma == 0.) * 1.).sum(axis=0))
 
                 sigmaNew = ((1. / (1. + np.exp(-2. * h / T))) > np.random.rand(*sigma.shape)) * 2. - 1.
 
-                # Hopfiled model asymmetric and diluted: same as in Hope4Genes algorithm
+                # Hopfiled model asymmetric and diluted: similar to Hope4Genes algorithm
                 # Deactivate nodes that are being turned off
                 sigmaNew[(sigmaNew - sigma) < -1.] = 0.
 
@@ -2030,24 +2039,20 @@ class DigitalCellSorter(VisualizationFunctions):
                 sigma[whereToUpdate] = sigmaNew[whereToUpdate] * np.abs(sigma[whereToUpdate])
 
             sigma_ = sigma.copy()
-            sigma_[sigma_<0.] = 0.
+            sigma_[sigma_ < 0.] = 0.
             final = np.argmax((xi_inv).dot(sigma_), axis=0)
-            final[np.where(np.max((xi_inv).dot(sigma_), axis=0) < 10.**-12)] = -1
+            final[np.where(np.max((xi_inv).dot(sigma_), axis=0) < 10. ** -12)] = -1
 
-            print(np.round(100.*(final != initial).sum()/(len(initial)), 2).astype(int), end=' ', flush=True)
+            if printSwitchingFraction:
+                print(np.round(100. * (final != initial).sum() / (len(initial)), 2).astype(int), end=' ', flush=True)
 
             if recordTrajectories:
-                #d = lambda r1, r2: np.linalg.norm(r1 - r2, axis=0)
-                #dd = [d(trajectories[0,:,:-2].T, trajectories[i,:,:-2].T) for i in range(1, 1000)]
-                #pd.DataFrame(np.vstack(dd), columns=clustersNames).to_excel('dev/x_CIBERSORT.xlsx')
-
                 id = 0 if id is None else id
-                write((trajectories, initial, final, attrs, typesNames, clustersNames), 'dev/trajectories%s'%(id))
-                #input('ID: %s'%(id))
+                write((trajectories, initial, final, attrs, typesNames, clustersNames), 'dev/trajectories%s' % (id))
 
-            sigma[sigma<0.] = 0.
+            sigma[sigma < 0.] = 0.
             overlap = (xi_inv).dot(sigma)
-            overlap[overlap<=0.] = 0.
+            overlap[overlap <= 0.] = 0.
 
             return overlap
 
@@ -2079,7 +2084,8 @@ class DigitalCellSorter(VisualizationFunctions):
 
         df_expr_cluster_centroids = df_markers_expr.groupby(level='cluster', axis=1, sort=False).mean()
         df_Z = df_expr_cluster_centroids.copy().apply(self.zScoreOfSeries, axis=1)
-        #r = np.mean(df_expr_cluster_centroids.values, axis=1) / np.std(df_expr_cluster_centroids.values, axis=1)
+        #r = np.mean(df_expr_cluster_centroids.values, axis=1) /
+        #np.std(df_expr_cluster_centroids.values, axis=1)
 
         df_sig = df_Z > self.zScoreCutoff #* r[:, None]
 
@@ -2089,23 +2095,20 @@ class DigitalCellSorter(VisualizationFunctions):
 
         listOfSeries = []
 
-        for i in range(self.nSamplesDistribution):
-            if i%np.int(self.nSamplesDistribution/10) == 0:
-                print('\n%s%%'%(np.int(100*i/self.nSamplesDistribution)), end='\t', flush=True)
-
-            #print(df_marker_cell_type.columns.values, '\n')
-            #print(df_sig.columns.values, '\n')
+        for i in range(self.nSamples_Hopfield):
+            if i % np.int(self.nSamples_Hopfield / 10) == 0:
+                print('\n%s%%' % (np.int(100 * i / self.nSamples_Hopfield)), end='\t', flush=True)
 
             # Run Hopfield network dynamics
             hop = propagateHopfield(df_sig.values * 2. - 1., df_marker_cell_type.values, 
                                     typesNames=df_marker_cell_type.columns.values,
-                                    clustersNames=df_sig.columns.values, id=i)
+                                    clustersNames=df_sig.columns.values, id = i, T = self.HopfieldTemperature)
 
             # Determine top scores
             res = np.argmax(hop, axis=0)
 
             # Best votes that below threshold are set to Unknown
-            res[np.where(np.max(hop, axis=0) < 10.**-12)] = len(df_marker_cell_type.columns)
+            res[np.where(np.max(hop, axis=0) < 10. ** -12)] = len(df_marker_cell_type.columns)
 
             listOfSeries.append(res)
 
@@ -2119,8 +2122,8 @@ class DigitalCellSorter(VisualizationFunctions):
             for j in range(len(w[0])):
                 df_L.iloc[w[0][j], i] = w[1][j] / len(r)
 
-        df_L[df_L < self.minimumScoreForUnknown] = 0.
-        df_L.iloc[-1, :] = 0.9 * self.minimumScoreForUnknown
+        df_L[df_L < self.thresholdForUnknown_Hopfield] = 0.
+        df_L.iloc[-1, :] = 0.9 * self.thresholdForUnknown_Hopfield
 
         # Best results are chosen as highest frequency cell type for each cluster
         se_celltypes = pd.Series(data = np.argmax(df_L.values, axis=0).astype(int).astype(str), index = df_sig.columns)
@@ -2133,17 +2136,10 @@ class DigitalCellSorter(VisualizationFunctions):
         se_celltypes = se_celltypes.replace(to_replace=celltypeNames)
 
         df_L.index = pd.Series(df_L.index.astype(str)).replace(to_replace=celltypeNames).values
-        print(df_L)
 
         df_L.drop(self.nameForUnknown, axis=0, inplace=True)
 
-        annotationDictionary = self.recordAnnotationResults(df_marker_cell_type.T, 
-                                                            df_markers_expr, 
-                                                            df_L, 
-                                                            df_L.copy(), 
-                                                            dict_expressed_markers)
-
-        return annotationDictionary
+        return (df_marker_cell_type.T, df_markers_expr, df_L, df_L.copy(), dict_expressed_markers)
 
     def recordAnnotationResults(self, df_marker_cell_type, df_markers_expr, df_L, df_V, dict_expressed_markers, df_null_distributions = None):
 
@@ -2252,6 +2248,120 @@ class DigitalCellSorter(VisualizationFunctions):
 
         return df_V.loc['Predicted cell type'].to_dict()
 
+
+    # Other functions of class #########################################################
+    @classmethod
+    def convertColormap(cls, colormap):
+
+        '''Convert colormap from the form (1.,1.,1.,1.) to 'rgba(255,255,255,1.)'
+
+        Parameters:
+            colormap: dictionary
+                Colormap to convert
+
+        Returns:
+            dictionary
+                Converted colomap
+        
+        Usage:
+            DCS = DigitalCellSorter.DigitalCellSorter()
+
+            colormap = DCS.convertColormap(colormap)
+        '''
+
+        return {k:'rgba' + str(tuple(list((np.array(v[:3]) * 255).astype(int)) + [v[3]])) for k, v in colormap.items()}
+
+    @classmethod
+    def zScoreOfSeries(cls, se):
+    
+        '''Calculate z-score of pandas.Series and modify the Series in place
+    
+        Parameters:
+            se: pandas.Series
+                Series to process
+
+        Returns:
+            pandas.Series
+                Processed series
+
+        Usage:
+            DCS = DigitalCellSorter.DigitalCellSorter()
+
+            se = DCS.zScoreOfSeries(se)
+        '''
+
+        se.iloc[:] = scipy.stats.zscore(se.values)
+
+        return se
+       
+    @classmethod
+    def KeyInFile(cls, key, file):
+
+        '''Check is a key exists in a HDF file.
+    
+        Parameters:
+            key: str
+                Key name to check
+
+            file: str
+                HDF file name to check
+
+        Returns:
+            boolean
+                True if the key is found
+                False otherwise
+
+        Usage:
+            DCS = DigitalCellSorter.DigitalCellSorter()
+
+            DCS.KeyInFile('df_expr', 'data/file.h5')
+        '''
+
+        if not os.path.isfile(file):
+            return False 
+
+        with pd.HDFStore(file) as file:
+            return True if "/" + key.strip("/") in file.keys() else False
+
+        return
+
+    def alignSeries(self, se1, se2, tagForMissing):
+
+        '''Align two pandas.Series
+
+        Parameters:
+            se1: pandas.Series
+                Series with the first set of items
+
+            se2: pandas.Series 
+                Series with the second set of items
+
+            tagForMissing: str, Default 'Missing'
+                Label to assign to non-overlapping items
+
+        Returns:
+            pandas.DataFrame
+                Contains two aligned pandas.Series
+        
+        Usage:
+            DCS = DigitalCellSorter.DigitalCellSorter()
+
+            df = DCS.alignSeries(pd.Index(['A', 'B', 'C', 'D']).to_series(), pd.Index(['B', 'C', 'D', 'E', 'F']).to_series())
+        '''
+        
+        se1.index.name = 'index'
+        se2.index.name = 'index'
+
+        append = lambda se1, se2: pd.concat([se1, pd.Series(index=se2.index.difference(se1.index), data=[tagForMissing] * len(se2.index.difference(se1.index)))], axis=0, sort=False)
+
+        se1 = append(se1, se2)
+        se2 = append(se2, se1)
+
+        se1.name = 'se1'
+        se2.name = 'se2'
+
+        return pd.concat((se1, se2.loc[se1.index]), axis=1, sort=True)
+
     def createReverseDictionary(self, inputDictionary):
 
         '''Efficient way to create a reverse dictionary from a dictionary.
@@ -2266,7 +2376,9 @@ class DigitalCellSorter(VisualizationFunctions):
                 Reversed dictionary
 
         Usage:
-            revDict = createReverseDictionary(Dict)
+            DCS = DigitalCellSorter.DigitalCellSorter()
+
+            revDict = DCS.createReverseDictionary(Dict)
         '''
 
         keys, values = np.array(list(inputDictionary.keys())), np.array(list(inputDictionary.values()))
@@ -2289,7 +2401,9 @@ class DigitalCellSorter(VisualizationFunctions):
                 Celltype/markers matrix
 
         Usage:
-            df_marker_cell_type = readMarkerFile()
+            DCS = DigitalCellSorter.DigitalCellSorter()
+
+            df_marker_cell_type = DCS.readMarkerFile()
         '''
 
         mergeFunction = 'mean'
@@ -2311,7 +2425,7 @@ class DigitalCellSorter(VisualizationFunctions):
         df_marker_cell_type[where_positive] = 1.
         df_marker_cell_type[where_negative] = -1.
 
-        df_marker_cell_type = df_marker_cell_type.loc[np.abs(df_marker_cell_type).sum(axis=1)>0]
+        df_marker_cell_type = df_marker_cell_type.loc[np.abs(df_marker_cell_type).sum(axis=1) > 0]
         print('Markers/celltypes:', df_marker_cell_type.shape, flush=True)
         print('Markers/celltypes:', df_marker_cell_type.sum(axis=0), flush=True)
 
@@ -2340,7 +2454,29 @@ class DigitalCellSorter(VisualizationFunctions):
 
         return df_marker_cell_type
     
-    def mergeIndexDuplicates(cls, df_expr, method='average'):
+    def mergeIndexDuplicates(cls, df_expr, method = 'average'):
+
+        '''Merge index duplicates
+
+        Parameters: 
+            df_expr: pandas.DataFrame
+                Gene expression table
+
+            method: str, Default None
+                How to deal with index duplicates. Option are:
+                    'average': average values of duplicates
+
+                    'first': keep only first of duplicates, discard rest
+
+        Returns:
+            pandas.DataFrame
+                Gene expression table
+
+        Usage:
+            DCS = DigitalCellSorter.DigitalCellSorter()
+
+            df_expr = DCS.mergeIndexDuplicates(df_expr)
+        '''
 
         # Check is any names in the index are duplicated, remove duplicates
         len_total, len_unique = len(df_expr.index), len(np.unique(df_expr.index))
@@ -2348,10 +2484,10 @@ class DigitalCellSorter(VisualizationFunctions):
         if len_total != len_unique:
             unique_items = np.unique(df_expr.index, return_counts=True)
 
-            if method=='average':
+            if method == 'average':
                 df_expr = df_expr.groupby(level=0, axis=0).sum()
 
-            elif method=='first':
+            elif method == 'first':
                 df_expr = df_expr.loc[~df_expr.index.duplicated(keep='first')]
 
             else:
@@ -2386,6 +2522,56 @@ class DigitalCellSorter(VisualizationFunctions):
 
         return
 
+    def loadAnnotatedLabels(self, detailed = False, includeLowQC = True):
+
+        '''Load cell annotations resulted from function 'annotate'
+
+        Parameters: 
+            detailed: boolean, Default False
+                Whether to give cluster- or celltype- resolution data
+
+            includeLowQC: boolean, Default False
+                Whether to include low quality cells in the output
+
+        Returns:
+            pandas.Series
+
+        Usage:
+            DCS = DigitalCellSorter.DigitalCellSorter()
+
+            DCS.loadAnnotatedLabels()
+        '''
+
+        if self.KeyInFile('df_markers_expr', self.fileHDFpath):
+            try:
+                se = pd.read_hdf(self.fileHDFpath, key='df_markers_expr', mode='r').T.reset_index().set_index('cell')['label']
+            except:
+                print('Error reading annotation results', flush=True)
+
+                return
+
+            if not detailed:
+                se = se.str.split(' #', expand=True)[0]
+
+        else:
+            print('Annotation results not found', flush=True)
+
+            return
+
+        if includeLowQC:
+            if self.KeyInFile('df_projection_pre_QC', self.fileHDFpath):
+                allCells = pd.read_hdf(self.fileHDFpath, key='df_projection_pre_QC', mode='r').columns.get_level_values('cell')
+            elif self.KeyInFile('df_projection', self.fileHDFpath):
+                allCells = pd.read_hdf(self.fileHDFpath, key='df_projection', mode='r').columns.get_level_values('cell')
+            else:
+                print('Labelled data not found', flush=True)
+
+                return
+
+            se = se.reindex(allCells, fill_value=self.nameForLowQC)
+
+        return se
+    
     def loadExpressionData(self):
 
         '''Load processed expression data from the internal HDF storage.
@@ -2530,6 +2716,9 @@ class DigitalCellSorter(VisualizationFunctions):
 
         Parameters:
             method: str, Default 'COMBAT'
+                Stein, C.K., Qu, P., Epstein, J. et al. Removing batch effects from purified 
+                plasma cell gene expression microarrays with modified ComBat. 
+                BMC Bioinformatics 16, 63 (2015)
 
         Returns:
             None
@@ -2537,7 +2726,7 @@ class DigitalCellSorter(VisualizationFunctions):
         Usage:
             DCS = DigitalCellSorter.DigitalCellSorter()
 
-            DCS.qualityControl()
+            DCS.batchEffectCorrection()
         '''
 
         if method == 'COMBAT':

@@ -1,5 +1,5 @@
-**Voting Results Matrix plot**
-==============================
+**Annotation Results Matrix plot**
+==================================
 
 This visualization function can be launched from `class DigitalCellSorter` at the stage of post-processing.
 
@@ -10,7 +10,7 @@ From submodule `VisualizationFunctions`:
 .. autoclass:: DigitalCellSorter.VisualizationFunctions.VisualizationFunctions
     :noindex:
 
-    .. automethod:: makeVotingResultsMatrixPlot
+    .. automethod:: makeAnnotationResultsMatrixPlot
 
 
 **Example output:**

@@ -13,7 +13,7 @@ setup(
     name='DigitalCellSorter',
     packages=find_packages(),
     version='1.2.3',
-    description='Toolkit for analysis and identification of hematological cell types from heterogeneous single cell RNA-seq data',
+    description='Toolkit for analysis and identification of cell types from heterogeneous single cell RNA-seq data',
     long_description_content_type="text/markdown",
     long_description=long_description,
     include_package_data=True,
@@ -49,6 +49,9 @@ setup(
         'pynndescent>=0.3.3',
         'networkx>=2.3',
         'python-louvain>=0.13',
+        'adjustText>=0.7.3',
+        'umap-learn>=0.3.10',
+        'phate>=1.0.3',
         'fitsne>=1.0.1; platform_system=="Linux" or platform_system=="Darwin"'],
     zip_safe=False
 )

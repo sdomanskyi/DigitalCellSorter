@@ -18,9 +18,9 @@ User functions from **DigitalCellSorter.core.DigitalCellSorter** class.
 
         DCS.process(DCS.prepare(data))
 
-        DCS.getIndividualGeneExpressionPlot('CCL5')
+        DCS.makeIndividualGeneExpressionPlot('CCL5')
 
-        DCS.getIndividualGeneTtestPlot('CCL5', analyzeBy='celltype')
+        DCS.makeIndividualGeneTtestPlot('CCL5', analyzeBy='celltype')
 
         cells = DCS.getCells(celltype='T cell')
         DCS.makeAnomalyScoresPlot(cells)
@@ -65,7 +65,7 @@ correction, dimensionality reduction, clustering and cell type annotation.
      clean
      project
      cluster
-     vote
+     annotate
      process
      visualize
 
@@ -143,9 +143,9 @@ correction, dimensionality reduction, clustering and cell type annotation.
 
     .. container:: header
 
-       **Function** ``vote()``: produce cluster voting results
+       **Function** ``annotate()``: produce cluster voting results
 
-    .. automethod:: DigitalCellSorter.core.DigitalCellSorter.vote
+    .. automethod:: DigitalCellSorter.core.DigitalCellSorter.annotate
      	:noindex:
 
 |
@@ -282,14 +282,14 @@ correction, dimensionality reduction, clustering and cell type annotation.
 
 .. currentmodule:: DigitalCellSorter.core.DigitalCellSorter
 .. autosummary:: 
-     getProjectionPlotAnnotated
-     getProjectionPlotByBatches
-     getProjectionPlotByClusters
-     getProjectionPlotsQC
-     getMarkerSubplots
-     getAnomalyScoresPlot
-     getIndividualGeneTtestPlot
-     getIndividualGeneExpressionPlot
+     makeProjectionPlotAnnotated
+     makeProjectionPlotByBatches
+     makeProjectionPlotByClusters
+     makeProjectionPlotsQualityControl
+     makeMarkerSubplots
+     makeAnomalyScoresPlot
+     makeIndividualGeneTtestPlot
+     makeIndividualGeneExpressionPlot
 
 **References to VisualizationFunctions class:**
 
@@ -297,7 +297,7 @@ correction, dimensionality reduction, clustering and cell type annotation.
 .. autosummary:: 
      makeQualityControlHistogramPlot
      makeHistogramNullDistributionPlot
-     makeVotingResultsMatrixPlot
+     makeAnnotationResultsMatrixPlot
      makeMarkerExpressionPlot
      makeStackedBarplot
      makeSankeyDiagram
@@ -307,9 +307,9 @@ correction, dimensionality reduction, clustering and cell type annotation.
 
     .. container:: header
 
-       **Function** ``getProjectionPlotAnnotated()``: Produce t-SNE plot colored by cell types
+       **Function** ``makeProjectionPlotAnnotated()``: Produce t-SNE plot colored by cell types
 
-    .. automethod:: DigitalCellSorter.core.DigitalCellSorter.getProjectionPlotAnnotated
+    .. automethod:: DigitalCellSorter.core.DigitalCellSorter.makeProjectionPlotAnnotated
      	:noindex:
 
 Example output:
@@ -328,9 +328,9 @@ Example output:
 
     .. container:: header
 
-       **Function** ``getProjectionPlotByBatches()``: Produce t-SNE plot colored by batches
+       **Function** ``makeProjectionPlotByBatches()``: Produce t-SNE plot colored by batches
 
-    .. automethod:: DigitalCellSorter.core.DigitalCellSorter.getProjectionPlotByBatches
+    .. automethod:: DigitalCellSorter.core.DigitalCellSorter.makeProjectionPlotByBatches
      	:noindex:
 
 Example output:
@@ -349,9 +349,9 @@ Example output:
 
     .. container:: header
 
-       **Function** ``getProjectionPlotByClusters()``: Produce t-SNE plot colored by clusters
+       **Function** ``makeProjectionPlotByClusters()``: Produce t-SNE plot colored by clusters
 
-    .. automethod:: DigitalCellSorter.core.DigitalCellSorter.getProjectionPlotByClusters
+    .. automethod:: DigitalCellSorter.core.DigitalCellSorter.makeProjectionPlotByClusters
      	:noindex:
 
 Example output:
@@ -414,9 +414,9 @@ Example output:
 
     .. container:: header
 
-       **Function** ``getProjectionPlotsQC()``: Produce Quality Control t-SNE plots
+       **Function** ``makeProjectionPlotsQualityControl()``: Produce Quality Control t-SNE plots
 
-    .. automethod:: DigitalCellSorter.core.DigitalCellSorter.getProjectionPlotsQC
+    .. automethod:: DigitalCellSorter.core.DigitalCellSorter.makeProjectionPlotsQualityControl
      	:noindex:
 
 Example output:
@@ -467,9 +467,9 @@ Example output:
 
     .. container:: header
 
-       **Function** ``getMarkerSubplots()``: Produce subplots on each marker and its expression on all clusters
+       **Function** ``makeMarkerSubplots()``: Produce subplots on each marker and its expression on all clusters
 
-    .. automethod:: DigitalCellSorter.core.DigitalCellSorter.getMarkerSubplots
+    .. automethod:: DigitalCellSorter.core.DigitalCellSorter.makeMarkerSubplots
      	:noindex:
 
 Example output:
@@ -502,9 +502,9 @@ Example output:
 
     .. container:: header
 
-       **Function** ``getAnomalyScoresPlot()``: Make anomaly scores plot
+       **Function** ``makeAnomalyScoresPlot()``: Make anomaly scores plot
 
-    .. automethod:: DigitalCellSorter.core.DigitalCellSorter.getAnomalyScoresPlot
+    .. automethod:: DigitalCellSorter.core.DigitalCellSorter.makeAnomalyScoresPlot
      	:noindex:
 
 Example output:
@@ -559,9 +559,9 @@ Example output:
 
     .. container:: header
 
-       **Function** ``getIndividualGeneTtestPlot()``: Produce individual gene t-test plot of the two-tailed p-value
+       **Function** ``makeIndividualGeneTtestPlot()``: Produce individual gene t-test plot of the two-tailed p-value
 
-    .. automethod:: DigitalCellSorter.core.DigitalCellSorter.getIndividualGeneTtestPlot
+    .. automethod:: DigitalCellSorter.core.DigitalCellSorter.makeIndividualGeneTtestPlot
      	:noindex:
 
 Example output:
@@ -580,9 +580,9 @@ Example output:
 
     .. container:: header
 
-       **Function** ``getIndividualGeneExpressionPlot()``: Produce individual gene expression plot on a 2D layout
+       **Function** ``makeIndividualGeneExpressionPlot()``: Produce individual gene expression plot on a 2D layout
 
-    .. automethod:: DigitalCellSorter.core.DigitalCellSorter.getIndividualGeneExpressionPlot
+    .. automethod:: DigitalCellSorter.core.DigitalCellSorter.makeIndividualGeneExpressionPlot
      	:noindex:
 
 Example output:
@@ -622,9 +622,9 @@ Example output:
 
     .. container:: header
 
-       **Function** ``makeVotingResultsMatrixPlot()``: Produce voting results voting matrix plot
+       **Function** ``makeAnnotationResultsMatrixPlot()``: Produce voting results voting matrix plot
 
-    .. automethod:: DigitalCellSorter.core.DigitalCellSorter.makeVotingResultsMatrixPlot
+    .. automethod:: DigitalCellSorter.core.DigitalCellSorter.makeAnnotationResultsMatrixPlot
      	:noindex:
 
 Example output:
