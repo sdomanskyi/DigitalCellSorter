@@ -1223,7 +1223,7 @@ class VisualizationFunctions:
         if not title is None:
             fig.update_layout(title_text=title, font_size=10)
 
-        fig.write_image(os.path.join(self.saveDir, self.dataName + nameAppend + '.png'), width=600, height=600, scale=quality)
+        fig.write_image(os.path.join(self.saveDir, self.dataName + nameAppend + '.png'), width=500, height=500, scale=quality)
 
         if interactive:
             fig.show()
@@ -1274,13 +1274,19 @@ class VisualizationFunctions:
 
         for i, celltype in enumerate(celltypes):
             if celltype in df_marker_cell_type.columns:
-                known_markers = df_marker_cell_type[celltype][df_marker_cell_type[celltype] > 0].index.values
+                known_markers = df_marker_cell_type[celltype][df_marker_cell_type[celltype] > 0.].index.values
                 xy = np.array([np.array([np.where(genes == marker)[0][0], i]) for marker in known_markers if marker in genes])
-                print('Overlapping markers of %s: %s (%s)' % (celltype, len(xy), len(known_markers)))
+                print('Overlapping positive markers of %s: %s (%s)' % (celltype, len(xy), len(known_markers)))
                 if len(xy) > 0:
-                    ax.plot(xy.T[0], xy.T[1], 'ro', ms=0.5)
+                    ax.plot(xy.T[0], xy.T[1], 'go', markeredgecolor='r', ms=1.0, markeredgewidth=0.2)
 
-        ax.set_title('Additional markers along with the overlapping part of the input (red)')
+                known_markers = df_marker_cell_type[celltype][df_marker_cell_type[celltype] < 0.].index.values
+                xy = np.array([np.array([np.where(genes == marker)[0][0], i]) for marker in known_markers if marker in genes])
+                print('Overlapping negative markers of %s: %s (%s)' % (celltype, len(xy), len(known_markers)))
+                if len(xy) > 0:
+                    ax.plot(xy.T[0], xy.T[1], 'ro', markeredgecolor='r', ms=1.0, markeredgewidth=0.2)
+
+        #ax.set_title('Additional markers along with the overlapping part of the input (red)')
         fig.savefig(os.path.join(self.saveDir, self.dataName + '_new_markers.png'), dpi=600)
 
         plt.close(fig)

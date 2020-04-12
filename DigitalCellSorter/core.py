@@ -24,6 +24,7 @@ import os
 import platform
 import copy
 import multiprocessing
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -193,7 +194,8 @@ class DigitalCellSorter(VisualizationFunctions):
                 clusteringFunction = AgglomerativeClustering, nComponentsPCA = 200, nSamples_pDCS = 3 * 10 ** 3,  nSamples_Hopfield = 500,
                 saveDir = os.path.join(''), makeMarkerSubplots = False, availableCPUsCount = min(12, os.cpu_count()), zScoreCutoff = 0.3,
                 subclusteringName = None, doQualityControl = True, doBatchCorrection = True, makePlots = True,
-                minimumNumberOfMarkersPerCelltype = 10, nameForUnknown = 'Unassigned', nameForLowQC = "Failed QC", 
+                minimumNumberOfMarkersPerCelltype = 10, nameForUnknown = 'Unassigned', nameForLowQC = 'Failed QC', 
+                countDepthCutoffQC = 0.5, numberOfGenesCutoffQC = 0.5, mitochondrialGenesCutoffQC = 1.5, excludedFromQC = None,
                 thresholdForUnknown_pDCS = 0., thresholdForUnknown_ratio = 0., thresholdForUnknown_Hopfield = 0., thresholdForUnknown = 0.2, 
                 layout = 'TSNE', HopfieldTemperature = 0.1, annotationMethod = 'ratio-pDCS-Hopfield'):
 
@@ -203,26 +205,26 @@ class DigitalCellSorter(VisualizationFunctions):
                                                                             'pickledGeneConverterDict', 
                                                                             'ensembl_hugo_entrez_alias_dict.pythdat'))
 
-        defaultGeneList = 'CIBERSORT' # 'CIBERSORT' 'markersDCS'
-
+        self.dataName = dataName
         self.saveDir = saveDir
 
-        if self.saveDir != os.path.join('') and not os.path.exists(self.saveDir):
-            os.makedirs(self.saveDir)
-
-        self.dataName = dataName
-
-        self.fileHDFpath = os.path.join(self.saveDir, self.dataName + '_processed.h5')
-
-        self.df_expr = df_expr
+        if not df_expr is None:
+            self.prepare(df_expr)
+        else:
+            self._df_expr = None
+        
+        self.defaultGeneListFileName = 'CIBERSORT_LM22'
+        self.defaultGeneListsDir = os.path.join(os.path.dirname(__file__), 'geneLists')
+        self.geneListFileName = geneListFileName
+        self.mitochondrialGenes = mitochondrialGenes
 
         self.geneNamesType = geneNamesType
-        
-        self.defualtGeneListsDir = os.path.join(os.path.dirname(__file__), 'geneLists')
 
-        self.geneListFileName = os.path.join(self.defualtGeneListsDir, defaultGeneList + '.xlsx') if geneListFileName is None else geneListFileName
+        self.countDepthCutoffQC = countDepthCutoffQC
+        self.numberOfGenesCutoffQC = numberOfGenesCutoffQC
+        self.mitochondrialGenesCutoffQC = mitochondrialGenesCutoffQC
 
-        self.mitochondrialGenes = mitochondrialGenes
+        self.excludedFromQC = excludedFromQC
 
         self.sigmaOverMeanSigma = sigmaOverMeanSigma
         self.nClusters = nClusters
@@ -256,8 +258,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         self.subclusteringName = subclusteringName
 
-        self.toggleRecordAllExpression = True
-
+        self.doQualityControl = doQualityControl
         self.toggleRemoveLowQualityCells = doQualityControl
         self.toggleDoBatchCorrection = doBatchCorrection
 
@@ -269,6 +270,7 @@ class DigitalCellSorter(VisualizationFunctions):
         self.toggleMakeProjectionPlotAnnotatedClusters = makePlots
         self.toggleMakeProjectionPlotBatches = makePlots
         self.toggleMakeStackedBarplot = makePlots
+
         self.toggleAnomalyScoresProjectionPlot = False
 
         self.toggleGetMarkerSubplots = makeMarkerSubplots
@@ -276,6 +278,84 @@ class DigitalCellSorter(VisualizationFunctions):
         super().__init__(saveDir=saveDir, dataName=dataName)
 
         return None
+    
+    @property
+    def saveDir(self):
+
+        return self._saveDir
+
+    @saveDir.setter
+    def saveDir(self, value):
+
+        self._saveDir = value
+
+        if self.saveDir != os.path.join('') and not os.path.exists(self.saveDir):
+            os.makedirs(self.saveDir)
+
+        self._fileHDFpath = os.path.join(self.saveDir, self.dataName + '_processed.h5')
+
+        return
+
+    @property
+    def fileHDFpath(self):
+
+        return self._fileHDFpath
+    
+    @fileHDFpath.setter
+    def fileHDFpath(self, value):
+
+        warnings.warn("Direct change of HDF file path is not allowed. " + 
+                      "Modify 'saveDir' in order to change 'fileHDFpath'", UserWarning)
+
+        return
+
+    @property
+    def df_expr(self):
+
+        if self._df_expr is None:
+
+            print('Expression data is not assigned')
+
+        return self._df_expr
+    
+    @df_expr.setter
+    def df_expr(self, value):
+
+        if value is None:
+            self._df_expr = value
+        else:
+            warnings.warn("Direct change of 'df_expr' is not allowed. " + 
+                          "Use function 'prepare' in order to set 'df_expr' " +
+                          "or, alternatively, initialize class instance with 'df_expr'. " +
+                          "'df_expr' can be removed by assigning None to it", UserWarning)
+
+        return
+
+    @property
+    def geneListFileName(self):
+
+        return self._geneListFileName
+
+    @geneListFileName.setter
+    def geneListFileName(self, value):
+
+        if value is None:
+            self._geneListFileName = os.path.join(self.defaultGeneListsDir, self.defaultGeneListFileName + '.xlsx')
+        else:
+            if os.path.isfile(value):
+                self._geneListFileName = value
+            else:
+                if os.path.isfile(os.path.join(self.defaultGeneListsDir, value + '.xlsx')):
+                    self._geneListFileName = os.path.join(self.defaultGeneListsDir, value + '.xlsx')
+                else:
+                    print('Gene list file not found. Uning default list: %s'%(self.defaultGeneListFileName), flush=True)
+
+                    self._geneListFileName = os.path.join(self.defaultGeneListsDir, self.defaultGeneListFileName + '.xlsx')
+
+        return
+
+
+
 
     # Primary functions of class #######################################################
     def prepare(self, obj):
@@ -318,7 +398,9 @@ class DigitalCellSorter(VisualizationFunctions):
 
             obj = obj.unstack(level='gene').T
 
-            self.df_expr = obj
+            self._df_expr = obj
+
+            print('Done', flush=True)
 
             return None
 
@@ -344,7 +426,9 @@ class DigitalCellSorter(VisualizationFunctions):
 
             obj.columns = pd.MultiIndex.from_arrays([batch, obj.columns.get_level_values('cell')], names=['batch', 'cell'])
 
-            self.df_expr = obj
+            self._df_expr = obj
+
+            print('Done', flush=True)
 
             return None
 
@@ -373,9 +457,11 @@ class DigitalCellSorter(VisualizationFunctions):
                     print('The column with "batch" identifiers is not found. Assuming one batch in the data', flush=True)
                     df_expr['batch'] = np.array(['batch0'] * len(df_expr))
 
-                df_expr = df_expr.set_index(['batch', 'cell', 'gene'])['expr'].unstack(level='gene').T
+                self._df_expr = df_expr.set_index(['batch', 'cell', 'gene'])['expr'].unstack(level='gene').T
 
-                return df_expr
+                print('Done', flush=True)
+
+                return None
             else:
                 print('Received data in a form of matrix. Reading data', flush=True)
                 df_expr = pd.read_csv(obj, header=None, index_col=0)
@@ -394,7 +480,9 @@ class DigitalCellSorter(VisualizationFunctions):
 
                 df_expr.index.name = 'gene'
 
-                self.df_expr = df_expr
+                self._df_expr = df_expr
+
+                print('Done', flush=True)
 
                 return None
         else:
@@ -431,15 +519,15 @@ class DigitalCellSorter(VisualizationFunctions):
 
         if nameTo == 'hugo' and nameFrom == 'alias':
             reversed = self.createReverseDictionary(self.gnc.conversionDict[nameTo][nameFrom])
-            self.df_expr.index = [reversed[gene][0] if (gene in reversed.keys()) else gene for gene in self.df_expr.index]
+            self._df_expr.index = [reversed[gene][0] if (gene in reversed.keys()) else gene for gene in self._df_expr.index]
         else:
-            self.df_expr.index = self.gnc.Convert(list(self.df_expr.index), nameFrom, nameTo, returnUnknownString=False)
+            self._df_expr.index = self.gnc.Convert(list(self._df_expr.index), nameFrom, nameTo, returnUnknownString=False)
 
-        len_total, len_unique = len(self.df_expr.index), len(np.unique(self.df_expr.index))
+        len_total, len_unique = len(self._df_expr.index), len(np.unique(self._df_expr.index))
         if len_total != len_unique:
-            unique_items = np.unique(self.df_expr.index, return_counts=True)
-            #self.df_expr = self.df_expr.loc[~self.df_expr.index.duplicated(keep='first')]
-            self.df_expr = self.df_expr.groupby(level=0, axis=0).sum()
+            unique_items = np.unique(self._df_expr.index, return_counts=True)
+            #self._df_expr = self._df_expr.loc[~self._df_expr.index.duplicated(keep='first')]
+            self._df_expr = self._df_expr.groupby(level=0, axis=0).sum()
             print('Merged %s duplicated items in the index of size %s' % (len_total - len_unique, len_total), flush=True)
             print(unique_items[0][unique_items[1] > 1], flush=True)
 
@@ -463,19 +551,19 @@ class DigitalCellSorter(VisualizationFunctions):
         '''
 
         # Replace any NaN(s) with zeros.
-        self.df_expr.fillna(0.0, inplace=True)
-        print('Replaced missing values with zeros. Data size: %s genes, %s cells' % self.df_expr.shape, flush=True)
+        self._df_expr.fillna(0.0, inplace=True)
+        print('Replaced missing values with zeros. Data size: %s genes, %s cells' % self._df_expr.shape, flush=True)
 
         # Check is any names in the index are duplicated, remove duplicates
-        self.df_expr = self.mergeIndexDuplicates(self.df_expr) 
+        self._df_expr = self.mergeIndexDuplicates(self._df_expr) 
 
         # Keep only cells with at least one expressed gene.
-        self.df_expr = self.df_expr.T[self.df_expr.sum(axis=0) > 0].T
-        print('Removed all-zero cells. Data size: %s genes, %s cells' % self.df_expr.shape, flush=True)
+        self._df_expr = self._df_expr.T[self._df_expr.sum(axis=0) > 0].T
+        print('Removed all-zero cells. Data size: %s genes, %s cells' % self._df_expr.shape, flush=True)
 
         # Keep only genes expressed in at least one cell.
-        self.df_expr = self.df_expr[self.df_expr.sum(axis=1) > 0]
-        print('Removed all-zero genes. Data size: %s genes, %s cells' % self.df_expr.shape, flush=True)
+        self._df_expr = self._df_expr[self._df_expr.sum(axis=1) > 0]
+        print('Removed all-zero genes. Data size: %s genes, %s cells' % self._df_expr.shape, flush=True)
 
         return None
 
@@ -498,32 +586,32 @@ class DigitalCellSorter(VisualizationFunctions):
         '''
 
         # Scale all cells.
-        median = np.median(np.sum(self.df_expr,axis=0)).astype(float) if median is None else median
+        median = np.median(np.sum(self._df_expr,axis=0)).astype(float) if median is None else median
         print('Rescaling all cells by "sum of values = %s".' % (median), flush=True)
-        self.df_expr = self.df_expr.apply(lambda q: q * median / np.sum(q),axis=0)
+        self._df_expr = self._df_expr.apply(lambda q: q * median / np.sum(q),axis=0)
 
         print('Log-transforming data.', flush=True)
         # Replace zeros with minimum value.
-        MIN = np.min(self.df_expr.values[self.df_expr.values > 0.])
+        MIN = np.min(self._df_expr.values[self._df_expr.values > 0.])
         if MIN <= 0.:
             raise ValueError
-        self.df_expr = self.df_expr.replace(0., MIN)
+        self._df_expr = self._df_expr.replace(0., MIN)
 
         # Take log2 of expression.
-        self.df_expr = np.log2(self.df_expr)
-        self.df_expr -= np.min(self.df_expr.values)
+        self._df_expr = np.log2(self._df_expr)
+        self._df_expr -= np.min(self._df_expr.values)
 
         # Keep only genes expressed in at least one cell.
-        self.df_expr = self.df_expr[self.df_expr.sum(axis=1) > 0]
-        print('Removed all-zero genes. Data size: %s genes, %s cells' % self.df_expr.shape, flush=True)  
+        self._df_expr = self._df_expr[self._df_expr.sum(axis=1) > 0]
+        print('Removed all-zero genes. Data size: %s genes, %s cells' % self._df_expr.shape, flush=True)  
 
         if not self.sigmaOverMeanSigma is None:
             # Keep only those genes with large enough standard deviation.
-            self.df_expr = self.df_expr[np.std(self.df_expr, axis=1) / np.mean(np.std(self.df_expr.values)) > self.sigmaOverMeanSigma]
-            print('Removed constant genes. Data size: %s genes, %s cells' % self.df_expr.shape, flush=True)
+            self._df_expr = self._df_expr[np.std(self._df_expr, axis=1) / np.mean(np.std(self._df_expr.values)) > self.sigmaOverMeanSigma]
+            print('Removed constant genes. Data size: %s genes, %s cells' % self._df_expr.shape, flush=True)
 
         # Sort rows by gene name
-        self.df_expr = self.df_expr.sort_index()
+        self._df_expr = self._df_expr.sort_index()
 
         return None
     
@@ -551,16 +639,16 @@ class DigitalCellSorter(VisualizationFunctions):
 
         print('Preparing xpca, PCs, 2D projection of df_expr', flush=True)
 
-        print('Performing PC projection from %s to %s features...' % (self.df_expr.shape[0], self.nComponentsPCA), flush=True)
+        print('Performing PC projection from %s to %s features...' % (self._df_expr.shape[0], self.nComponentsPCA), flush=True)
         _PCA = PCA(n_components=self.nComponentsPCA)
 
-        idx = np.argsort(np.var(self.df_expr.values.T, axis=0) / np.mean(self.df_expr.values.T, axis=0))[-2000:]
-        X_pca = _PCA.fit_transform(self.df_expr.values.T[:, idx]).T
+        idx = np.argsort(np.var(self._df_expr.values.T, axis=0) / np.mean(self._df_expr.values.T, axis=0))[-2000:]
+        X_pca = _PCA.fit_transform(self._df_expr.values.T[:, idx]).T
 
         print('Explained variance:', np.round(np.sum(_PCA.explained_variance_ratio_) * 100., 2), "%", flush=True)
         
         print('Recording xpca, PCs, 2D projection of df_expr', flush=True)
-        pd.DataFrame(data=X_pca, columns=self.df_expr.columns).to_hdf(self.fileHDFpath, key='df_xpca', mode='a', complevel=4, complib='zlib')
+        pd.DataFrame(data=X_pca, columns=self._df_expr.columns).to_hdf(self.fileHDFpath, key='df_xpca', mode='a', complevel=4, complib='zlib')
         pd.DataFrame(data=_PCA.components_).to_hdf(self.fileHDFpath, key='df_pcs', mode='a', complevel=4, complib='zlib')
 
         if not PCAonly:
@@ -595,7 +683,7 @@ class DigitalCellSorter(VisualizationFunctions):
                 X_projection2 = phate.PHATE().fit_transform(X_pca.T).T
 
             print('Recording 2D projection of df_expr', flush=True)
-            pd.DataFrame(data=X_projection2, columns=self.df_expr.columns).to_hdf(self.fileHDFpath, key='df_projection_pre_QC' if self.toggleRemoveLowQualityCells else 'df_projection', mode='a', complevel=4, complib='zlib')
+            pd.DataFrame(data=X_projection2, columns=self._df_expr.columns).to_hdf(self.fileHDFpath, key='df_projection_pre_QC' if self.toggleRemoveLowQualityCells else 'df_projection', mode='a', complevel=4, complib='zlib')
 
             return X_pca, _PCA.components_, X_projection2
 
@@ -644,7 +732,7 @@ class DigitalCellSorter(VisualizationFunctions):
             except:
                 clusterExpression = False
 
-            data = self.df_expr.values.T if clusterExpression else X_pca.T
+            data = self._df_expr.values.T if clusterExpression else X_pca.T
 
             print('Searching for %s nearest neighbors' % (k_neighbors), flush=True)
             knn = pynndescent.NNDescent(data, metric=metric, n_neighbors=k_neighbors).query(data, k=k_neighbors)
@@ -693,12 +781,12 @@ class DigitalCellSorter(VisualizationFunctions):
 
                 cellClusterIndex = fineCellClusterIndex
 
-        df_clusters = pd.DataFrame(data=cellClusterIndex, index=self.df_expr.columns)
+        df_clusters = pd.DataFrame(data=cellClusterIndex, index=self._df_expr.columns)
         df_clusters.columns = ['cluster']
 
         df_clusters.to_hdf(self.fileHDFpath, key='df_clusters', mode='a', complevel=4, complib='zlib')
 
-        self.df_expr = pd.concat([df_clusters, self.df_expr.T], sort=False, axis=1).reset_index().set_index(['batch', 'cell', 'cluster']).T
+        self._df_expr = pd.concat([df_clusters, self._df_expr.T], sort=False, axis=1).reset_index().set_index(['batch', 'cell', 'cluster']).T
 
         return
     
@@ -726,15 +814,15 @@ class DigitalCellSorter(VisualizationFunctions):
 
         self.loadExpressionData()
 
-        if self.df_expr is None:
+        if self._df_expr is None:
 
             return
 
-        self.prepareMarkers(expressedGenes=self.df_expr.index if mapNonexpressedCelltypes else None)
+        self.prepareMarkers(expressedGenes=self._df_expr.index if mapNonexpressedCelltypes else None)
 
         df_marker_cell_type = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_marker_cell_type', mode='r')
 
-        df_markers_expr = self.df_expr.loc[self.df_expr.index.intersection(df_marker_cell_type.index)]
+        df_markers_expr = self._df_expr.loc[self._df_expr.index.intersection(df_marker_cell_type.index)]
         print('Selected genes common with the marker list. Data shape:', df_markers_expr.shape, flush=True)
 
         methodsToUse = self.annotationMethod.split('-')
@@ -825,21 +913,26 @@ class DigitalCellSorter(VisualizationFunctions):
         # Convert index to hugo names, clean data
         if not dataIsNormalized:
             self.convert()
-            self.clean()
+        
+        self.clean()
         
         # Calculate QC measures
-        self.calculateQCmeasures()
+        if self.doQualityControl:
+            self.calculateQCmeasures()
 
         # Normalize and then correct for batch effects
         if not dataIsNormalized:
             self.normalize()
-            self.batchEffectCorrection()
+
+            if self.toggleDoBatchCorrection:
+                self.batchEffectCorrection()
 
         # Calculate PCA and 2D projection
         self.project()
 
         # Remove low quality cells
-        self.qualityControl()
+        if self.doQualityControl:
+            self.qualityControl()
 
         # Cluster data, append cluster index to expression DataFrame
         self.cluster()
@@ -891,7 +984,7 @@ class DigitalCellSorter(VisualizationFunctions):
         ##############################################################################################
         # Make 2D projection plots
         ##############################################################################################
-        if self.toggleMakeProjectionPlotsQC:
+        if self.toggleMakeProjectionPlotsQC and self.doQualityControl:
             self.makeProjectionPlotsQualityControl()
 
         if self.toggleMakeProjectionPlotClusters:
@@ -978,7 +1071,17 @@ class DigitalCellSorter(VisualizationFunctions):
 
         df_projection = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_projection', mode='r')
 
-        self.makeProjectionPlot(df_projection.values, df_projection.columns.get_level_values('batch').values, 'by_patients')
+        batches = df_projection.columns.get_level_values('batch').values
+
+        #uniqueBatches = np.unique(batches)
+        #wh1 = np.where(batches == uniqueBatches[0])
+        #wh2 = np.where(batches == uniqueBatches[1])
+        #wh3 = np.where(batches == uniqueBatches[2])
+        #batches[wh1] = 'BM1'
+        #batches[wh2] = 'BM2'
+        #batches[wh3] = 'BM3'
+
+        self.makeProjectionPlot(df_projection.values, batches, 'by_patients', labels=False, legend=True)
 
         return None
     
@@ -1121,7 +1224,7 @@ class DigitalCellSorter(VisualizationFunctions):
             gene: str
                 Name of gene of interest
 
-            analyzeBy: str, Default 'cluster'
+            analyzeBy: str, Default 'label'
                 What level of lablels to include.
                 Other possible options are 'label' and 'celltype'
 
@@ -1226,10 +1329,12 @@ class DigitalCellSorter(VisualizationFunctions):
             cutoff = DCS.getAnomalyScores(df_expr.iloc[:, 5:], df_expr.iloc[:, :5])
         '''
 
-        instanceIsolationForest = IsolationForest(behaviour='new',
-                                                  max_samples=np.min([trainingSet.shape[1] - 1, 100]), 
+        print('Calculating anomaly scores of the selected cells', flush=True)
+
+        instanceIsolationForest = IsolationForest(max_samples=np.min([trainingSet.shape[1] - 1, 100]), 
                                                   random_state=np.random.RandomState(None), 
-                                                  contamination='auto')
+                                                  contamination='auto',
+                                                  behaviour="new")
 
         instanceIsolationForest.fit(trainingSet.values.T)
 
@@ -1351,7 +1456,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         Parameters:
             cells: pandas.MultiIndex
-                Index of cells of interest
+                2-level Index of cells of interest, must include levels 'batch' and 'cell'
 
         Returns:
             pandas.DataFrame
@@ -1365,12 +1470,18 @@ class DigitalCellSorter(VisualizationFunctions):
             DCS.getExprOfCells(cells)
         '''
 
-        df_expr = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_expr', mode='r')
-        df_expr.index.names = ['batch', 'cell', 'gene']
-        df_expr = df_expr.unstack(level='gene', fill_value=0).T
-        df_expr.index = df_expr.index.get_level_values('gene')
+        if self._df_expr is None:
+            self.loadExpressionData()
 
-        return df_expr[cells]
+        index = pd.MultiIndex.from_arrays([self._df_expr.columns.get_level_values('batch'), 
+                                   self._df_expr.columns.get_level_values('cell') ], names=['batch', 'cell'])
+
+        if cells.reindex(index)[1] is None:
+            print('Selected expression of all cells')
+
+            return self.df_expr
+
+        return self._df_expr[self._df_expr.columns[cells.reindex(index)[1] > -1]]
 
     def getCells(self, celltype = None, clusterIndex = None, clusterName = None):
 
@@ -1453,7 +1564,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         return selectedCells
 
-    def getIndexOfGoodQualityCells(self, count_depth_cutoff = 0.5, number_of_genes_cutoff = 0.5, mitochondrial_genes_cutoff_upper_bound = 3.0):
+    def getIndexOfGoodQualityCells(self):
 
         '''Get index of sells that satisfy the QC criteria
 
@@ -1479,15 +1590,18 @@ class DigitalCellSorter(VisualizationFunctions):
 
         df_QC = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='QC', mode='r')
 
+        if not self.excludedFromQC is None:
+            df_QC = df_QC.loc[df_QC.index.difference(self.excludedFromQC)]
+
         plotsDir = os.path.join(self.saveDir, 'QC_plots', '')
 
         if not os.path.exists(plotsDir):
             os.makedirs(plotsDir)
 
         # Calculate cutoffs
-        cutoff_count_depth = self.getQualityControlCutoff(df_QC['count_depth'], count_depth_cutoff, plotPathAndName=os.path.join(plotsDir, '%s_count_depth' % (self.dataName)), MakeHistogramPlot=True)
-        cutoff_number_of_genes = self.getQualityControlCutoff(df_QC['number_of_genes'], number_of_genes_cutoff, plotPathAndName=os.path.join(plotsDir, '%s_number_of_genes' % (self.dataName)), MakeHistogramPlot=True)
-        cutoff_fraction_of_mitochondrialGenes = self.getQualityControlCutoff(df_QC['fraction_of_mitochondrialGenes'], mitochondrial_genes_cutoff_upper_bound, plotPathAndName=os.path.join(plotsDir, '%s_fraction_of_mitochondrialGenes' % (self.dataName)), mito=True, MakeHistogramPlot=True)
+        cutoff_count_depth = self.getQualityControlCutoff(df_QC['count_depth'], self.countDepthCutoffQC, plotPathAndName=os.path.join(plotsDir, '%s_count_depth' % (self.dataName)), MakeHistogramPlot=True)
+        cutoff_number_of_genes = self.getQualityControlCutoff(df_QC['number_of_genes'], self.numberOfGenesCutoffQC, plotPathAndName=os.path.join(plotsDir, '%s_number_of_genes' % (self.dataName)), MakeHistogramPlot=True)
+        cutoff_fraction_of_mitochondrialGenes = self.getQualityControlCutoff(df_QC['fraction_of_mitochondrialGenes'], self.mitochondrialGenesCutoffQC, plotPathAndName=os.path.join(plotsDir, '%s_fraction_of_mitochondrialGenes' % (self.dataName)), mito=True, MakeHistogramPlot=True)
 
         df_QC['isGoodQuality'] = np.zeros(len(df_QC)).astype(bool)
 
@@ -1495,7 +1609,12 @@ class DigitalCellSorter(VisualizationFunctions):
             (df_QC['number_of_genes'] > cutoff_number_of_genes) & \
             (df_QC['fraction_of_mitochondrialGenes'] < cutoff_fraction_of_mitochondrialGenes)
 
-        return df_QC['isGoodQuality'].index[mask].sort_values()
+        index = df_QC['isGoodQuality'].index[mask]
+
+        if not self.excludedFromQC is None:
+            index = pd.concat([pd.Series(index=index), pd.Series(index=self.excludedFromQC)]).index
+
+        return index.sort_values()
 
     def getQualityControlCutoff(self, se, cutoff, mito = False, plotPathAndName = None, MakeHistogramPlot = True):
 
@@ -1544,10 +1663,12 @@ class DigitalCellSorter(VisualizationFunctions):
             x1 = spline_data.T[0][np.where(spline_data.T[0] > median)[0][0]]
             y1 = smoothed[np.where(spline_data.T[0] > median)[0][0]]
 
-            x2 = spline_data.T[0][np.where(spline_data.T[0] > (median + 1.5 * std))[0][0]]
-            y2 = smoothed[np.where(spline_data.T[0] > (median + 1.5 * std))[0][0]]
+            wh = np.where(spline_data.T[0] > (median + cutoff * std))[0][0]
 
-            cutoff = min(median + cutoff * std, x1 - y1 * (x2 - x1) / (y2 - y1))
+            x2 = spline_data.T[0][wh]
+            y2 = smoothed[wh]
+
+            cutoff = min(median + 3. * std, x1 - y1 * (x2 - x1) / (y2 - y1))
         else:
             cutoff = int(cutoff * np.median(subset))
 
@@ -1617,25 +1738,21 @@ class DigitalCellSorter(VisualizationFunctions):
         '''
 
         if zScoreCutoff is None:
+
             zScoreCutoff = self.zScoreCutoff
 
-        if not self.KeyInFile('df_clusters', self.fileHDFpath):
+        if self._df_expr is None:
 
-            print('Clusters key not found in HDF. Execute function process() first')
+            self.loadExpressionData()
 
-            return None
+        if self._df_expr is None:
 
-        print('Loading processed data', flush=True)
-        self.df_expr = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_expr', mode='r').unstack(level=2, fill_value=0).T
-        self.df_expr.index = self.df_expr.index.get_level_values(-1)
+            return
 
-        df_clusters = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_clusters', mode='r')
-        self.df_expr = pd.concat([df_clusters, self.df_expr.T], sort=False, axis=1).reset_index().set_index(['batch', 'cell', 'cluster']).T
-
-        df_gene_cluster_centroids = self.df_expr.groupby(level=['cluster'], sort=True, axis=1).mean()
+        df_gene_cluster_centroids = self._df_expr.groupby(level=['cluster'], sort=True, axis=1).mean()
 
         df_gene_cluster_centroids_merged = pd.DataFrame()
-        df_votingResults = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_voting.xlsx'), sheet_name='z-scores', index_col='cluster')[['# cells in cluster', 'Predicted cell type']]
+        df_votingResults = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_annotation.xlsx'), sheet_name='z-scores', index_col='cluster')[['# cells in cluster', 'Predicted cell type']]
 
         groups = pd.concat([df_votingResults['# cells in cluster'], df_votingResults['Predicted cell type'].str.split(' #', expand=True)[0]], sort=False, axis=1).reset_index().set_index(0).groupby(by=0)
 
@@ -1650,9 +1767,6 @@ class DigitalCellSorter(VisualizationFunctions):
         if not cluster is None:
 
             clusterGenes = df_gene_cluster_centroids[cluster].sort_values(ascending=False)
-            #clusterGenes = pd.read_hdf(os.path.join(self.saveDir, self.dataName +
-            #'_processed.h5'), key='df_gene_cluster_centroids',
-            #mode='r')[cluster].sort_values(ascending=False)
             clusterGenes = clusterGenes[clusterGenes >= zScoreCutoff].iloc[:top]
 
             return {'genes':clusterGenes.index.values.tolist(), 'zscore':clusterGenes.values.tolist()}
@@ -1677,6 +1791,7 @@ class DigitalCellSorter(VisualizationFunctions):
             sel = all[all > 1.0].sort_values()[:top]
             print('Candidates of %s:' % (celltype), len(sel))
             df_new_marker_list = pd.concat([df_new_marker_list, sel], sort=False, axis=1)
+
         df_new_marker_list = df_new_marker_list.fillna(0.).sort_index()
         df_new_marker_list[df_new_marker_list > 0.] = 1.0
 
@@ -1685,7 +1800,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         df_new_marker_list.index.name = 'Marker'
         fileName = os.path.join(self.saveDir, 'new_markers.xlsx')
-        print('Recording voting results to:', fileName)
+        print('Recording results to:', fileName)
         writer = pd.ExcelWriter(fileName)
         df_new_marker_list.to_excel(writer, 'MarkerCellType')
         df_temp = pd.Series(data=df_new_marker_list.columns, index=df_new_marker_list.columns)
@@ -1694,7 +1809,9 @@ class DigitalCellSorter(VisualizationFunctions):
         df_temp.to_excel(writer, 'CellTypesGrouped')
         writer.save()
 
-        df_marker_cell_type = pd.read_excel(os.path.join(self.saveDir, os.path.basename(self.geneListFileName)), index_col=0, header=0)
+        df_marker_cell_type = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_annotation.xlsx'), 
+                                   sheet_name='Marker cell type weight matrix', index_col=0).T
+
         df_new_marker_genes = df_new_marker_genes[df_new_marker_list.index]
 
         self.makePlotOfNewMarkers(df_marker_cell_type, df_new_marker_genes)
@@ -2389,12 +2506,19 @@ class DigitalCellSorter(VisualizationFunctions):
 
         return dict(zip(keys, [GOs[value].tolist() for value in values]))
 
-    def readMarkerFile(self):
+    def readMarkerFile(self, mergeFunction = 'mean', mergeCutoff = 0.25):
 
         '''Read markers file, prepare markers
 
         Parameters: 
-            None
+            mergeCutoff: str, Default 'mean'
+                Function used for grouping of the cell sub-types. Options are:
+                    'mean': average of the values
+                    'max': maxium of the values, effectively a logiacal OR function
+
+            mergeCutoff: float, Default 0.25
+                Values below cutoff are set to zero. 
+                This option is used if mergeCutoff is 'mean'
 
         Returns:
             pandas.DataFrame
@@ -2405,9 +2529,6 @@ class DigitalCellSorter(VisualizationFunctions):
 
             df_marker_cell_type = DCS.readMarkerFile()
         '''
-
-        mergeFunction = 'mean'
-        mergeCutoff = 0.25
 
         df_marker_cell_type = pd.read_excel(self.geneListFileName, index_col=0, header=[0,1]).replace(np.nan, 0.).replace(0, 0.)
         df_marker_cell_type.columns.names = ['CellTypeGrouped', 'CellType']
@@ -2518,11 +2639,11 @@ class DigitalCellSorter(VisualizationFunctions):
 
         print('Recording compressed DataFrame', flush=True)
 
-        self.df_expr.replace(0, np.nan).T.stack().to_frame().to_hdf(self.fileHDFpath, key='df_expr', mode='a', complevel=4, complib='zlib')
+        self._df_expr.replace(0, np.nan).T.stack().to_frame().to_hdf(self.fileHDFpath, key='df_expr', mode='a', complevel=4, complib='zlib')
 
         return
 
-    def loadAnnotatedLabels(self, detailed = False, includeLowQC = True):
+    def loadAnnotatedLabels(self, detailed = False, includeLowQC = True, infoType = 'label'):
 
         '''Load cell annotations resulted from function 'annotate'
 
@@ -2544,7 +2665,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         if self.KeyInFile('df_markers_expr', self.fileHDFpath):
             try:
-                se = pd.read_hdf(self.fileHDFpath, key='df_markers_expr', mode='r').T.reset_index().set_index('cell')['label']
+                se = pd.read_hdf(self.fileHDFpath, key='df_markers_expr', mode='r').T.reset_index().set_index('cell')[infoType]
             except:
                 print('Error reading annotation results', flush=True)
 
@@ -2560,15 +2681,24 @@ class DigitalCellSorter(VisualizationFunctions):
 
         if includeLowQC:
             if self.KeyInFile('df_projection_pre_QC', self.fileHDFpath):
-                allCells = pd.read_hdf(self.fileHDFpath, key='df_projection_pre_QC', mode='r').columns.get_level_values('cell')
+                allCells = pd.read_hdf(self.fileHDFpath, key='df_projection_pre_QC', mode='r').columns
+                allBathes = allCells.get_level_values('batch')
+                allCells = allCells.get_level_values('cell')
             elif self.KeyInFile('df_projection', self.fileHDFpath):
-                allCells = pd.read_hdf(self.fileHDFpath, key='df_projection', mode='r').columns.get_level_values('cell')
+                allCells = pd.read_hdf(self.fileHDFpath, key='df_projection', mode='r').columns
+                allBathes = allCells.get_level_values('batch')
+                allCells = allCells.get_level_values('cell')
             else:
                 print('Labelled data not found', flush=True)
 
                 return
 
-            se = se.reindex(allCells, fill_value=self.nameForLowQC)
+            if infoType=='label':
+                se = se.reindex(allCells, fill_value=self.nameForLowQC)
+            elif infoType=='batch':
+                se_low = pd.Series(data=allBathes, index=allCells)
+
+                se = pd.concat([se, se_low.loc[se_low.index.difference(se.index)]])
 
         return se
     
@@ -2591,9 +2721,9 @@ class DigitalCellSorter(VisualizationFunctions):
         if self.KeyInFile('df_expr', self.fileHDFpath):
             print('Loading processed data', flush=True)
 
-            self.df_expr = pd.read_hdf(self.fileHDFpath, key='df_expr', mode='r').unstack(level=-1, fill_value=0.).T
-            self.df_expr.index = self.df_expr.index.get_level_values(-1)
-            self.df_expr.sort_index(inplace=True)
+            self._df_expr = pd.read_hdf(self.fileHDFpath, key='df_expr', mode='r').unstack(level=-1, fill_value=0.).T
+            self._df_expr.index = self._df_expr.index.get_level_values(-1)
+            self._df_expr.sort_index(inplace=True)
         else:
             print('Processed data not found')
 
@@ -2664,15 +2794,15 @@ class DigitalCellSorter(VisualizationFunctions):
         '''
 
         if self.mitochondrialGenes is None:
-            mitoGenesPath = os.path.join(self.defualtGeneListsDir, 'Human.MitoCarta2.0.csv')
+            mitoGenesPath = os.path.join(self.defaultGeneListsDir, 'Human.MitoCarta2.0.csv')
             self.mitochondrialGenes = pd.read_csv(mitoGenesPath, index_col=None, header=0)['Symbol'].values.squeeze().tolist()
 
         print('Calculating quality control measures (count depth, number of genes, fraction of mitochondrial genes) for each cell', flush=True)
 
-        df_QC = pd.concat([(self.df_expr).sum(axis=0), 
-                           (self.df_expr > 0).sum(axis=0), 
-                           (self.df_expr.loc[self.df_expr.index.intersection(self.mitochondrialGenes)] > 0).sum(axis=0) / \
-                              (self.df_expr > 0).sum(axis=0)], axis=1, sort=False)
+        df_QC = pd.concat([(self._df_expr).sum(axis=0), 
+                           (self._df_expr > 0).sum(axis=0), 
+                           (self._df_expr.loc[self._df_expr.index.intersection(self.mitochondrialGenes)] > 0).sum(axis=0) / \
+                              (self._df_expr > 0).sum(axis=0)], axis=1, sort=False)
 
         df_QC.columns = ['count_depth', 'number_of_genes', 'fraction_of_mitochondrialGenes']
 
@@ -2699,12 +2829,12 @@ class DigitalCellSorter(VisualizationFunctions):
         index = self.getIndexOfGoodQualityCells()
 
         if self.toggleRemoveLowQualityCells:
-            self.df_expr = self.df_expr[self.df_expr.columns.intersection(index).sort_values()]
-            self.df_expr = self.df_expr[self.df_expr.sum(axis=1) > 0]
-            print('Removed low quality cells. Data size: %s genes, %s cells' % self.df_expr.shape, flush=True)
+            self._df_expr = self._df_expr[self._df_expr.columns.intersection(index).sort_values()]
+            self._df_expr = self._df_expr[self._df_expr.sum(axis=1) > 0]
+            print('Removed low quality cells. Data size: %s genes, %s cells' % self._df_expr.shape, flush=True)
 
             df_projection = pd.read_hdf(self.fileHDFpath, key='df_projection_pre_QC', mode='r')
-            df_projection[self.df_expr.columns].to_hdf(self.fileHDFpath, key='df_projection', mode='a', complevel=4, complib='zlib')
+            df_projection[self._df_expr.columns].to_hdf(self.fileHDFpath, key='df_projection', mode='a', complevel=4, complib='zlib')
 
             self.project(PCAonly=True)
 
@@ -2730,21 +2860,21 @@ class DigitalCellSorter(VisualizationFunctions):
         '''
 
         if method == 'COMBAT':
-            cells = self.df_expr.columns.get_level_values('cell').values.copy()
-            patients = self.df_expr.columns.get_level_values('batch').values.copy()
+            cells = self._df_expr.columns.get_level_values('cell').values.copy()
+            patients = self._df_expr.columns.get_level_values('batch').values.copy()
 
             if len(np.unique(patients)) == 1:
                 print('Only one batch provided. Batch correction is not necessary', flush=True)
             else:
                 print('ComBat transformation', flush=True)
                 print('Reading positions of zeros', flush=True)
-                where_zeros = self.df_expr == 0.
-                values = combat(pd.DataFrame(data=self.df_expr.values.copy(), index=self.df_expr.index.values.copy(), columns=cells), pd.Series(data=patients, index=cells)).values
-                self.df_expr = pd.DataFrame(data=values, index=self.df_expr.index, columns=self.df_expr.columns)
+                where_zeros = self._df_expr == 0.
+                values = combat(pd.DataFrame(data=self._df_expr.values.copy(), index=self._df_expr.index.values.copy(), columns=cells), pd.Series(data=patients, index=cells)).values
+                self._df_expr = pd.DataFrame(data=values, index=self._df_expr.index, columns=self._df_expr.columns)
                 print('Setting original zeros back to zeros', flush=True)
-                self.df_expr[where_zeros] = 0.
+                self._df_expr[where_zeros] = 0.
                 print('Setting negative values to zeros', flush=True)
-                self.df_expr[self.df_expr < 0.0] = 0.
+                self._df_expr[self._df_expr < 0.0] = 0.
 
         else:
             print('Batch effect correction method unknown')

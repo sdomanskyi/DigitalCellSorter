@@ -1,52 +1,88 @@
-import os
-import pandas as pd
-import numpy as np
+import sys
+sys.path.append("..")
 
+import os
 import DigitalCellSorter
-from DigitalCellSorter.ReadPrepareDataHCApreviewDataset import PrepareDataOnePatient
-    
+import DigitalCellSorter.ReadPrepareDataHCA as prep
+
 if __name__ == '__main__':
 
-    # Create an instance of class DigitalCellSorter. Here we use Default parameter values
-    DCS = DigitalCellSorter.DigitalCellSorter()
+    here = os.path.dirname(__file__)
 
-    # Modify some of the DCS attributes
-    DCS.dataName = 'BM1'
-    DCS.saveDir = os.path.join(os.path.dirname(__file__), 'output', DCS.dataName, '')
-    DCS.nClusters = 20
+    url = "https://data.humancellatlas.org/project-assets/project-matrices/cc95ff89-2e68-4a08-a234-480eca21ce79.homo_sapiens.mtx.zip"
+    extractPath = os.path.join(here, 'data', os.path.splitext(os.path.basename(url))[0])
 
-    # Call function PrepareDataOnePatient to create file BM1.h5 (HDF file of input type 3) in folder 'data'
-    PrepareDataOnePatient(os.path.join('data', 'ica_bone_marrow_h5.h5'), 'BM1', os.path.join('data', ''))
+    # Download and unpack data
+    prep.getHCAdataByURL(url, extractPath)
 
-    # Load the expression data from h5 file
-    df_expr = pd.read_hdf(os.path.join('data', DCS.dataName + '.h5'), key=DCS.dataName, mode='r')
+    # Call function recordFilesOfIndividualDonors to load the data from HCA Data Portal
+    id = prep.recordFilesOfIndividualDonors(extractPath, organName='bone marrow')[0]
+
+    # Load gene expression data from h5 file
+    df_expr = prep.getDataframeByDonorID(extractPath, id)
+    df_expr.columns.names = ['batch', 'cell']
+
+    # Create an instance of class DigitalCellSorter. 
+    # Here we use Default parameter values for most of the parameters
+    DCS = DigitalCellSorter.DigitalCellSorter(dataName='BM1', 
+                                              saveDir=os.path.join(here, 'output', 'BM1', ''),
+                                              geneListFileName='CIBERSORT_LM22_7')
 
     # Validate the expression data, so that it has correct form
-    df_expr = DCS.prepare(df_expr)
+    DCS.prepare(df_expr)
 
-    # Process the expression data
-    DCS.process(df_expr)
+    # Delete df_expr as now DCS contains the master copy of it
+    del df_expr
 
+    # Process the expression data, i.e. quality control, dimensionality reduction, clustering
+    DCS.process()
 
+    # Load marker genes and annotate cells
+    DCS.annotate()
+
+    # Make plots of annotated data
+    DCS.visualize()
+    
+    # Make CD19 gene expression plot
+    for name in DCS.getHugoName('CD19'):
+        DCS.makeIndividualGeneExpressionPlot(name)
+            
+    # Make CD33 gene expression plot
+    for name in DCS.getHugoName('CD33'):
+        DCS.makeIndividualGeneExpressionPlot(name)
+    
     # Further analysis can be done on cell types of interest, e.g. here 'T cell' and 'B cell'.
     # Let's create a new instance of DigitalCellSorter to run "sub-analysis" with it.
-    # It is important to disable Quality control, because the low quality cells have already been identified and filtered with DCS.
-    # Parameter dataNam points to the location processed with DCS. 
-    DCSsub = DigitalCellSorterSubmodule.DigitalCellSorter(dataName=DCS.dataName, nClusters=10, doQualityControl=False)
+    # It is important to disable Quality control, because the low quality cells have 
+    # already been identified and filtered with DCS.
+    # Parameter dataName points to the location processed with DCS. 
+    DCSsub = DigitalCellSorter.DigitalCellSorter(dataName='BM1', 
+                                                 nClusters=10, 
+                                                 doQualityControl=False,
+                                                 layout='PHATE',
+                                                 subclusteringName='T cell')
 
     # Modify a few other attributes
-    DCSsub.subclusteringName = 'T cell'
-    DCSsub.saveDir = os.path.join(os.path.dirname(__file__), 'output', DCS.dataName, 'subclustering T cell', '')
-    DCSsub.geneListFileName = os.path.join(os.path.dirname(__file__), 'docs', 'examples', 'CIBERSORT_T_SUB.xlsx')
+    DCSsub.saveDir = os.path.join(here, 'output', 'BM1', 'subclustering T cell', '')
+    DCSsub.geneListFileName = os.path.join(here, 'docs', 'examples', 'CIBERSORT_T_SUB.xlsx')
+
+    # Get index of T cells
+    indexOfTcells = DCS.getCells(celltype='T cell')
+
+    # Get expression of these T cells using their index
+    df_expr = DCS.getExprOfCells(indexOfTcells)
+
+    # Insert expression data into DCSsub
+    DCSsub.prepare(df_expr)
 
     # Process subtype 'T cell'
-    DCSsub.process(df_expr[DCS.getCells(celltype='T cell')])
+    DCSsub.process(dataIsNormalized=True)
 
-    
-    # We can reuse DCSsub to analyze cell type 'B cell'. Just modify the attributes
-    DCSsub.subclusteringName = 'B cell'
-    DCSsub.saveDir = os.path.join(os.path.dirname(__file__), 'output', DCS.dataName, 'subclustering B cell', '')
-    DCSsub.geneListFileName = os.path.join(os.path.dirname(__file__), 'docs', 'examples', 'CIBERSORT_B_SUB.xlsx')
+    # Load marker genes and annotate cells
+    DCSsub.annotate()
 
-    # Process subtype 'B cell'
-    DCSsub.process(df_expr[DCS.getCells(celltype='B cell')])
+    # Make plots of annotated data
+    DCSsub.visualize()
+
+
+

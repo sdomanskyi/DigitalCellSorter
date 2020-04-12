@@ -9,7 +9,7 @@ import urllib.request
 
 from .GenericFunctions import write, read, extractFromZipOfGz
 
-def getHCAdataByURL(url, extractPath):
+def getHCAdataByURL(url, extractPath, extractData = True):
 
     '''Download and extract data from Human Cell Atlas Portal
 
@@ -19,6 +19,9 @@ def getHCAdataByURL(url, extractPath):
 
         extractPath: str
             Path where to save and extract data to
+
+        extractData: boolean, Default True
+            Whether to extract downloaded data
 
     Returns:
         None
@@ -42,12 +45,13 @@ def getHCAdataByURL(url, extractPath):
         print('Downloading file:', url)
         urllib.request.urlretrieve(url, os.path.join(os.path.dirname(extractPath), os.path.basename(url)))
 
-    # Extract file to extract path
-    extractFromZipOfGz(extractPath + '.zip', removeDownloadedZipFile=True)
+    if extractData:
+        # Extract file to extract path
+        extractFromZipOfGz(extractPath + '.zip', removeDownloadedZipFile=True)
     
-    for tempName in ['cells', 'genes', 'barcodes']:
-        write(pd.read_csv(os.path.join(extractPath, tempName + '.tsv'), delimiter='\t', index_col=0, header=0), 
-                os.path.join(extractPath, tempName))
+        for tempName in ['cells', 'genes', 'barcodes']:
+            write(pd.read_csv(os.path.join(extractPath, tempName + '.tsv'), delimiter='\t', index_col=0, header=0), 
+                    os.path.join(extractPath, tempName))
 
     return
 

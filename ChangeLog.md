@@ -1,8 +1,11 @@
 
 - 1.3.0
-   * Modified core algorithm for cell type identification to account for markers that should not be expressed in a given cell type (negative markers)
-   * Modified core algorithm to better normalize celltype/marker matrix
-   * Modified core algorithm account for low quality votes and abundunt markers
+   * Modified pDCS algorithm for cell type identification to account for markers that should not be expressed in a given cell type (negative markers)
+   * Modified pDCS celltype/marker matrix normalization
+   * Modified pDCS algorithm account for low quality scores
+   * Added Hopfield classifier for cell type annotation
+   * Added ratio method for cell type annotation
+   * Added options for consensus cell type annotation
    * Added cell markers pie summary function and plot
    * Added t-test for individual gene plot
    * Added several new user functions, for efficient and flexible extraction of cells, genes, clusters, etc.

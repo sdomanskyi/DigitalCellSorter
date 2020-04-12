@@ -48,7 +48,8 @@ It is highly recommended to install Anaconda.
 Installers are available at https://www.anaconda.com/distribution/
 
 It uses packages ```numpy```, ```pandas```, ```matplotlib```, ```scikit-learn```, ```scipy```, 
-```mygene```, ```fftw```, ```pynndescent```, ```networkx```, ```python-louvain```, ```fitsne```
+```mygene```, ```fftw```, ```pynndescent```, ```networkx```, ```python-louvain```, ```fitsne```, 
+```adjustText```, ```phate```, ```umap-learn```, ```plotly```
 and a few other standard Python packages. Most of these packages are installed with installation of the 
 latest release of ```DigitalCellSorter```:
 
@@ -65,9 +66,12 @@ Also one can create a local copy of this project for development purposes by run
 To install ```fftw``` from the ```conda-forge``` channel add ```conda-forge``` to your channels.
 Once the conda-forge channel has been enabled, ```fftw``` can be installed as follows:
 
-
 	conda config --add channels conda-forge
 	conda install fftw
+
+To use Sankey diagrams that are part of Digital Cell Sorter install ```orca```:
+
+    conda install -c plotly plotly-orca
 
 ### Loading the package
 
@@ -79,43 +83,8 @@ Create an instance of class ```DigitalCellSorter```. Here, for simplicity, we us
 
 	DCS = DigitalCellSorter.DigitalCellSorter()
 
-<details><summary>During the initialization the following parameters can be specified (click me)</summary><p>
-
-```dataName```: name used in output files, Default ''
-
-```geneListFileName```: marker cell type list name, Default None
-
-```mitochondrialGenes```: list of mitochondrial genes for quality conrol routine, Default None
-
-```sigmaOverMeanSigma```: threshold to consider a gene constant, Default 0.3
-
-```nClusters```: number of clusters, Default 5
-
-```nComponentsPCA```: number of pca components, Default 100
-
-```nSamplesDistribution```: number of random samples to generate, Default 10000
-
-```saveDir```: directory for output files, Default is current directory
-
-```makeMarkerSubplots```:  whether to make subplots on markers, Default True
-
-```makePlots```: whether to make all major plots, Default True
-
-```votingScheme```: voting shceme to use instead of the built-in, Default None
-
-```availableCPUsCount```: number of CPUs available, Default os.cpu_count()
-
-```zScoreCutoff```: zscore cutoff when calculating Z_mc, Default 0.3
-
-```clusterName```: parameter used in subclustering, Default None
-
-```doQualityControl```: whether to remove low quality cells, Default True
-
-```doBatchCorrection```: whether to correct data for batches, Default False
-
-</p></details>
-
-These and other parameters can be modified after initialization using, e.g.:
+During the initialization a number of parameters can be specified. For detailed list see documentation.
+Many of these parameters are transfered to DCS attributes thus can be modified after initialization using, e.g.:
 
 	DCS.toggleMakeStackedBarplot = False
 
@@ -215,12 +184,13 @@ Let us demonstrate this on the input of type 1:
 ### Other Data
 
 ```markersDCS.xlsx```: An excel book with marker data. Rows are markers and columns are cell types. 
-'1' means that the gene is a marker for that cell type, and '0' otherwise.
+'1' means that the gene is a marker for that cell type, '-1' means that this gene is not expressed in this cell type, and '0' otherwise.
 This gene marker file included in the package is used by Default. 
 If you use your own file it has to be prepared in the same format (including the two-line header). Note that only the first worksheet will be read,
 and its name can be arbitrary. The first column should contain gene names. The second row should contain cell types, and the first row how 
 those cell types are grouped. If any of the cell types need to be skipped, have "NA" in the corresponding cell of the first row of that cell type.
-See example below:
+
+<details open><summary>Example:</summary><p>
 
 |A       |B            |C             |D           |E          |F                |G                         |H                           |I                        |J                         |K                  |L               |M                 |...      |
 |--------|-------------|--------------|------------|-----------|-----------------|--------------------------|----------------------------|-------------------------|--------------------------|-------------------|----------------|------------------|---------|
@@ -243,50 +213,33 @@ See example below:
 |ANGPT4  |0            |0             |1           |0          |0                |0                         |0                           |0                        |0                         |0                  |0               |0                 |...      |
 |...     |...          |...           |...         |...        |...              |...                       |...                         |...                      |...                       |...                |...             |...               |...      |
 
+</p></details>
 
 ```Human.MitoCarta2.0.csv```: An ```csv``` spreadsheet with human mitochondrial genes, created within work 
 [MitoCarta2.0: an updated inventory of mammalian mitochondrial proteins](https://doi.org/10.1093/nar/gkv1003 "MitoCarta2.0")
-Sarah E. Calvo, Karl R. Clauser, Vamsi K. Mootha, *Nucleic Acids Research*, Volume 44, Issue D1, 4 January 2016, Pages D1251вЂ“D1257.
+Sarah E. Calvo, Karl R. Clauser, Vamsi K. Mootha, *Nucleic Acids Research*, Volume 44, Issue D1, 4 January 2016.
 
 
 ## Functionality
 
 ### Overall
 
-The main class for cell sorting functions and producing output images is DigitalCellSorter
+The main class, DigitalCellSorter, includes tools for:
 
-<details open><summary>The class includes tools for:</summary><p>
-
-  1. **Pre-preprocessing** of single cell mRNA sequencing data (gene expression data)
-     1. Cleaning: filling in missing values, zemoving all-zero genes and cells, converting gene index to a desired convention, etc.
-     2. Normalizing: rescaling all cells expression, log-transforming, etc.
-
+  1. **Pre-preprocessing**
   2. **Quality control**
   3. **Batch effects correction**
   4. **Cells anomaly score evaluation**
   4. **Dimensionality reduction**
-  5. **Clustering** (Hierarchical, K-Means, knn-graph-based, etc.)
+  5. **Clustering**
   6. **Annotating cell types**
-  7. **Vizualization**
-       1. 2D layout (projection) plot
-       2. Quality Control histogram plot
-       3. Marker expression projection subplot
-       4. Marker-centroids expression plot
-       5. Voting results matrix plot
-       6. Cell types stacked barplot
-       7. Anomaly scores plot
-       8. Histogram null distribution plot
-       9. New markers plot
-       10. Sankey diagram (a.k.a. river plot)
-  
-  8. **Post-processing** functions, e.g. extract cells of interest, find significantly expressed genes, 
-plot marker expression of the cells of interest, etc.
+  7. **Vizualization**  
+  8. **Post-processing**.
 
-</p></details>
 
 ### Visualization
 
-Function ```visualize()``` or ```process()``` will produce all necessary files for post-analysis of the data. 
+Function ```visualize()``` will produce most of the necessary files for post-analysis of the data. 
 
 <details open><summary>The visualization tools include:</summary><p>
  
@@ -294,21 +247,21 @@ Function ```visualize()``` or ```process()``` will produce all necessary files f
 in addition this figure contains relative (%) and absolute (cell counts) cluster sizes
 
 <p align="middle">
-	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/output/BM1/BM1_voting.png?raw=true" width="1000"/>
+	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/output/BM1/BM1_marker_expression.png?raw=true" width="1000"/>
 </p>
 
 - ```getIndividualGeneExpressionPlot()```:  2D layout colored by individual gene's expression
 
 <p align="middle">
 	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/output/BM1/marker_subplots/BM1_CD19_(B4_CVID3_CD19).png?raw=true" width="400"/>
-	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/output/BM1/marker_subplots/BM1_CD4_(CD4_CD4mut).png?raw=true" width="400"/>
+	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/output/BM1/marker_subplots/BM1_CD33_(SIGLEC-3_CD33_p67_SIGLEC3).png?raw=true" width="400"/>
 </p>
 
 - ```makeVotingResultsMatrixPlot()```: z-scores of the voting results for each input cell type and each cluster, 
 in addition this figure contains relative (%) and absolute (cell counts) cluster sizes
 
 <p align="middle">
- <img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/output/BM1/BM1_matrix_voting.png?raw=true" height="700"/>
+ <img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/output/BM1/BM1_scores_matrix.png?raw=true" height="700"/>
 </p>
 
 - ```makeHistogramNullDistributionPlot()```: null distribution for each cluster and each cell type illustrating 
@@ -347,21 +300,19 @@ number of counts measured, and a faraction of mitochondrial genes..
 Effect of batch correction demostrated on combining BM1, BM2, BM3 and processing the data jointly without (left) and with (right) batch correction option:
 
 <p align="middle">
-	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/BM123_no_corr_clusters__by_patients.png?raw=true" width="375"/>
-	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/BM123_with_corr_clusters__by_patients.png?raw=true" width="375"/>
+	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/BM123_no_corr_clusters_by_patients.png?raw=true" width="375"/>
+	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/BM123_with_corr_clusters_by_patients.png?raw=true" width="375"/>
 </p>
 
 - ```makeStackedBarplot()```: plot with fractions of various cell types
 
 <p align="middle">
 	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/output/BM1/BM1_clusters_by_clusters_annotated.png?raw=true" width="500"/>
-	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/output/BM1/BM1_subclustering_stacked_barplot_.png?raw=true" height="500"/>
+	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/output/BM1/BM1_subclustering_stacked_barplot_BM1.png?raw=true" height="500"/>
 </p>
 
 
 - ```makeSankeyDiagram()```: river plot to compare various results 
-
-[(see interactive HTML version, download it and open in a browser)](http://htmlpreview.github.io/?https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/Sankey_example.html "Sankey interactive diagram")
 
 <p align="middle">
 	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/Sankey_example.png?raw=true" width="800"/>
@@ -370,15 +321,15 @@ Effect of batch correction demostrated on combining BM1, BM2, BM3 and processing
 - ```getAnomalyScoresPlot()```: plot with anomaly scores per cell
 
 <p align="middle">
-	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/output/BM1/BM1_clusters_by_anomaly_score All.png?raw=true" width="750"/>
+	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/output/BM1/BM1_clusters_by_anomaly_score_All.png?raw=true" width="750"/>
 </p>
 
 Calculate and plot anomaly scores for an arbitrary cell type or cluster:
 
 <p align="middle">
-	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/output/BM1/BM1_clusters_by_anomaly_score B cell.png?raw=true" width="250"/>
-	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/output/BM1/BM1_clusters_by_anomaly_score T cell.png?raw=true" width="250"/>
-	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/output/BM1/BM1_clusters_by_anomaly_score Cluster2.png?raw=true" width="250"/>
+	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/output/BM1/BM1_clusters_by_anomaly_score_B_cells.png?raw=true" width="250"/>
+	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/output/BM1/BM1_clusters_by_anomaly_score_T_cells.png?raw=true" width="250"/>
+	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/output/BM1/BM1_clusters_by_anomaly_score_cluster_7.0.0.png?raw=true" width="250"/>
 </p>
 
 
@@ -405,15 +356,42 @@ Calculate and plot anomaly scores for an arbitrary cell type or cluster:
 
 We have made an example execution file ```demo.py``` that shows how to use ```DigitalCellSorter```.
 
-In the demo, folder ```data``` is intentionally left empty. The reader can download the file ```ica_bone_marrow_h5.h5``` 
-from https://preview.data.humancellatlas.org/ (Raw Counts Matrix - Bone Marrow) and place in folder ```data```. 
-The file is ~485Mb and contains all 378000 cells from 8 bone marrow donors (BM1-BM8). 
-In our example, the data of BM1 is prepared by 
-function ```PrepareDataOnePatient()``` in module ```ReadPrepareDataHCApreviewDataset```.
-Load this function, and call it to create a ```BM1.h5``` file (HDF file of input type 3) in the ```data``` folder:
+In the demo, folder ```data``` is intentionally left empty. 
+The data file (cc95ff89-2e68-4a08-a234-480eca21ce79.homo_sapiens.mtx.zip) is about 2.4Gb in size and
+will be downloaded with the ```demo.py``` script.
 
-	from DigitalCellSorter.ReadPrepareDataHCApreviewDataset import PrepareDataOnePatient
-	PrepareDataOnePatient(os.path.join('data', 'ica_bone_marrow_h5.h5'), 'BM1', os.path.join('data', ''))
+> Previously the HCA preview data was consolidated in file ```ica_bone_marrow_h5.h5``` and downloadable  
+> from https://preview.data.humancellatlas.org/ (Raw Counts Matrix - Bone Marrow). 
+> That file was ~485Mb and containing 378000 cells from 8 bone marrow donors (BM1-BM8). 
+
+In our example  we use the data of BM1 only, howerver all 8 bone marrow samples are downloaded.
+Create a local variable that points to location where the ```demo.py``` script was executed:
+
+    here = os.path.dirname(__file__)
+
+The following URL points to data file at Data Portal of Human Cell Atlas:
+
+    url = "https://data.humancellatlas.org/project-assets/project-matrices/cc95ff89-2e68-4a08-a234-480eca21ce79.homo_sapiens.mtx.zip"
+
+Create a variable to point to where the data will be downloaded and extracted:
+
+    extractPath = os.path.join(here, 'data', os.path.splitext(os.path.basename(url))[0])
+
+Import a module from DigitalCellSorter and call a function to download and unpack the data:
+
+    import DigitalCellSorter.ReadPrepareDataHCA as prep
+
+    prep.getHCAdataByURL(url, extractPath)
+    
+Call function recordFilesOfIndividualDonors to load the data from HCA Data Portal. 
+Note that this data file and the individual files are large and will take up to 4Gb of disk space:
+
+    id = prep.recordFilesOfIndividualDonors(extractPath, organName='bone marrow')[0]
+
+Load gene expression data from h5 file:
+
+    df_expr = prep.getDataframeByDonorID(extractPath, id)
+    df_expr.columns.names = ['batch', 'cell']
 
 
 #### Main cell types
@@ -422,71 +400,101 @@ In these instructions we have already created an instance of ```DigitalCellSorte
 Let's modify some of the ```DCS``` attributes:
 
 	DCS.dataName = 'BM1'
-	DCS.saveDir = os.path.join(os.path.dirname(__file__), 'output', 'BM1', '')
-	DCS.nClusters = 20
+	DCS.saveDir = os.path.join(here, 'output', 'BM1', '')
+    DCS.geneListFileName = 'CIBERSORT_LM22_7'
 
-Now we are ready to ```load``` the data, ```prepare```(validate) it and ```process```. The function ```process()``` 
-takes takes as an input parameter a pandas DataFrame validated by function ```prepare()```:
+Now we are ready to load the data, ```prepare```(validate) it and ```process```.
 
-	df_expr = pd.read_hdf(os.path.join('data', 'BM1.h5'), key='BM1', mode='r')
-	df_expr = DCS.prepare(df_expr)	
+Validate the expression data, so that it has correct form:
+
+    DCS.prepare(df_expr)
+
+Delete df_expr as now DCS contains the master copy of it:
+
+    del df_expr
+
+Process the expression data, i.e. quality control, dimensionality reduction, clustering:
+
 	DCS.process(df_expr)
 
-This will launch the processing workflow detailed in our paper and generate the plots. If you don't need any plots and
-looking forward to use post-processing tools, call function ```process()``` with an additional parameter:
+Load markers and annotate the processe data:
 
-	DCS.process(df_expr, visualize=False)
+	DCS.annotate()
 
-Then, if necessary, you can generate all the default plots by:
+Then generate all the default plots by:
 
 	DCS.visualize()
+
+Make CD19 and CD33 gene expression plots:
+
+    for name in DCS.getHugoName('CD19'):
+        DCS.makeIndividualGeneExpressionPlot(name)
+            
+    for name in DCS.getHugoName('CD33'):
+        DCS.makeIndividualGeneExpressionPlot(name)
 
 
 #### Cell sub-types
 
-Further analysis can be done on cell types of interest, e.g. here 'T cell' and 'B cell'.
+Further analysis can be done on cell types of interest, e.g. here 'T cell'.
 Let's create a new instance of DigitalCellSorter to run "sub-analysis" with it:
 
-    DCSsub = DigitalCellSorter.DigitalCellSorter(dataName=DCS.dataName, 
+    DCSsub = DigitalCellSorter.DigitalCellSorter(dataName='BM1', 
                                                 nClusters=10, 
-                                                doQualityControl=False)
+                                                doQualityControl=False,
+                                                layout='PHATE',
+                                                subclusteringName='T cell')
 
 It is important to disable Quality control, because the low quality cells have already been identified and filtered with ```DCS```.
 Also ```dataName``` parameter points to the location processed with ```DCS```. 
 Next modify a few other attributes and process cell type 'T cell':
 
-    DCSsub.subclusteringName = 'T cell'
-    DCSsub.saveDir = os.path.join(os.path.dirname(__file__), 'output', DCS.dataName, 'subclustering T cell', '')
-    DCSsub.geneListFileName = os.path.join(os.path.dirname(__file__), 'docs', 'examples', 'CIBERSORT_T_SUB.xlsx')
+    DCSsub.saveDir = os.path.join(here, 'output', 'BM1', 'subclustering T cell', '')
+    DCSsub.geneListFileName = os.path.join('here', 'docs', 'examples', 'CIBERSORT_T_SUB.xlsx')
 
-    DCSsub.process(df_expr[DCS.getCells(celltype='T cell')])
+Get index of T cells:
+
+    indexOfTcells = DCS.getCells(celltype='T cell')
+
+Get expression of these T cells using their index:
+
+    df_expr = DCS.getExprOfCells(indexOfTcells)
+
+Insert expression data into DCSsub:
+
+    DCSsub.prepare(df_expr)
+
+Process subtype 'T cell':
+
+    DCSsub.process(dataIsNormalized=True)
+
+Load marker genes and annotate cells:
+
+    DCSsub.annotate()
+
+Make plots of annotated data:
+
+    DCSsub.visualize()
+
 
 This way the 2D layout with annotated clusters (left) of T cell sub-types and the corresponding voting matrix (right) 
 are generated by the function ```process()```:
 
 <p align="middle">
 	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/output/BM1/subclustering T cell/BM1_clusters_by_clusters_annotated.png?raw=true" width="400"/>
-	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/output/BM1/subclustering T cell/BM1_matrix_voting.png?raw=true" height="400"/>
+	<img src="https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/output/BM1/subclustering T cell/BM1_scores_matrix.png?raw=true" height="400"/>
 </p>
-
-We can reuse the ```DCSsub``` to analyze cell type 'B cell'. Just modify the following attributes:
-
-    DCSsub.subclusteringName = 'B cell'
-    DCSsub.saveDir = os.path.join(os.path.dirname(__file__), 'output', DCS.dataName, 'subclustering B cell', '')
-    DCSsub.geneListFileName = os.path.join(os.path.dirname(__file__), 'docs', 'examples', 'CIBERSORT_B_SUB.xlsx')
-
-    DCSsub.process(df_expr[DCS.getCells(celltype='B cell')])
 
 
 To execute the complete script ```demo.py``` run:
 
 	python demo.py
 
-*Note that the HCA BM1 data contains 48000 sequenced cells, requiring approximately 60Gb of RAM (we recommend to use High Performance Computers).
-If you want to run our example on a regular PC or a laptop, you can use a randomly chosen number of cells when using ```HCAtools```:
+*Note that the HCA BM1 data contains ~50000 sequenced cells, requiring more than 60Gb of RAM (we recommend to use High Performance Computers).
+If you want to run our example on a regular PC or a laptop, you can use a randomly chosen number of cells:
 
-	PrepareDataOnePatient(os.path.join('data', 'ica_bone_marrow_h5.h5'), 'BM1', os.path.join('data', ''),
-	                               useAllData=False, cellsLimitToUse=5000)
+    df_expr.sample(n=5000, axis=1)
+
 
 ### Output
 

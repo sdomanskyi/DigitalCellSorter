@@ -12,7 +12,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 setup(
     name='DigitalCellSorter',
     packages=find_packages(),
-    version='1.2.3',
+    version='1.3.0',
     description='Toolkit for analysis and identification of cell types from heterogeneous single cell RNA-seq data',
     long_description_content_type="text/markdown",
     long_description=long_description,
@@ -21,7 +21,7 @@ setup(
     author_email='s.domanskyi@gmail.com',
     license='MIT License',
     url='https://github.com/sdomanskyi/DigitalCellSorter',
-    download_url='https://github.com/sdomanskyi/DigitalCellSorter/archive/1.2.3.tar.gz',
+    download_url='https://github.com/sdomanskyi/DigitalCellSorter/archive/1.3.0.tar.gz',
     keywords=['single cell RNA sequencing', 'cell type identification','biomarkers'],
     classifiers=[
         'License :: OSI Approved :: MIT License',
