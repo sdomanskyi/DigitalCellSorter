@@ -55,7 +55,12 @@ Load gene expression data from h5 file:
 
 ## Main cell types
 
-In these instructions we have already created an instance of ```DigitalCellSorter``` class (see section **Loading the package**) .
+In your script import the package and create an instance of class ```DigitalCellSorter```. 
+Here, for simplicity, we use Default parameter values:
+
+	import DigitalCellSorter
+	DCS = DigitalCellSorter.DigitalCellSorter()
+
 Let's modify some of the ```DCS``` attributes:
 
 	DCS.dataName = 'BM1'
@@ -91,6 +96,23 @@ Make CD19 and CD33 gene expression plots:
             
     for name in DCS.getHugoName('CD33'):
         DCS.makeIndividualGeneExpressionPlot(name)
+
+
+Make anomaly scores plots:
+
+    cells = DCS.getCells(clusterIndex='7.0.0')
+    DCS.makeAnomalyScoresPlot(cells=cells)
+
+    cells = DCS.getCells(celltype='B cell')
+    DCS.makeAnomalyScoresPlot(cells=cells)
+
+    cells = DCS.getCells(celltype='T cell')
+    DCS.makeAnomalyScoresPlot(cells=cells)
+
+Calling function ```makeAnomalyScoresPlot``` with no arguments will do analysis on all cells of the DCS expression data.
+Due to complexity of the underlying algorithm of anomaly score calculation this example make take significant amount of time (~40 min):
+
+    DCS.makeAnomalyScoresPlot()
 
 
 ## Cell sub-types

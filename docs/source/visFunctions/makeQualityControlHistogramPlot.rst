@@ -15,7 +15,7 @@ From submodule `VisualizationFunctions`:
 
 **Example output:**
 
-.. thumbnail:: https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/output/BM1/QC_plots/BM1_count_depth_histogram.png?raw=true
+.. thumbnail:: https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/output/BM1/QC_plots/BM1_fraction_of_mitochondrialGenes_histogram.png?raw=true
     :title: Example
     :alt: Cannot load this photo
     :align: center

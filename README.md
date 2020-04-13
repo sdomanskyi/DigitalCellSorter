@@ -63,6 +63,10 @@ Also one can create a local copy of this project for development purposes by run
 
 	git clone https://github.com/sdomanskyi/DigitalCellSorter
 
+After cloning the package can also be installed from the cloned directory by:
+
+	python setup.py install
+
 To install ```fftw``` from the ```conda-forge``` channel add ```conda-forge``` to your channels.
 Once the conda-forge channel has been enabled, ```fftw``` can be installed as follows:
 

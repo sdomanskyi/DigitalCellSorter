@@ -15,7 +15,7 @@ From submodule `VisualizationFunctions`:
 
 **Example output:**
 
-.. thumbnail:: https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/output/BM1/BM1_voting.png?raw=true
+.. thumbnail:: https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/output/BM1/BM1_marker_expression.png?raw=true
     :title: Example
     :alt: Cannot load this photo
     :align: center

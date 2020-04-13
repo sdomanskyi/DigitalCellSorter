@@ -15,7 +15,7 @@ From submodule `VisualizationFunctions`:
 
 **Example output:**
 
-.. thumbnail:: https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/output/BM1/BM1_subclustering_stacked_barplot_.png?raw=true
+.. thumbnail:: https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/output/BM1/BM1_subclustering_stacked_barplot_BM1.png?raw=true
     :title: Example
     :alt: Cannot load this photo
     :align: center
