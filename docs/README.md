@@ -8,6 +8,9 @@ The ready-to-read documentation is available at https://digital-cell-sorter.read
 The documentation of our software is built with [**Sphinx**](https://www.sphinx-doc.org/ "Sphinx") at 
 [**ReadTheDocs.org**](https://readthedocs.org/).
 
+- [Documentation Updates](#documentation-updates)
+- [Documentation Development](#documentation-development)
+
 ## Documentation Updates
 
 Any changes to source code and docstrings
