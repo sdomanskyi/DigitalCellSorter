@@ -12,13 +12,13 @@ Digital Cell Sorter (DCS): a single cell RNA-seq analysis toolkit for clustering
 > go to https://zenodo.org/record/2603265 and download the package (v1.1).
 
 
-
 > **The latest publication describing the methodology of cell types identification:**
->[Polled Digital Cell Sorter (p-DCS): Automatic identification of hematological cell types from single cell RNA-sequencing clusters](
->https://doi.org/10.1186/s12859-019-2951-x 
->"Polled Digital Cell Sorter (p-DCS): Automatic identification of hematological cell types from single cell RNA-sequencing clusters")
->Sergii Domanskyi, Anthony Szedlak, Nathaniel T Hawkins, Jiayin Wang, Giovanni Paternostro & Carlo Piermarocchi, 
->*BMC Bioinformatics* volume 20, Article number: 369 (**2019**)
+> [Polled Digital Cell Sorter (p-DCS): Automatic identification of hematological cell types from single cell RNA-sequencing clusters](
+> https://doi.org/10.1186/s12859-019-2951-x 
+> "Polled Digital Cell Sorter (p-DCS): Automatic identification of hematological cell types from single cell RNA-sequencing clusters")
+> Sergii Domanskyi, Anthony Szedlak, Nathaniel T Hawkins, Jiayin Wang, Giovanni Paternostro & Carlo Piermarocchi, 
+> *BMC Bioinformatics* volume 20, Article number: 369 (**2019**)
+
 
 The documentation is available at https://digital-cell-sorter.readthedocs.io/.
 
