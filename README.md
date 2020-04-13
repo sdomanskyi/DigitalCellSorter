@@ -241,6 +241,10 @@ The main class, DigitalCellSorter, includes tools for:
 
 Function ```visualize()``` will produce most of the necessary files for post-analysis of the data. 
 
+```diff
++ See examples of the visualization tools below
+```
+
 <details closed><summary>The visualization tools include:</summary><p>
  
 - ```makeMarkerExpressionPlot()```: a heatmap that shows all markers and their expression levels in the clusters, 
@@ -364,7 +368,10 @@ will be downloaded with the ```demo.py``` script.
 > from https://preview.data.humancellatlas.org/ (Raw Counts Matrix - Bone Marrow). 
 > That file was ~485Mb and containing 378000 cells from 8 bone marrow donors (BM1-BM8). 
 
-See details of the script ```demo.py``` at:
+```diff
++ See details of the script ```demo.py``` at:
+```
+
 https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/README.md
 
 

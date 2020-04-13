@@ -689,7 +689,7 @@ class VisualizationFunctions:
                     ax.set_title(cell_types[i], fontdict={'color': 'b', 'size':'6'})
 
                 if i == 0:
-                    ax.text(0. * maxx, maxy + 0.05 * maxy, predicted_cell_type_cluster[j] + ' (Cluster %s)' % j, rotation=0, 
+                    ax.text(0. * maxx, maxy + 0.05 * maxy, predicted_cell_type_cluster[j] + ' (Cluster %s)' % clusters[j], rotation=0, 
                             fontsize=fontsize, weight='bold', va='bottom', ha='left', color='k')
                     
                     ax.set_ylabel('Probability', fontsize=fontsize)

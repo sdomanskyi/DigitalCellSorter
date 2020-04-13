@@ -1,4 +1,4 @@
-# Details of ```demo.py``` script
+# Example walkthrough of demo.py script
 
 [![DOI](https://badge.fury.io/gh/sdomanskyi%2FDigitalCellSorter.svg)](https://badge.fury.io/gh/sdomanskyi%2FDigitalCellSorter)
 [![DOI](https://badge.fury.io/py/DigitalCellSorter.svg)](https://pypi.org/project/DigitalCellSorter)
@@ -8,10 +8,11 @@ The ready-to-read documentation is available at https://digital-cell-sorter.read
 The documentation of our software is built with [**Sphinx**](https://www.sphinx-doc.org/ "Sphinx") at 
 [**ReadTheDocs.org**](https://readthedocs.org/).
 
-[Data preparation](#usage)
-[Main cell types](#main-cell-types)
-[Cell sub-types](#cell-sub-types)
-[Output](#output)
+- [Data preparation](#data-preparation)
+- [Main cell types](#main-cell-types)
+- [Cell sub-types](#cell-sub-types)
+- [Output](#output)
+
 
 ## Data preparation
 
