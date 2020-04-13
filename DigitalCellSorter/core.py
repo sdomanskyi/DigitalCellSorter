@@ -893,7 +893,7 @@ class DigitalCellSorter(VisualizationFunctions):
         
         return annotationResults
     
-    def process(self, dataIsNormalized = False):
+    def process(self, dataIsNormalized = False, cleanData = True):
 
         '''Process data before using any annotation of visualization functions
 
@@ -914,7 +914,8 @@ class DigitalCellSorter(VisualizationFunctions):
         if not dataIsNormalized:
             self.convert()
         
-        self.clean()
+        if cleanData:
+            self.clean()
         
         # Calculate QC measures
         if self.doQualityControl:
@@ -924,8 +925,8 @@ class DigitalCellSorter(VisualizationFunctions):
         if not dataIsNormalized:
             self.normalize()
 
-            if self.toggleDoBatchCorrection:
-                self.batchEffectCorrection()
+        if self.toggleDoBatchCorrection:
+            self.batchEffectCorrection()
 
         # Calculate PCA and 2D projection
         self.project()
@@ -1049,7 +1050,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         return None
     
-    def makeProjectionPlotByBatches(self):
+    def makeProjectionPlotByBatches(self, labels = False, legend = True):
 
         '''Produce projection plot colored by batches
               
@@ -1081,7 +1082,7 @@ class DigitalCellSorter(VisualizationFunctions):
         #batches[wh2] = 'BM2'
         #batches[wh3] = 'BM3'
 
-        self.makeProjectionPlot(df_projection.values, batches, 'by_patients', labels=False, legend=True)
+        self.makeProjectionPlot(df_projection.values, batches, 'by_patients', labels=labels, legend=legend)
 
         return None
     

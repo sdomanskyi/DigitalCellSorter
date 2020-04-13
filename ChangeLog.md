@@ -1,4 +1,7 @@
 
+- 1.3.1
+   * Minor API modifications
+
 - 1.3.0
    * Modified pDCS algorithm for cell type identification to account for markers that should not be expressed in a given cell type (negative markers)
    * Modified pDCS celltype/marker matrix normalization
