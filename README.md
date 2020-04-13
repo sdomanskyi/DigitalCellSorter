@@ -97,7 +97,7 @@ The input gene expression data is expected in one of the following formats:
 1. Spreadsheet of comma-separated values ```csv``` containing condensed matrix in a form ```('cell', 'gene', 'expr')```. 
 If there are batches in the data the matrix has to be of the form ```('batch', 'cell', 'gene', 'expr')```. Columns order can be arbitrary.
 
-<details open><summary>Examples:</summary><p>
+<details closed><summary>Examples:</summary><p>
 
 | cell | gene | expr |
 |------|------|------|
@@ -125,7 +125,7 @@ or:
 2. Spreadsheet of comma-separated values ```csv``` where rows are genes, columns are cells with gene expression counts.
 If there are batches in the data the spreadsheet the first row should be ```'batch'``` and the second ```'cell'```.
 
-<details open><summary>Examples:</summary><p>
+<details closed><summary>Examples:</summary><p>
 
 | cell  | C1     | C2     | C3     | C4     |
 |-------|--------|--------|--------|--------|
@@ -153,7 +153,7 @@ If the are batched in the data then the index of ```axis 1``` should have two le
 with the first level indicating patient, batch or expreriment where that cell was sequenced, and the
 second level containing cell barcodes for identification.
 
-<details open><summary>Examples:</summary><p>
+<details closed><summary>Examples:</summary><p>
 
     df = pd.DataFrame(data=[[2,np.nan],[3,8],[3,5],[np.nan,1]], 
                       index=['G1','G2','G3','G4'], 
@@ -166,7 +166,7 @@ second level containing cell barcodes for identification.
 the first level should be indicating patient, batch or expreriment where that cell was sequenced, the second level cell barcodes for 
 identification and the third level gene names.
 
-<details open><summary>Examples:</summary><p>
+<details closed><summary>Examples:</summary><p>
 
     se = pd.Series(data=[1,8,3,5,5], 
                    index=pd.MultiIndex.from_arrays([['batch0','batch0','batch1','batch1','batch1'],
@@ -190,7 +190,7 @@ If you use your own file it has to be prepared in the same format (including the
 and its name can be arbitrary. The first column should contain gene names. The second row should contain cell types, and the first row how 
 those cell types are grouped. If any of the cell types need to be skipped, have "NA" in the corresponding cell of the first row of that cell type.
 
-<details open><summary>Example:</summary><p>
+<details closed><summary>Example:</summary><p>
 
 |A       |B            |C             |D           |E          |F                |G                         |H                           |I                        |J                         |K                  |L               |M                 |...      |
 |--------|-------------|--------------|------------|-----------|-----------------|--------------------------|----------------------------|-------------------------|--------------------------|-------------------|----------------|------------------|---------|
@@ -241,7 +241,7 @@ The main class, DigitalCellSorter, includes tools for:
 
 Function ```visualize()``` will produce most of the necessary files for post-analysis of the data. 
 
-<details open><summary>The visualization tools include:</summary><p>
+<details closed><summary>The visualization tools include:</summary><p>
  
 - ```makeMarkerExpressionPlot()```: a heatmap that shows all markers and their expression levels in the clusters, 
 in addition this figure contains relative (%) and absolute (cell counts) cluster sizes

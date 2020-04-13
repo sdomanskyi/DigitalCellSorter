@@ -1208,7 +1208,6 @@ class DigitalCellSorter(VisualizationFunctions):
         df_sel = self.getExprOfCells(cells)
 
         scores = self.getAnomalyScores(df_sel, df_sel)
-        print('Loaded expression data')
 
         scores = pd.DataFrame(index=cells, data=scores).reindex(df_projection.columns).values.T[0]
 
