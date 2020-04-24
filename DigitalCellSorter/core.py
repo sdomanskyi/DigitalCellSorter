@@ -355,8 +355,6 @@ class DigitalCellSorter(VisualizationFunctions):
         return
 
 
-
-
     # Primary functions of class #######################################################
     def prepare(self, obj):
 
@@ -410,13 +408,17 @@ class DigitalCellSorter(VisualizationFunctions):
 
             try:
                 obj.index.name = 'gene'
-            except:
+            except Exception as exception:
+                print(exception)
                 print('DataFrame index format is not understood. Returning None', flush=True)
                 return None
 
-            if not 'cell' in obj.columns.names:
-                print('Columns level "cell" not found. Returning None', flush=True)
-                return None
+            if len(obj.columns.names) > 1:
+                if not 'cell' in obj.columns.names:
+                    print('Columns level "cell" not found. Returning None', flush=True)
+                    return None
+            else:
+                obj.columns.names = ['cell']
 
             if not 'batch' in obj.columns.names:
                 print('Columns level "batch" not found. Assuming one batch in the data.', flush=True)
@@ -490,7 +492,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         return None
 
-    def convert(self, nameFrom = None, nameTo = None):
+    def convert(self, nameFrom = None, nameTo = None, **kwargs):
 
         '''Convert index to hugo names, if any names in the index are
         duplicated, remove duplicates
@@ -501,6 +503,8 @@ class DigitalCellSorter(VisualizationFunctions):
 
             nameTo: str, Default 'hugo'
                 Gene name type to convert to
+
+            Any parameters that function 'mergeIndexDuplicates' can accept
 
         Returns:
             None
@@ -523,13 +527,7 @@ class DigitalCellSorter(VisualizationFunctions):
         else:
             self._df_expr.index = self.gnc.Convert(list(self._df_expr.index), nameFrom, nameTo, returnUnknownString=False)
 
-        len_total, len_unique = len(self._df_expr.index), len(np.unique(self._df_expr.index))
-        if len_total != len_unique:
-            unique_items = np.unique(self._df_expr.index, return_counts=True)
-            #self._df_expr = self._df_expr.loc[~self._df_expr.index.duplicated(keep='first')]
-            self._df_expr = self._df_expr.groupby(level=0, axis=0).sum()
-            print('Merged %s duplicated items in the index of size %s' % (len_total - len_unique, len_total), flush=True)
-            print(unique_items[0][unique_items[1] > 1], flush=True)
+        self._df_expr = self.mergeIndexDuplicates(self.df_expr, **kwargs)
 
         return None
 
@@ -706,7 +704,7 @@ class DigitalCellSorter(VisualizationFunctions):
         '''
 
         print('Calculating clustering of PCA data', flush=True)
-        df_xpca = pd.read_hdf(self.fileHDFpath, key='df_xpca', mode='r')
+        df_xpca = pd.read_hdf(self.fileHDFpath, key='df_xpca')
 
         X_pca = df_xpca.values
         clusteringFunction = self.clusteringFunction
@@ -719,17 +717,20 @@ class DigitalCellSorter(VisualizationFunctions):
             
             try:
                 k_neighbors = clusteringFunction[k_neighbors]
-            except:
+            except Exception as exception:
+                print(exception)
                 k_neighbors = 40
 
             try:
                 metric = clusteringFunction[metric]
-            except:
+            except Exception as exception:
+                print(exception)
                 metric = 'euclidean'
             
             try:
                 clusterExpression = clusteringFunction[clusterExpression]
-            except:
+            except Exception as exception:
+                print(exception)
                 clusterExpression = False
 
             data = self._df_expr.values.T if clusterExpression else X_pca.T
@@ -770,7 +771,8 @@ class DigitalCellSorter(VisualizationFunctions):
                             tempCellClusterIndex[:] = np.nan
                             for i, subCluster in enumerate(model.biclusters_[0]):
                                 tempCellClusterIndex[np.where(subCluster)[0]] = i
-                        except:
+                        except Exception as exception:
+                            print(exception)
                             print('Exception', subData.shape, cellsOfCluster.shape)
                             tempCellClusterIndex = np.zeros((subData.T.shape[0],))
                     else:
@@ -820,7 +822,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         self.prepareMarkers(expressedGenes=self._df_expr.index if mapNonexpressedCelltypes else None)
 
-        df_marker_cell_type = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_marker_cell_type', mode='r')
+        df_marker_cell_type = pd.read_hdf(self.fileHDFpath, key='df_marker_cell_type')
 
         df_markers_expr = self._df_expr.loc[self._df_expr.index.intersection(df_marker_cell_type.index)]
         print('Selected genes common with the marker list. Data shape:', df_markers_expr.shape, flush=True)
@@ -889,7 +891,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         df_markers_expr = df_markers_expr.T.set_index(['batch', 'cell', 'cluster', 'label']).T.apply(pd.to_numeric)
 
-        df_markers_expr.to_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_markers_expr', mode='a', complevel=4, complib='zlib')
+        df_markers_expr.to_hdf(self.fileHDFpath, key='df_markers_expr', mode='a', complevel=4, complib='zlib')
         
         return annotationResults
     
@@ -1017,12 +1019,12 @@ class DigitalCellSorter(VisualizationFunctions):
 
 
     # Plotting user functions of class #################################################
-    def makeProjectionPlotAnnotated(self):
+    def makeProjectionPlotAnnotated(self, **kwargs):
 
         '''Produce projection plot colored by cell types
               
         Parameters:
-            None
+            Any parameters that function 'makeProjectionPlot' can accept
 
         Returns:
             None
@@ -1035,27 +1037,30 @@ class DigitalCellSorter(VisualizationFunctions):
             DCS.makeProjectionPlotAnnotated()
         '''
 
-        print('Making projection plot by clusters "True" labels')
+        print('Making projection plot by clusters with annotated labels')
 
-        df_markers_expr = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_markers_expr', mode='r')
+        df_markers_expr = pd.read_hdf(self.fileHDFpath, key='df_markers_expr')
 
-        df_projection = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_projection', mode='r')
+        df_projection = pd.read_hdf(self.fileHDFpath, key='df_projection')
         df_projection = df_projection[df_markers_expr.groupby(level=['batch', 'cell'], sort=False, axis=1).count().columns]
 
         with open(os.path.join(self.saveDir, 'ColormapForCellTypes.txt'), 'r') as temp_file:
             colormap = {item.strip().split('\t')[0]:eval(item.strip().split('\t')[1]) for item in temp_file.readlines()}
 
-        self.makeProjectionPlot(df_projection.values, df_markers_expr.columns.get_level_values('label'), 'by_clusters_annotated',
-                            colormap=colormap, legend=False)
+        kwargs.setdefault('suffix', 'by_clusters_annotated')
+        kwargs.setdefault('colormap', colormap)
+        kwargs.setdefault('legend', False)
+
+        self.makeProjectionPlot(df_projection.values, df_markers_expr.columns.get_level_values('label'), **kwargs)
 
         return None
     
-    def makeProjectionPlotByBatches(self, labels = False, legend = True):
+    def makeProjectionPlotByBatches(self, **kwargs):
 
         '''Produce projection plot colored by batches
               
         Parameters:
-            None
+            Any parameters that function 'makeProjectionPlot' can accept
 
         Returns:
             None
@@ -1070,28 +1075,31 @@ class DigitalCellSorter(VisualizationFunctions):
 
         print('Making projection plot by batches')
 
-        df_projection = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_projection', mode='r')
+        df_projection = pd.read_hdf(self.fileHDFpath, key='df_projection')
 
         batches = df_projection.columns.get_level_values('batch').values
 
-        #uniqueBatches = np.unique(batches)
-        #wh1 = np.where(batches == uniqueBatches[0])
-        #wh2 = np.where(batches == uniqueBatches[1])
-        #wh3 = np.where(batches == uniqueBatches[2])
+        #wh1 = np.where(batches == np.unique(batches)[0])
+        #wh2 = np.where(batches == np.unique(batches)[1])
+        #wh3 = np.where(batches == np.unique(batches)[2])
         #batches[wh1] = 'BM1'
         #batches[wh2] = 'BM2'
         #batches[wh3] = 'BM3'
 
-        self.makeProjectionPlot(df_projection.values, batches, 'by_patients', labels=labels, legend=legend)
+        kwargs.setdefault('legend', True)
+        kwargs.setdefault('labels', False)
+        kwargs.setdefault('suffix', 'by_patients')
+
+        self.makeProjectionPlot(df_projection.values, batches, **kwargs)
 
         return None
     
-    def makeProjectionPlotByClusters(self):
+    def makeProjectionPlotByClusters(self, **kwargs):
 
         '''Produce projection plot colored by clusters
               
         Parameters:
-            None
+            Any parameters that function 'makeProjectionPlot' can accept
 
         Returns:
             None
@@ -1106,19 +1114,21 @@ class DigitalCellSorter(VisualizationFunctions):
 
         print('Making projection plot by clusters')
 
-        df_clusters = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_clusters', mode='r')
-        df_projection = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_projection', mode='r')
+        df_clusters = pd.read_hdf(self.fileHDFpath, key='df_clusters')
+        df_projection = pd.read_hdf(self.fileHDFpath, key='df_projection')
 
-        self.makeProjectionPlot(df_projection.values, np.array(['Cluster #%s' % (label[0]) for label in df_clusters.values]), 'by_clusters')
+        kwargs.setdefault('suffix', 'by_clusters')
+
+        self.makeProjectionPlot(df_projection.values, np.array(['Cluster #%s' % (label[0]) for label in df_clusters.values]), **kwargs)
 
         return None
 
-    def makeProjectionPlotsQualityControl(self):
+    def makeProjectionPlotsQualityControl(self, **kwargs):
 
         '''Produce Quality Control projection plots
               
         Parameters:
-            None
+            Any parameters that function 'makeProjectionPlot' can accept
 
         Returns:
             None
@@ -1133,27 +1143,39 @@ class DigitalCellSorter(VisualizationFunctions):
 
         print('Making projection plots of QC', flush=True)
 
-        df_QC = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='QC', mode='r')
+        df_QC = pd.read_hdf(self.fileHDFpath, key='QC')
         if self.toggleRemoveLowQualityCells:
-            df_projection = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_projection_pre_QC', mode='r')
+            df_projection = pd.read_hdf(self.fileHDFpath, key='df_projection_pre_QC')
         else:
-            df_projection = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_projection', mode='r')
+            df_projection = pd.read_hdf(self.fileHDFpath, key='df_projection')
 
-        goodQUalityCells = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_projection', mode='r').columns
+        goodQUalityCells = pd.read_hdf(self.fileHDFpath, key='df_projection').columns
 
-        self.makeProjectionPlot(df_projection.values, df_projection.columns.isin(goodQUalityCells.get_level_values('cell'), level='cell'), 'by_is_quality_cell', legend=False, labels=False)
-        self.makeProjectionPlot(df_projection.values, df_QC['number_of_genes'].values, 'by_number_of_genes', legend=False, labels=False, colorbar=True)
-        self.makeProjectionPlot(df_projection.values, df_QC['count_depth'].values, 'by_count_depth', legend=False, labels=False, colorbar=True)
-        self.makeProjectionPlot(df_projection.values, df_QC['fraction_of_mitochondrialGenes'].values, 'by_fraction_of_mitochondrialGenes', legend=False, labels=False, colorbar=True)
+        kwargs.setdefault('legend', False)
+        kwargs.setdefault('labels', False)
+        kwargs.setdefault('colorbar', True)
+
+        kwargs.update(suffix='by_number_of_genes')
+        self.makeProjectionPlot(df_projection.values, df_QC['number_of_genes'].values, **kwargs)
+
+        kwargs.update(suffix='by_count_depth')
+        self.makeProjectionPlot(df_projection.values, df_QC['count_depth'].values, **kwargs)
+        
+        kwargs.update(suffix='by_fraction_of_mitochondrialGenes')
+        self.makeProjectionPlot(df_projection.values, df_QC['fraction_of_mitochondrialGenes'].values, **kwargs)
+
+        kwargs.update(suffix='by_is_quality_cell')
+        kwargs.update(colorbar=False)
+        self.makeProjectionPlot(df_projection.values, df_projection.columns.isin(goodQUalityCells.get_level_values('cell'), level='cell'), **kwargs)
 
         return None
 
-    def makeMarkerSubplots(self):
+    def makeMarkerSubplots(self, **kwargs):
 
         '''Produce subplots on each marker and its expression on all clusters
               
         Parameters:
-            None
+            Any parameters that function 'internalMakeMarkerSubplots' can accept
 
         Returns:
             None
@@ -1166,23 +1188,30 @@ class DigitalCellSorter(VisualizationFunctions):
             DCS.makeMarkerSubplots()
         '''
 
-        df_projection = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_projection', mode='r')
-        df_markers_expr = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_markers_expr', mode='r')
+        df_projection = pd.read_hdf(self.fileHDFpath, key='df_projection')
+        df_markers_expr = pd.read_hdf(self.fileHDFpath, key='df_markers_expr')
         df_projection = df_projection[pd.MultiIndex.from_arrays([df_markers_expr.columns.get_level_values('batch'), df_markers_expr.columns.get_level_values('cell')])]
 
         hugo_cd_dict = dict(zip(df_markers_expr.index.values.tolist(), self.gnc.Convert(list(df_markers_expr.index), 'hugo', 'alias', returnUnknownString=False)))
+        
+        kwargs.setdefault('analyzeBy', 'label')
+        kwargs.setdefault('NoFrameOnFigures', True)
+        kwargs.setdefault('HideClusterLabels', False)
+        kwargs.setdefault('outlineClusters', True)
 
-        self.internalMakeMarkerSubplots(df_markers_expr, df_projection.values, hugo_cd_dict)
+        self.internalMakeMarkerSubplots(df_markers_expr, df_projection.values, hugo_cd_dict, **kwargs)
 
-        return
+        return None
 
-    def makeAnomalyScoresPlot(self, cells = 'All'):
+    def makeAnomalyScoresPlot(self, cells = 'All', **kwargs):
 
         '''Make anomaly scores plot
 
         Parameters:
             cells: pandas.MultiIndex, Default 'All'
                 Index of cells of interest
+
+            Any parameters that function 'makeProjectionPlot' can accept
 
         Returns:
             None
@@ -1197,7 +1226,7 @@ class DigitalCellSorter(VisualizationFunctions):
             DCS.makeAnomalyScoresPlot(cells)
         '''
 
-        df_projection = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_projection', mode='r')
+        df_projection = pd.read_hdf(self.fileHDFpath, key='df_projection')
 
         if type(cells) is str:
             if cells == 'All':
@@ -1209,14 +1238,18 @@ class DigitalCellSorter(VisualizationFunctions):
         df_sel = self.getExprOfCells(cells)
 
         scores = self.getAnomalyScores(df_sel, df_sel)
-
         scores = pd.DataFrame(index=cells, data=scores).reindex(df_projection.columns).values.T[0]
 
-        self.makeProjectionPlot(df_projection.values, scores, suffix='by_anomaly_score', legend=False, labels=False, colorbar=True)
+        kwargs.setdefault('suffix', 'by_anomaly_score')
+        kwargs.setdefault('legend', False)
+        kwargs.setdefault('labels', False)
+        kwargs.setdefault('colorbar', True)
+
+        self.makeProjectionPlot(df_projection.values, scores, **kwargs)
 
         return None
     
-    def makeIndividualGeneTtestPlot(self, gene, analyzeBy = 'label'):
+    def makeIndividualGeneTtestPlot(self, gene, analyzeBy = 'label', **kwargs):
 
         '''Produce individual gene t-test plot of the two-tailed p-value.
 
@@ -1227,6 +1260,8 @@ class DigitalCellSorter(VisualizationFunctions):
             analyzeBy: str, Default 'label'
                 What level of lablels to include.
                 Other possible options are 'label' and 'celltype'
+
+            Any parameters that function 'makeTtestPlot' can accept
 
         Returns:
             None
@@ -1255,13 +1290,14 @@ class DigitalCellSorter(VisualizationFunctions):
 
         alt = self.gnc.Convert([gene], 'hugo', 'alias', returnUnknownString=False)[0]
         alt = [alt] if type(alt) is str else alt
-        hugo_cd_dict = '%s\n(%s)' % (gene, ('\n').join(list(alt)))
 
-        self.makeTtestPlot(ttestStatistic, ttestpValue, label=hugo_cd_dict)
+        kwargs.setdefault('label', '%s\n(%s)' % (gene, ('\n').join(list(alt))))
+
+        self.makeTtestPlot(ttestStatistic, ttestpValue, **kwargs)
 
         return None    
 
-    def makeIndividualGeneExpressionPlot(self, gene, hideClusterLabels = False, outlineClusters = True):
+    def makeIndividualGeneExpressionPlot(self, gene, **kwargs):
 
         '''Produce individual gene expression plot on a 2D layout
 
@@ -1275,6 +1311,8 @@ class DigitalCellSorter(VisualizationFunctions):
             outlineClusters: boolean, Default True
                 Whether to outline the clusters with circles
 
+            Any parameters that function 'internalMakeMarkerSubplots' can accept
+
         Returns:
             None
         
@@ -1284,22 +1322,23 @@ class DigitalCellSorter(VisualizationFunctions):
             DCS.makeIndividualGeneExpressionPlot('CD4')
         '''
 
-        df_markers_expr = self.getExprOfGene(gene, analyzeBy='cluster')
+        kwargs.setdefault('analyzeBy', 'cluster')
+
+        df_markers_expr = self.getExprOfGene(gene, analyzeBy=kwargs['analyzeBy'])
 
         if df_markers_expr is None:
 
             return None
 
-        df_projection = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_projection', mode='r')
+        df_projection = pd.read_hdf(self.fileHDFpath, key='df_projection')
         
         hugo_cd_dict = {gene: self.gnc.Convert([gene], 'hugo', 'alias', returnUnknownString=False)[0]}
 
-        self.internalMakeMarkerSubplots(df_markers_expr, 
-                                df_projection.values, 
-                                hugo_cd_dict, 
-                                NoFrameOnFigures=True, 
-                                HideClusterLabels=hideClusterLabels, 
-                                outlineClusters=outlineClusters)
+        kwargs.setdefault('NoFrameOnFigures', True)
+        kwargs.setdefault('HideClusterLabels', False)
+        kwargs.setdefault('outlineClusters', True)
+
+        self.internalMakeMarkerSubplots(df_markers_expr, df_projection.values, hugo_cd_dict, **kwargs)
 
         return None
 
@@ -1383,8 +1422,8 @@ class DigitalCellSorter(VisualizationFunctions):
         if printAliases:
             try:
                 print(gene, ':', conversionDict[gene])
-            except:
-                pass
+            except Exception as exception:
+                print(exception)
 
             for name in names:
                 print(name, ':', conversionDict[name])
@@ -1416,15 +1455,16 @@ class DigitalCellSorter(VisualizationFunctions):
             DCS.getExprOfGene('SDC1')
         '''
 
-        fileName = os.path.join(self.saveDir, self.dataName + '_processed.h5')
+        fileName = self.fileHDFpath
 
         if not os.path.isfile(fileName):
             print('Processed data file not found')
             return
         
         try:
-            df_markers_expr = pd.read_hdf(fileName, key='df_expr', mode='r').xs(key=gene, axis=0, level=-1).T
-        except:
+            df_markers_expr = pd.read_hdf(fileName, key='df_expr').xs(key=gene, axis=0, level=-1).T
+        except Exception as exception:
+            print(exception)
             print('Gene %s not in index' % (gene))
             return
 
@@ -1432,7 +1472,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         df_markers_expr.columns = pd.MultiIndex.from_arrays([df_markers_expr.columns.get_level_values('batch'), df_markers_expr.columns.get_level_values('cell')])
 
-        labelled = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_markers_expr', mode='r').columns
+        labelled = pd.read_hdf(self.fileHDFpath, key='df_markers_expr').columns
         
         columns = pd.MultiIndex.from_arrays([labelled.get_level_values('batch'), labelled.get_level_values('cell')])
         df_markers_expr = df_markers_expr.reindex(columns, axis=1).fillna(0.)
@@ -1509,7 +1549,7 @@ class DigitalCellSorter(VisualizationFunctions):
             labels = DCS.getCells()
         '''
 
-        df = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_markers_expr', mode='r').columns.to_frame()
+        df = pd.read_hdf(self.fileHDFpath, key='df_markers_expr').columns.to_frame()
 
         if not clusterIndex is None:
 
@@ -1564,7 +1604,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         return selectedCells
 
-    def getIndexOfGoodQualityCells(self):
+    def getIndexOfGoodQualityCells(self, QCplotsSubDir = 'QC_plots', **kwargs):
 
         '''Get index of sells that satisfy the QC criteria
 
@@ -1578,6 +1618,8 @@ class DigitalCellSorter(VisualizationFunctions):
             mitochondrial_genes_cutoff: float, Default 3.0
                 The cutoff is median + standard_deviation * this_parameter
 
+            Any parameters that function 'makeQualityControlHistogramPlot' can accept
+
         Returns:
             pandas.Index
                 Index of cells
@@ -1588,20 +1630,19 @@ class DigitalCellSorter(VisualizationFunctions):
             index = DCS.getIndexOfGoodQualityCells()
         '''
 
-        df_QC = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='QC', mode='r')
+        df_QC = pd.read_hdf(self.fileHDFpath, key='QC')
 
         if not self.excludedFromQC is None:
             df_QC = df_QC.loc[df_QC.index.difference(self.excludedFromQC)]
 
-        plotsDir = os.path.join(self.saveDir, 'QC_plots', '')
+        plotsDir = os.path.join(self.saveDir, QCplotsSubDir, '')
 
-        if not os.path.exists(plotsDir):
-            os.makedirs(plotsDir)
+        kwargs.setdefault('MakeHistogramPlot', True)
 
         # Calculate cutoffs
-        cutoff_count_depth = self.getQualityControlCutoff(df_QC['count_depth'], self.countDepthCutoffQC, plotPathAndName=os.path.join(plotsDir, '%s_count_depth' % (self.dataName)), MakeHistogramPlot=True)
-        cutoff_number_of_genes = self.getQualityControlCutoff(df_QC['number_of_genes'], self.numberOfGenesCutoffQC, plotPathAndName=os.path.join(plotsDir, '%s_number_of_genes' % (self.dataName)), MakeHistogramPlot=True)
-        cutoff_fraction_of_mitochondrialGenes = self.getQualityControlCutoff(df_QC['fraction_of_mitochondrialGenes'], self.mitochondrialGenesCutoffQC, plotPathAndName=os.path.join(plotsDir, '%s_fraction_of_mitochondrialGenes' % (self.dataName)), mito=True, MakeHistogramPlot=True)
+        cutoff_count_depth = self.getQualityControlCutoff(df_QC['count_depth'], self.countDepthCutoffQC, plotPathAndName=os.path.join(plotsDir, '%s_count_depth' % (self.dataName)), **kwargs)
+        cutoff_number_of_genes = self.getQualityControlCutoff(df_QC['number_of_genes'], self.numberOfGenesCutoffQC, plotPathAndName=os.path.join(plotsDir, '%s_number_of_genes' % (self.dataName)), **kwargs)
+        cutoff_fraction_of_mitochondrialGenes = self.getQualityControlCutoff(df_QC['fraction_of_mitochondrialGenes'], self.mitochondrialGenesCutoffQC, plotPathAndName=os.path.join(plotsDir, '%s_fraction_of_mitochondrialGenes' % (self.dataName)), mito=True, **kwargs)
 
         df_QC['isGoodQuality'] = np.zeros(len(df_QC)).astype(bool)
 
@@ -1616,7 +1657,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         return index.sort_values()
 
-    def getQualityControlCutoff(self, se, cutoff, mito = False, plotPathAndName = None, MakeHistogramPlot = True):
+    def getQualityControlCutoff(self, se, cutoff, mito = False, MakeHistogramPlot = True, **kwargs):
 
         '''Function to calculate QC quality cutoff
 
@@ -1635,6 +1676,8 @@ class DigitalCellSorter(VisualizationFunctions):
 
             MakeHistogramPlot: boolean, Default True
                 Whether to make a histogram plot
+
+            Any parameters that function 'makeQualityControlHistogramPlot' can accept
 
         Returns:
             float
@@ -1672,8 +1715,10 @@ class DigitalCellSorter(VisualizationFunctions):
         else:
             cutoff = int(cutoff * np.median(subset))
 
+        kwargs.setdefault('mito', mito)
+
         if MakeHistogramPlot:
-            self.makeQualityControlHistogramPlot(subset, cutoff, plotPathAndName=plotPathAndName, mito=mito)
+            self.makeQualityControlHistogramPlot(subset, cutoff, **kwargs)
             
         return cutoff
 
@@ -1711,7 +1756,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         return moveTag(moveTag(df.T).T)
     
-    def getNewMarkerGenes(self, cluster = None, top = 100, zScoreCutoff = None, removeUnknown = False):
+    def getNewMarkerGenes(self, cluster = None, top = 100, zScoreCutoff = None, removeUnknown = False, **kwargs):
 
         '''Extract new marker genes based on the cluster annotations
 
@@ -1727,6 +1772,8 @@ class DigitalCellSorter(VisualizationFunctions):
 
             removeUnknown: boolean, Default False
                 Whether to remove type "Unknown"
+
+            Any parameters that function 'makePlotOfNewMarkers' can accept
 
         Returns:
             None
@@ -1814,7 +1861,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         df_new_marker_genes = df_new_marker_genes[df_new_marker_list.index]
 
-        self.makePlotOfNewMarkers(df_marker_cell_type, df_new_marker_genes)
+        self.makePlotOfNewMarkers(df_marker_cell_type, df_new_marker_genes, **kwargs)
 
         return None
 
@@ -2106,7 +2153,8 @@ class DigitalCellSorter(VisualizationFunctions):
 
             try:
                 Q_inv = np.linalg.inv(Q)    # n,n
-            except:
+            except Exception as exception:
+                print(exception)
                 print('Cannot invert matrix Q')
 
                 return
@@ -2665,8 +2713,9 @@ class DigitalCellSorter(VisualizationFunctions):
 
         if self.KeyInFile('df_markers_expr', self.fileHDFpath):
             try:
-                se = pd.read_hdf(self.fileHDFpath, key='df_markers_expr', mode='r').T.reset_index().set_index('cell')[infoType]
-            except:
+                se = pd.read_hdf(self.fileHDFpath, key='df_markers_expr').T.reset_index().set_index('cell')[infoType]
+            except Exception as exception:
+                print(exception)
                 print('Error reading annotation results', flush=True)
 
                 return
@@ -2681,11 +2730,11 @@ class DigitalCellSorter(VisualizationFunctions):
 
         if includeLowQC:
             if self.KeyInFile('df_projection_pre_QC', self.fileHDFpath):
-                allCells = pd.read_hdf(self.fileHDFpath, key='df_projection_pre_QC', mode='r').columns
+                allCells = pd.read_hdf(self.fileHDFpath, key='df_projection_pre_QC').columns
                 allBathes = allCells.get_level_values('batch')
                 allCells = allCells.get_level_values('cell')
             elif self.KeyInFile('df_projection', self.fileHDFpath):
-                allCells = pd.read_hdf(self.fileHDFpath, key='df_projection', mode='r').columns
+                allCells = pd.read_hdf(self.fileHDFpath, key='df_projection').columns
                 allBathes = allCells.get_level_values('batch')
                 allCells = allCells.get_level_values('cell')
             else:
@@ -2721,7 +2770,7 @@ class DigitalCellSorter(VisualizationFunctions):
         if self.KeyInFile('df_expr', self.fileHDFpath):
             print('Loading processed data', flush=True)
 
-            self._df_expr = pd.read_hdf(self.fileHDFpath, key='df_expr', mode='r').unstack(level=-1, fill_value=0.).T
+            self._df_expr = pd.read_hdf(self.fileHDFpath, key='df_expr').unstack(level=-1, fill_value=0.).T
             self._df_expr.index = self._df_expr.index.get_level_values(-1)
             self._df_expr.sort_index(inplace=True)
         else:
@@ -2761,12 +2810,12 @@ class DigitalCellSorter(VisualizationFunctions):
         df_marker_cell_type = df_marker_cell_type[(df_marker_cell_type != 0).sum(axis=1) >= 1]
         df_marker_cell_type.index.name = 'Marker'
 
-        df_marker_cell_type.to_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_marker_cell_type', mode='a', complevel=4, complib='zlib')
+        df_marker_cell_type.to_hdf(self.fileHDFpath, key='df_marker_cell_type', mode='a', complevel=4, complib='zlib')
 
         # Create (or update) a colormap for cell types
         if createColormapForCelltypes:
             with open(os.path.join(self.saveDir, 'ColormapForCellTypes.txt'), 'w') as tempMapFile:
-                df_marker_cell_type = pd.read_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='df_marker_cell_type', mode='r')
+                df_marker_cell_type = pd.read_hdf(self.fileHDFpath, key='df_marker_cell_type')
 
                 cellTypes = np.sort(df_marker_cell_type.columns.values.tolist())
 
@@ -2806,11 +2855,11 @@ class DigitalCellSorter(VisualizationFunctions):
 
         df_QC.columns = ['count_depth', 'number_of_genes', 'fraction_of_mitochondrialGenes']
 
-        df_QC.to_hdf(os.path.join(self.saveDir, self.dataName + '_processed.h5'), key='QC', mode='a', complevel=4, complib='zlib')
+        df_QC.to_hdf(self.fileHDFpath, key='QC', mode='a', complevel=4, complib='zlib')
 
         return
 
-    def qualityControl(self):
+    def qualityControl(self, **kwargs):
 
         '''Remove low quality cells
 
@@ -2818,7 +2867,7 @@ class DigitalCellSorter(VisualizationFunctions):
             None
 
         Returns:
-            None
+            Any parameters that function 'getIndexOfGoodQualityCells' can accept
 
         Usage:
             DCS = DigitalCellSorter.DigitalCellSorter()
@@ -2826,14 +2875,14 @@ class DigitalCellSorter(VisualizationFunctions):
             DCS.qualityControl()
         '''
 
-        index = self.getIndexOfGoodQualityCells()
+        index = self.getIndexOfGoodQualityCells(**kwargs)
 
         if self.toggleRemoveLowQualityCells:
             self._df_expr = self._df_expr[self._df_expr.columns.intersection(index).sort_values()]
             self._df_expr = self._df_expr[self._df_expr.sum(axis=1) > 0]
             print('Removed low quality cells. Data size: %s genes, %s cells' % self._df_expr.shape, flush=True)
 
-            df_projection = pd.read_hdf(self.fileHDFpath, key='df_projection_pre_QC', mode='r')
+            df_projection = pd.read_hdf(self.fileHDFpath, key='df_projection_pre_QC')
             df_projection[self._df_expr.columns].to_hdf(self.fileHDFpath, key='df_projection', mode='a', complevel=4, complib='zlib')
 
             self.project(PCAonly=True)

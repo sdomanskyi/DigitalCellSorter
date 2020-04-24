@@ -65,7 +65,7 @@ def timeMark():
         timeMark()
     '''
         
-    return print('--> Total elapsed time: %s min' % (np.round(time.thread_time() / 60., 1)), '\n')
+    return print('--> Total elapsed time: %s min' % (np.round(time.time() / 60., 1)), '\n')
 
 def getStartTime():
 
@@ -135,7 +135,8 @@ def extractFromZipOfGz(filepath, removeDownloadedZipFile=False):
 
         try:
             os.remove(os.path.join(filepath, filename))
-        except:
+        except Exception as exception:
+            print(exception)
             print('Could not remove the file')
 
     return extractPath
