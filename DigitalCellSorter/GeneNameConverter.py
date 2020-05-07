@@ -1,25 +1,11 @@
-# -*- coding: utf-8 -*-
-"""
-Spyder Editor
-
-This is a temporary script file.
-"""
-
-
-
 import mygene
 import pickle
-
-
-
-
 
 class GeneNameConverter:
     
     def __init__(self,
                  dictDir = None,
-                 jumpStart = True,
-                 ):
+                 jumpStart = True,):
         if dictDir is None: self.dictDir = 'pickledGeneConverterDict/ensembl_hugo_entrez_alias_dict.pythdat'
         else: self.dictDir = dictDir
         #Try getting dictionary from disk, and if it can't be found, initialize an empty dict
@@ -48,7 +34,6 @@ class GeneNameConverter:
         self.Convert(pd.read_csv('seedGenes/genes_ensembl.txt').values.flatten().tolist(),'ensembl','entrez')
         self.Convert(pd.read_csv('seedGenes/genes_entrez.txt').values.flatten().tolist(),'retired','entrez')
         self.Convert(pd.read_csv('seedGenes/genes_hugo.txt').values.flatten().tolist(),'alias','entrez')
-        
     
     def Convert(self,
                 genes,
@@ -56,8 +41,7 @@ class GeneNameConverter:
                 targetType,
                 onlineSearch = False,
                 aggressiveSearch = False,
-                returnUnknownString = True,
-                ):
+                returnUnknownString = True,):
         
         class MyTypeError(Exception): pass
         returnFlatFlag = False
@@ -72,7 +56,7 @@ class GeneNameConverter:
             genesToFetch = set(genes).difference(self.conversionDict[sourceType][targetType].keys())
             if aggressiveSearch == False:
                 genesToFetch = genesToFetch.difference(self.conversionDict[sourceType]['unknown'])
-            if len(genesToFetch)>0:
+            if len(genesToFetch) > 0:
                 self.Fetch(list(genesToFetch),sourceType)
         
         geneSet = set(self.conversionDict[sourceType][targetType].keys())
@@ -93,24 +77,23 @@ class GeneNameConverter:
     
     def Fetch(self,
               genes,
-              sourceType,
-              ):
+              sourceType,):
         
         kwargs = {'species':'human','fields':['ensembl.gene','entrezgene','symbol','alias','retired']}
-        if sourceType=='entrez' or sourceType=='retired':
+        if sourceType == 'entrez' or sourceType == 'retired':
             kwargs['scopes'] = ('entrezgene','retired')
             for gene in genes:
                 assert type(gene) is int or type(gene) is long
-        elif sourceType=='ensembl':
+        elif sourceType == 'ensembl':
             kwargs['scopes'] = 'ensembl.gene'
             for gene in genes:
                 assert type(gene) is str
-                assert gene[:4]=='ENSG'
-        elif sourceType=='hugo' or sourceType=='alias': 
+                assert gene[:4] == 'ENSG'
+        elif sourceType == 'hugo' or sourceType == 'alias': 
             kwargs['scopes'] = ('symbol','alias')
             for gene in genes:
                 assert type(gene) is str
-                assert gene[:4]!='ENSG'
+                assert gene[:4] != 'ENSG'
         
         genesSet = set(genes)
         queryList = mygene.MyGeneInfo().querymany(genes, **kwargs)
@@ -119,9 +102,9 @@ class GeneNameConverter:
         for q,gene in zip(queryList,genes):
             #First check if gene was found by mygene
             if 'notfound' in q.keys():
-                self.conversionDict[sourceType]['unknown'].add( gene )
+                self.conversionDict[sourceType]['unknown'].add(gene)
             else:
-                #Extract the different naming conventions from the query 
+                #Extract the different naming conventions from the query
                 #(lots of ugly bookkeeping)
                 try:
                     entrez = q['entrezgene']
@@ -139,15 +122,15 @@ class GeneNameConverter:
                     retireds = []
                 try: hugo = q['symbol']
                 except KeyError: hugo = None
-                if str(q['query'])[:4]=='ENSG':
+                if str(q['query'])[:4] == 'ENSG':
                     ensembl = q['query']
                     ensembl_list = (ensembl,)
                 else:
                     try:
                         ensembl = q['ensembl']
-                        if type(ensembl)==dict:
+                        if type(ensembl) == dict:
                             ensembl = ensembl['gene']
-                        if type(ensembl)==list:
+                        if type(ensembl) == list:
                             ensembl_list = [list(i.values())[0] for i in ensembl]
                             ensembl = ensembl_list[0]
                         else:
@@ -158,7 +141,7 @@ class GeneNameConverter:
                         ensembl_list = ()
                 try:
                     aliases = q['alias']
-                    if type(aliases)!=list: aliases = [aliases]
+                    if type(aliases) != list: aliases = [aliases]
                     aliases.append(hugo)
                     aliases = tuple(set(aliases))
                 except KeyError: aliases = ()
@@ -170,7 +153,7 @@ class GeneNameConverter:
                             self.conversionDict[source]['known'].add(sourceGene)
                             if sourceGene in self.conversionDict[source]['unknown']:
                                 self.conversionDict[source]['unknown'].remove(sourceGene)
-                        if source!=target and sourceGene is not None and targetGene is not None:
+                        if source != target and sourceGene is not None and targetGene is not None:
                             self.conversionDict[source][target][sourceGene] = targetGene
                 
                 #Some searches identify many ensembl's for a given hugo/entrez query
@@ -188,7 +171,7 @@ class GeneNameConverter:
                             self.conversionDict['alias'][target][alias] = targetGene
                 
                 #Map official hugo to a tuple of aliases
-                if hugo is not None and len(aliases)>0:
+                if hugo is not None and len(aliases) > 0:
                     self.conversionDict['hugo']['alias'][hugo] = aliases
                 
                 #Map all retired entrez to official entrez and vice versa
@@ -201,20 +184,20 @@ class GeneNameConverter:
                             self.conversionDict['retired']['unknown'].remove(retired)
                 
         #Fix alias dictionary to always assume that the input gene is the official
-        #hugo. This is important in the case of symbols like CRP, which is both an alias
-        #of CSRP1 with EzID=1465 and an official hugo name with EzID=1401. This final 
+        #hugo.  This is important in the case of symbols like CRP, which is both an alias
+        #of CSRP1 with EzID=1465 and an official hugo name with EzID=1401.  This final
         #loop guarantees
         #
         #   conversionDict['alias']['hugo']['CRP'] == 'CRP'
         #
-        #Without this final loop, the alias dictionary would ERRONEOUSLY map the 
+        #Without this final loop, the alias dictionary would ERRONEOUSLY map the
         #official gene name CRP to CSRP1:
         #
         #   conversionDict['alias']['hugo']['CRP'] == 'CSRP1'
         #
         #Gene name conventions are complicated.
-        for hugo in list(self.conversionDict['hugo']['entrez'].keys())+\
-                    list(self.conversionDict['hugo']['ensembl'].keys())+\
+        for hugo in list(self.conversionDict['hugo']['entrez'].keys()) + \
+                    list(self.conversionDict['hugo']['ensembl'].keys()) + \
                     list(self.conversionDict['hugo']['alias'].keys()):
             try: entrez = self.conversionDict['hugo']['entrez'][hugo]
             except KeyError: entrez = None
@@ -231,32 +214,6 @@ class GeneNameConverter:
     
     def Load(self,pathToFile):
         with open(pathToFile, 'rb') as f: return pickle.load(f)
-
-
-
-
-
-
-
-#if __name__=='__main__':
-#    
-#    
-#    gnc = GeneNameConverter()
-#    
-#    
-#    genes = ['TP53','ABL1','CD34']
-#    genes_converted = gnc.Convert(genes,'hugo','entrez')
-#    for i in zip(genes,genes_converted):
-#        print '%s --> %s' % i
-#    
-#    
-#    genes = [729173]
-#    genes_converted = gnc.Convert(genes,'retired','entrez')
-#    for i in zip(genes,genes_converted):
-#        print '%s --> %s' % i
-
-
-
 
 
 

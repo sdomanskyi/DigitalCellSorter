@@ -1,6 +1,5 @@
 /data/**/*.h5
 /data/**/*.zip
-/data/**/*.gz
 .vs/
 /other/
 *.sb

@@ -37,21 +37,16 @@ setup(
         'Topic :: Education',
         'Topic :: Utilities',
         ],
+    python_requires='>=3',
     install_requires=[
         'numpy>=1.16.4',
         'pandas>=0.24.2',
-        'tables>=3.5.2',
+        'tables>=3.4.2',
         'scipy>=1.3.0',
         'matplotlib>=3.1.0',
         'scikit-learn>=0.21.2',
-        'plotly>=4.1.1',
         'mygene>=3.1.0',
-        'pynndescent>=0.3.3',
-        'networkx>=2.3',
-        'python-louvain>=0.13',
         'adjustText>=0.7.3',
-        'umap-learn>=0.3.10',
-        'phate>=1.0.3',
         'fitsne>=1.0.1; platform_system=="Linux" or platform_system=="Darwin"'],
     zip_safe=False
 )

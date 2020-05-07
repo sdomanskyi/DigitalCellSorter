@@ -47,10 +47,13 @@ The code runs in Python >= 3.7 environment.
 It is highly recommended to install Anaconda.
 Installers are available at https://www.anaconda.com/distribution/
 
-It uses packages ```numpy```, ```pandas```, ```matplotlib```, ```scikit-learn```, ```scipy```, 
-```mygene```, ```fftw```, ```pynndescent```, ```networkx```, ```python-louvain```, ```fitsne```, 
-```adjustText```, ```phate```, ```umap-learn```, ```plotly```
-and a few other standard Python packages. Most of these packages are installed with installation of the 
+It uses packages ```numpy```, ```pandas```, ```matplotlib```, ```scikit-learn```, 
+```scipy```, ```mygene```, ```fftw```, ```fitsne```, ```adjustText```
+and a few other standard Python packages. Many of these are not instaled by default, and should by installed
+by separately if using certain functionality with Digital Cell Sorter. For example, for use of network-based clustering
+install packages ```pynndescent```, ```networkx```, ```python-louvain```. To use UMAP layout
+install ```umap-learn```, and for PHATE install ```phate```. To use Sankey diagrams install
+```plotly```. Many of the necessary packages are installed with installation of the 
 latest release of ```DigitalCellSorter```:
 
 	pip install DigitalCellSorter
