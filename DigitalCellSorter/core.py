@@ -192,9 +192,9 @@ class DigitalCellSorter(VisualizationFunctions):
     def __init__(self, df_expr = None, dataName = 'dataName', geneNamesType = 'alias', geneListFileName = None, mitochondrialGenes = None,
                 sigmaOverMeanSigma = 0.01, nClusters = 10, nFineClusters = 3, doFineClustering = True, minSizeForFineClustering = 50, 
                 clusteringFunction = AgglomerativeClustering, nComponentsPCA = 200, nSamples_pDCS = 3 * 10 ** 3,  nSamples_Hopfield = 500,
-                saveDir = os.path.join(''), makeMarkerSubplots = False, availableCPUsCount = min(12, os.cpu_count()), zScoreCutoff = 0.3,
-                subclusteringName = None, doQualityControl = True, doBatchCorrection = True, makePlots = True,
-                minimumNumberOfMarkersPerCelltype = 10, nameForUnknown = 'Unassigned', nameForLowQC = 'Failed QC', 
+                saveDir = os.path.join(''), makeMarkerSubplots = False, availableCPUsCount = min(6, os.cpu_count()), zScoreCutoff = 0.3,
+                subclusteringName = None, doQualityControl = True, doBatchCorrection = True, makePlots = True, useUnderlyingNetwork = True,
+                minimumNumberOfMarkersPerCelltype = 10, nameForUnknown = 'Unassigned', nameForLowQC = 'Failed QC', matplotlibMode = None,
                 countDepthCutoffQC = 0.5, numberOfGenesCutoffQC = 0.5, mitochondrialGenesCutoffQC = 1.5, excludedFromQC = None,
                 thresholdForUnknown_pDCS = 0., thresholdForUnknown_ratio = 0., thresholdForUnknown_Hopfield = 0., thresholdForUnknown = 0.2, 
                 layout = 'TSNE', HopfieldTemperature = 0.1, annotationMethod = 'ratio-pDCS-Hopfield'):
@@ -234,6 +234,8 @@ class DigitalCellSorter(VisualizationFunctions):
         self.nComponentsPCA = nComponentsPCA
         self.zScoreCutoff = zScoreCutoff
         self.minimumNumberOfMarkersPerCelltype = minimumNumberOfMarkersPerCelltype
+
+        self.useUnderlyingNetwork = useUnderlyingNetwork
 
         self.annotationMethod = annotationMethod
 
@@ -275,7 +277,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         self.toggleGetMarkerSubplots = makeMarkerSubplots
 
-        super().__init__(saveDir=saveDir, dataName=dataName)
+        super().__init__(saveDir=saveDir, dataName=dataName, matplotlibMode=matplotlibMode)
 
         return None
     
@@ -840,6 +842,8 @@ class DigitalCellSorter(VisualizationFunctions):
         if 'Hopfield' in methodsToUse:
             print('\nCalculating results by %s method' % ('Hopfield'), flush = True)
             annotationResults_Hopfield = list(self.annotateWith_Hopfield_Scheme(df_markers_expr.copy(), df_marker_cell_type.T.copy()))
+            #self.annotateWith_Hopfield_Scheme(df_markers_expr.copy(), df_marker_cell_type.T.copy())
+            #return
 
         if ('pDCS' in methodsToUse) and ('ratio' in methodsToUse) and ('Hopfield' in methodsToUse):
             annotationResults = annotationResults_pDCS
@@ -1014,6 +1018,10 @@ class DigitalCellSorter(VisualizationFunctions):
         ##############################################################################################
         if self.toggleGetMarkerSubplots:
             self.makeMarkerSubplots()
+
+        self.makeHopfieldLandscapePlot()
+
+        self.makeHopfieldPCplot()
 
         return None
 
@@ -2118,109 +2126,6 @@ class DigitalCellSorter(VisualizationFunctions):
 
         np.random.seed(0)
 
-        def propagateHopfield(sigma, xi, T = 0.2, tmax = 75, fractionToUpdate = 0.5, 
-                              underlyingNetwork = None, typesNames = None, clustersNames = None, 
-                              recordTrajectories = False, id = None, printSwitchingFraction = False):
-
-            '''Function used internally. Propagate Hopfield network 
-            over a set number of time steps
-                    
-            Parameters:
-                sigma: pandas.DataFrame
-                    Markers expression DataFrame
-
-                df_attrs: pandas.DataFrame
-                    Marker cell type DataFrame
-
-                T: float, Default 0.2
-                    Noise (Temperature) parameter
-
-                tmax: int, Default 200
-                    Number of step to iterate through
-
-                fractionToUpdate: float, Default 0.5
-                    Fraction of nodes to randomly update at each iteration
-
-            Returns:
-                2d numpy.array 
-                    Overlaps 
-
-            Usage:
-                result = propagateHopfield(sigma, df_attrs)
-            '''
-
-            Q = (xi.T).dot(xi)              # n,n
-
-            try:
-                Q_inv = np.linalg.inv(Q)    # n,n
-            except Exception as exception:
-                print(exception)
-                print('Cannot invert matrix Q')
-
-                return
-
-            xi_inv = (Q_inv).dot(xi.T)      # n,m
-            J = (xi).dot(xi_inv)            # m,m
-            
-            sigma_ = sigma.copy()
-            sigma_[sigma_ < 0.] = 0.
-            initial = np.argmax((xi_inv).dot(sigma_), axis=0)
-            initial[np.where(np.max((xi_inv).dot(sigma_), axis=0) < 10. ** -12)] = -1
-
-            if recordTrajectories:
-                trajectories = np.zeros((tmax, sigma.shape[1], xi.shape[1] + 2))
-                times = np.zeros((28, 1))
-                _PCA = PCA(n_components=min(xi.shape))
-                _PCA.fit_transform(xi_inv)
-                attrs = np.dot(_PCA.components_, xi_inv.T).T
-
-                z = []
-
-            for t in range(tmax): 
-                h = (J).dot(sigma)
-                
-                if recordTrajectories:
-                    times[:] = t
-
-                    sigma_ = sigma.copy()
-                    sigma_[sigma_ < 0.] = 0.
-
-                    energy = -(h * sigma_).sum(axis=0).reshape(sigma_.shape[1], 1) 
-                    energy /= (((sigma_ != 0.).sum(axis=0))[:, None] / sigma_.shape[0])
-                    coordinates = np.dot(_PCA.components_, sigma_).T
-                    trajectories[t,:,:] = np.hstack([coordinates, times, energy])
-
-                    z.append(((sigma == 0.) * 1.).sum(axis=0))
-
-                sigmaNew = ((1. / (1. + np.exp(-2. * h / T))) > np.random.rand(*sigma.shape)) * 2. - 1.
-
-                # Hopfiled model asymmetric and diluted: similar to Hope4Genes algorithm
-                # Deactivate nodes that are being turned off
-                sigmaNew[(sigmaNew - sigma) < -1.] = 0.
-
-                f = 1. if t >= 100 else max(0.05, float(t) / 100.)
-
-                whereToUpdate = (np.random.rand(*sigma.shape) <= f * fractionToUpdate)
-                sigma[whereToUpdate] = sigmaNew[whereToUpdate] * np.abs(sigma[whereToUpdate])
-
-            sigma_ = sigma.copy()
-            sigma_[sigma_ < 0.] = 0.
-            final = np.argmax((xi_inv).dot(sigma_), axis=0)
-            final[np.where(np.max((xi_inv).dot(sigma_), axis=0) < 10. ** -12)] = -1
-
-            if printSwitchingFraction:
-                print(np.round(100. * (final != initial).sum() / (len(initial)), 2).astype(int), end=' ', flush=True)
-
-            if recordTrajectories:
-                id = 0 if id is None else id
-                write((trajectories, initial, final, attrs, typesNames, clustersNames), 'dev/trajectories%s' % (id))
-
-            sigma[sigma < 0.] = 0.
-            overlap = (xi_inv).dot(sigma)
-            overlap[overlap <= 0.] = 0.
-
-            return overlap
-
         # The scheme does not account for negative markers.
         # Therefore remove them
         df_marker_cell_type[df_marker_cell_type > 0.] = 1.
@@ -2249,12 +2154,25 @@ class DigitalCellSorter(VisualizationFunctions):
 
         df_expr_cluster_centroids = df_markers_expr.groupby(level='cluster', axis=1, sort=False).mean()
         df_Z = df_expr_cluster_centroids.copy().apply(self.zScoreOfSeries, axis=1)
-        #r = np.mean(df_expr_cluster_centroids.values, axis=1) /
-        #np.std(df_expr_cluster_centroids.values, axis=1)
 
-        df_sig = df_Z > self.zScoreCutoff #* r[:, None]
+        df_sig = df_Z > self.zScoreCutoff
 
         dict_expressed_markers = {cluster:df_sig.index[df_sig[cluster] > 0].values for cluster in df_sig}
+
+        if self.useUnderlyingNetwork:
+            try:
+                underlyingNetwork = self.getSubnetworkOfPCN(df_marker_cell_type.index.values, min_shared_first_targets=1)
+
+                print('Recording underlying network', flush=True)
+                underlyingNetwork.to_hdf(self.fileHDFpath, key='df_underlyingNetwork', mode='a', complevel=4, complib='zlib')
+
+                underlyingNetwork = underlyingNetwork.values
+            except Exception as exception:
+                print(exception)
+                print('Not using underlying network connection')
+                underlyingNetwork = None
+        else:
+            underlyingNetwork = None
 
         print('Generating Hopfield networks:', flush=True)
 
@@ -2265,9 +2183,11 @@ class DigitalCellSorter(VisualizationFunctions):
                 print('\n%s%%' % (np.int(100 * i / self.nSamples_Hopfield)), end='\t', flush=True)
 
             # Run Hopfield network dynamics
-            hop = propagateHopfield(df_sig.values * 2. - 1., df_marker_cell_type.values, 
-                                    typesNames=df_marker_cell_type.columns.values,
-                                    clustersNames=df_sig.columns.values, id = i, T = self.HopfieldTemperature)
+            hop = self.propagateHopfield(sigma=df_sig.values * 2. - 1., 
+                                         xi=df_marker_cell_type.values, 
+                                         typesNames=df_marker_cell_type.columns.values, underlyingNetwork=underlyingNetwork,
+                                         clustersNames=df_sig.columns.values, id = i, T = self.HopfieldTemperature, 
+                                         path = os.path.join(self.saveDir, 'HopfieldTrajectories'))
 
             # Determine top scores
             res = np.argmax(hop, axis=0)
@@ -2413,6 +2333,230 @@ class DigitalCellSorter(VisualizationFunctions):
 
         return df_V.loc['Predicted cell type'].to_dict()
 
+    def propagateHopfield(cls, sigma = None, xi = None, T = 0.2, tmax = 200, fractionToUpdate = 0.5, mode = 4, meshSamplingRate = 100,
+                            underlyingNetwork = None, typesNames = None, clustersNames = None, printInfo = False,
+                            recordTrajectories = True, id = None, printSwitchingFraction = False, path = None):
+
+        '''Function is used internally to propagate Hopfield network 
+        over a set number of time steps
+                    
+        Parameters:
+            sigma: pandas.DataFrame, Default None
+                Markers expression
+
+            xi: pandas.DataFrame, Default None
+                Marker cell type DataFrame
+
+            T: float, Default 0.2
+                Noise (Temperature) parameter
+
+            tmax: int, Default 200
+                Number of step to iterate through
+
+            fractionToUpdate: float, Default 0.5
+                Fraction of nodes to randomly update at each iteration
+
+            mode: int, Default 4
+                Options are:
+                    1: non-onthogonalized, non-weighted attractors
+                    2: onthogonalized, non-weighted attractors
+                    3: onthogonalized, weighted attractors
+                    4: onthogonalized, weighted attractors, asymetric and diluted dynamics
+
+            meshSamplingRate: int, Default 100
+                Visualization parameter to control the quality of the color mesh near the attractors
+
+            underlyingNetwork: 2d numpy.array, Default None
+                Network of underlying connections between genes
+
+            typesNames: list-like, Default None
+                Names of cell types
+
+            clustersNames: list-like, Default None
+                Names or identifiers of the clusters
+
+            printInfo: boolean, Default False
+                Whether to print detailes
+
+            recordTrajectories: boolean, Default True
+                Whether to record trajectories data to files
+
+            id: int, Default None
+                Identifier of this function call
+
+            printSwitchingFraction: boolean, Default False
+                Whether to print fraction of clusters that switch theie 
+                maximum overlapping attractor
+
+            path: str, Default None
+                Path for saving trajectories data
+
+        Returns:
+            2d numpy.array 
+                Overlaps 
+
+        Usage:
+            result = propagateHopfield(sigma=sigma, xi=df_attrs)
+        '''
+          
+        if xi is None:
+            print('xi is None')
+
+            return
+
+        if not path is None:           
+            if not os.path.exists(path):
+                os.makedirs(path)
+
+        if mode==1 or mode==2:
+            xi[xi > 0.] = 1.
+            xi[xi <= 0.] = -1.
+
+        if printInfo:
+            print('Unique nodes across Hopfield network:', len(np.unique(xi, axis=0)))
+
+        if mode == 1:
+            A = xi.T
+            J = (xi).dot(A) / (xi.shape[0]) # m,m
+        else:
+            Q = (xi.T).dot(xi)              # n,n
+
+            try:
+                Q_inv = np.linalg.inv(Q)    # n,n
+            except Exception as exception:
+                print(exception)
+                print('Cannot invert matrix Q')
+
+                return
+
+            A = (Q_inv).dot(xi.T)           # n,m <-- xi_inv
+            J = (xi).dot(A)                 # m,m
+
+        if not underlyingNetwork is None:
+            if J.shape == underlyingNetwork.shape:
+                #print('Udsing network of underlying interactions')
+                J *= underlyingNetwork
+            else:
+                print('Network of underlying interactions shape is inconsistent with J. Ignoring it')
+
+        getHopfieldEnergy = lambda s: -0.5 * s[None, :].dot(J).dot(s)
+
+        if recordTrajectories:
+            pca = PCA(n_components=None).fit(A)
+
+            attrs = pca.transform(A)
+            variance = pca.explained_variance_ratio_
+
+            if id == 0 or id is None:
+                if xi.shape[1] == 2:
+                    dim = 2
+                    lim = 15
+                    g = np.linspace(-lim, lim, num=100)
+                    mesh_coords = np.meshgrid(*tuple([g]*dim))
+                    mesh_coords = np.vstack([g.flatten() for g in mesh_coords]).T
+                    
+                    mesh = np.zeros((mesh_coords.shape[0], xi.shape[1]))
+                    mesh[:, :len(mesh_coords.T)] = mesh_coords
+
+                    mesh_sigma = pca.inverse_transform(mesh)
+
+                    if False:
+                        mesh_sigma[mesh_sigma > 0.] = 1.
+                        mesh_sigma[mesh_sigma <= 0.] = -1.
+                        digital_mesh = pca.transform(mesh_sigma)
+                        mesh_coords = digital_mesh
+                    
+                    mesh_energy = np.array([getHopfieldEnergy(s) for s in mesh_sigma])
+                    write(np.hstack([mesh_coords[:,:2], mesh_energy]), os.path.join(path, 'mesh'))
+                else:
+                    print('Generating samples in the vicinity of attractors')
+                    temp = []
+                    for i in range(xi.shape[1]):
+                        for j in range(25):
+                            st = A[i]
+                            temp.append(np.array([st * ((np.random.rand(st.shape[0]) > 0.025*j) * 2. - 1.) for i in range(meshSamplingRate)]))
+                    mesh_sigma = np.vstack(temp)
+
+                    print('Calculating energy of the samples')
+                    if False:
+                        mesh_energy = np.array([getHopfieldEnergy(s) for s in mesh_sigma])
+                    else:
+                        c = 0
+
+                        print('Calculating chunks:')
+
+                        def func(mesh_sigma):
+                            nonlocal c
+                            c += 1
+                            print(c, end=' ', flush=True)
+                            return -0.5 * ((J).dot(mesh_sigma.T) * mesh_sigma.T).sum(axis=0)[:,None]
+
+                        mesh_energy = np.vstack([func(item) for item in np.split(mesh_sigma, meshSamplingRate)])
+
+                    print('\nProjecting samples on PCs')
+                    mesh_coords = pca.transform(mesh_sigma)
+
+                    print('Recording mesh data')
+                    write(np.hstack([mesh_coords, mesh_energy]), os.path.join(path, 'mesh'))
+
+        if recordTrajectories:
+            write((np.vstack([attrs, variance]), typesNames), os.path.join(path, 'attrs'))
+
+        if sigma is None:
+            print('Sigma is None')
+
+            return
+
+        if recordTrajectories:
+            trajectories = np.zeros((tmax, sigma.shape[1], xi.shape[1]))
+                    
+        initial = np.argmax((A).dot(sigma), axis=0)
+        initial[np.where(np.max((A).dot(sigma), axis=0) < 10. ** -12)] = -1
+
+        if printInfo:
+            sIn = sigma.copy()
+
+        for t in range(tmax): 
+            h = (J).dot(sigma)
+
+            #print(np.round((100.*(sigma==0.)*1.).sum().sum()/(sigma.shape[0]*sigma.shape[1]), 2), end=', ', flush=True)
+                
+            if recordTrajectories:
+                if id == 0 or id is None:
+                    trajectories[t,:,:] = np.hstack([pca.transform(sigma.T)])
+
+            sigmaNew = ((1. / (1. + np.exp(-2. * h / T))) > np.random.rand(*sigma.shape)) * 2. - 1.
+
+            # Make dynamics asymmetric and diluted: Deactivate nodes that are being turned off
+            if mode == 4:
+                sigmaNew[(sigmaNew - sigma) < -1.] = 0.
+
+            f = 1. if t >= 100 else max(0.05, float(t) / 100.)
+
+            whereToUpdate = (np.random.rand(*sigma.shape) <= f * fractionToUpdate)
+            sigma[whereToUpdate] = sigmaNew[whereToUpdate] * np.abs(sigma[whereToUpdate])
+
+        if printInfo:
+            print('In positive:', ((sIn>0)*1.).sum(axis=0))
+            print('Out positive:', ((sigma>0)*1.).sum(axis=0))
+            print('Positive common in-out:', (((sIn>0.)*(sigma>0.))*1.).sum(axis=0))
+
+        final = np.argmax((A).dot(sigma), axis=0)
+        final[np.where(np.max((A).dot(sigma), axis=0) < 10. ** -12)] = -1
+
+        if printSwitchingFraction:
+            print(np.round(100. * (final != initial).sum() / (len(initial)), 2).astype(int), end=' ', flush=True)
+
+        if recordTrajectories:
+            if id == 0 or id is None:
+                write(trajectories, os.path.join(path, 'trajectories%s')%(id))
+                write((initial, final, typesNames, clustersNames), os.path.join(path, 'additional'))
+
+        overlap = (A).dot(sigma)
+        overlap[overlap <= 0.] = 0.
+
+        return overlap
+
 
     # Other functions of class #########################################################
     @classmethod
@@ -2489,6 +2633,65 @@ class DigitalCellSorter(VisualizationFunctions):
             return True if "/" + key.strip("/") in file.keys() else False
 
         return
+
+    def getSubnetworkOfPCN(self, subnetworkGenes, min_shared_first_targets = 30):
+
+        '''Extract subnetwork of PCN network
+
+        Parameters:
+            subnetworkGenes: list-like
+                Set of genes that the subnetwork should contain
+
+            min_shared_first_targets: int, Default 30
+                Number of minimum first shared targets to connect two nodes
+
+        Returns:
+            pandas.DataFrame
+                Adjacency matrix
+
+        Usage:
+            DCS = DigitalCellSorter.DigitalCellSorter()
+
+            df_subnetwork = DCS.getSubnetworkOfPCN(genes)
+        '''
+
+        print('\nReading PCN (directed, unweighted) network from file')
+        PCN = pd.read_csv(os.path.join('data', 'PCN.txt.gz'), compression='gzip', header=0, index_col=[0], delimiter='\t')['Target']
+
+        print('Calculating targets of PCN network genes')
+        targets = PCN.groupby(level=0).agg('unique').apply(set).to_dict()
+
+        del PCN
+
+        index = pd.Index(set(subnetworkGenes).intersection(set(targets.keys()))).sort_values()
+        print('Number of PCN genes: %s'%(len(index)))
+
+        print('Calculating number of common targets for %s genes'%(len(index)))
+        data = np.zeros((len(index), len(index))).astype(int)
+
+        for iA in range(len(index)):
+            print(iA, end=', ', flush=True)
+            geneA = index[iA]
+
+            for iB in range(iA, len(index)):
+                geneB = index[iB]
+                direct = 1 if (geneB in targets[geneA]) else 0
+                data[iA,iB] = data[iB,iA] = len(targets[geneA].intersection(targets[geneB])) + direct
+
+        targetsOverlaps = pd.DataFrame(index=index, columns=index, data=data)
+        print(targetsOverlaps)
+
+        subnetwork = 1.*(targetsOverlaps >= min_shared_first_targets)
+        print(subnetwork.shape)
+
+        subnetwork = subnetwork.reindex(subnetworkGenes, axis=0).reindex(subnetworkGenes, axis=1).fillna(0.)
+        print(subnetwork.shape)
+
+        con = subnetwork.sum().sum()
+        tot = (len(subnetwork)-1)*len(subnetwork)
+        print('\nConnections in subnetwork: %s, out of %s possible (%s%%)\n'%(con, tot, np.round(100.*con/tot, 0)))
+
+        return subnetwork
 
     def alignSeries(self, se1, se2, tagForMissing):
 

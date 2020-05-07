@@ -6,11 +6,11 @@ import pandas as pd
 
 import scipy.stats
 import scipy.signal
+import scipy.ndimage
 import scipy.cluster.hierarchy
 from scipy.interpolate import UnivariateSpline
 
 import matplotlib
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.patheffects as path_effects
 from matplotlib import cm
@@ -18,16 +18,34 @@ from matplotlib import cm
 import plotly.graph_objects
 from adjustText import adjust_text
 
+from .GenericFunctions import read, write
+
 class VisualizationFunctions:
 
     '''Class of visualization functions for DigitalCellSorter'''
 
-    def __init__(self, dataName = 'dataName', saveDir = os.path.join('')):
+    def __init__(self, dataName = 'dataName', saveDir = os.path.join(''), matplotlibMode = 'Agg'):
 
         '''Function called automatically'''
 
         self.saveDir = saveDir
         self.dataName = dataName
+        self.matplotlibMode = matplotlibMode
+
+        return
+
+    @property
+    def matplotlibMode(self):
+
+        return self._matplotlibMode
+
+    @matplotlibMode.setter
+    def matplotlibMode(self, value):
+
+        self._matplotlibMode = value
+
+        if not self.matplotlibMode is None:
+            matplotlib.use(self.matplotlibMode)
 
         return
 
@@ -1386,8 +1404,7 @@ class VisualizationFunctions:
 
         return None
     
-    def makeCellMarkersPiePlot(self, type1, type2, df_marker_cell_type = 'all', nameToAppend = None, 
-                               listUnexpressedMarkers = True, orthogonalSectorsShift = 0.1, rotationAngle = 0, dpi = 300, extension = 'png'):
+    def makeCellMarkersPiePlot(self, type1, type2, df_marker_cell_type = 'all', nameToAppend = None, listUnexpressedMarkers = True, orthogonalSectorsShift = 0.1, rotationAngle = 0, dpi = 300, extension = 'png'):
 
         '''Make summary of markers comparison between two cell types.
 
@@ -1656,3 +1673,300 @@ class VisualizationFunctions:
         self.saveFigure(fig, self.saveDir, self.dataName + saveName, extension=extension, dpi=dpi)
 
         return dict(zip(labels, list(sets)))
+
+    def makeHopfieldPCplot(self, colormap = cm.hot_r, plotTrLines = False, clusterid = 1, trID = 0, axisOff = False, trPath = None, dpi = 300, extension = 'png'):
+
+        '''Make radar plot of the attractors in their principal components coordinates
+
+        Parameters:
+            colormap: matplotlib.colormap or str, Default cm.hot_r
+                Colormap or its string name
+
+            plotTrLines: boolean, Default False
+                Whether to plot trajectories
+
+            clusterid: int, Default 1
+                Identifier of the cluster to plot trajectories of
+
+            trID: int, Default 0
+                Identifier of the trajectories to plot
+
+            axisOff: boolean, Default False
+                Whether to hide the axes lines
+
+            trPath: str, Default None
+                Path to trajectories files
+
+            dpi: int, Default 300
+                Resolution of the figure
+
+            extension: str, Default 'png'
+                Format extension of the figure
+
+        Returns:
+            None
+        
+        Usage:
+            DCS = DigitalCellSorter.DigitalCellSorter()
+
+            DCS.makeHopfieldPCplot()
+        '''
+
+        if axisOff:
+            ax.axis('off')
+
+        if trPath is None:
+            trPath = os.path.join(self.saveDir, 'HopfieldTrajectories')
+
+        if not os.path.exists(trPath):
+            print('Data not found', flush=True)
+
+            return
+
+        fig = plt.figure(figsize=(8,8))
+        ax = plt.subplot(111, polar=True, theta_direction=-1, theta_offset=0.5*np.pi)
+
+        attrs, attrs_names = read(os.path.join(trPath, 'attrs'))
+        N = attrs.shape[1]
+        df = pd.DataFrame(data=attrs[:N], index=attrs_names, 
+                          columns=['PC%s\n%s%%'%(i+1, np.int(100.*attrs[N][i])) for i in range(N)])
+
+        wherePC = attrs[N] > 0.001
+        df = df[df.columns[wherePC]]
+        N = df.shape[1]
+
+        vmaxAt = df.max(axis=0).max()
+        vminAt = df.min(axis=0).min()
+
+        ax.set_ylim(vminAt, vmaxAt)
+ 
+        angles = [n / float(N) * 2 * np.pi for n in range(N)] + [0.]
+ 
+        ax.set_xticklabels([])
+        ax.set_xticks(angles)
+
+        for i, celltype in enumerate(df.index):
+            values=df.loc[celltype].values.flatten().tolist()
+            values.append(values[0])
+
+            color = cm.jet(i/len(attrs_names))
+
+            ax.plot(angles, values, color=color, linewidth=1.0, linestyle='solid', label=celltype)
+            #ax.fill(angles, values, alpha=0.2, color=color)
+
+            temp_texts = ax.text(angles[np.argmax(values)], values[np.argmax(values)], celltype, color=color, fontsize=10, ha='center', va='center')
+            temp_texts.set_path_effects([path_effects.Stroke(linewidth=0.5, foreground='k'), path_effects.Normal()])
+
+        if plotTrLines:
+            trajectories = read(os.path.join(trPath, 'trajectories%s')%(trID))
+
+            initial, final, typesNames, clusterNames = read(os.path.join(trPath, 'additional'))
+        
+            thisTr = trajectories[:, clusterid, wherePC].T
+
+            vmax = max(thisTr.max(axis=0).max(axis=0), vmaxAt)
+            vmin = min(thisTr.min(axis=0).min(axis=0), vminAt)
+
+            ax.set_ylim(vmin, vmax)
+
+            inId = initial[clusterid]
+            outId = final[clusterid]
+
+            print('ClusterID: %s, Initial state: %s (%s), Final state: %s (%s)'%(clusterNames[clusterid], typesNames[inId], inId, typesNames[outId], outId))
+
+            suffix = clusterNames[clusterid]
+
+            fig.suptitle('Cluster %s: %s -> %s' % (clusterNames[clusterid], typesNames[inId] if inId!=-1 else 'Unknown', typesNames[outId] if outId!=-1 else 'Unknown'), fontsize=11, color='b')
+
+            values = thisTr.T[0].tolist() + [thisTr.T[0][0]]
+
+            timeLimit = thisTr.shape[1]
+
+            for t in range(timeLimit):
+                values = thisTr.T[t].tolist() + [thisTr.T[t][0]]
+
+                if t==0:
+                    ax.plot(angles, values, 'o-', ms=4.0, color='b', alpha=1.0, clip_on=False)
+
+                ax.plot(angles, values, color='b', linewidth=0.5, alpha=0.04, linestyle='solid')
+                ax.fill(angles, values, alpha=0.005, color='b')
+
+                if t == timeLimit - 1:
+                    ax.plot(angles, values, 'o-', ms=4.0, color='r', alpha=1.0, clip_on=False)
+
+            ax.set_rlabel_position(0)
+        else:
+            vmax = vmaxAt
+            vmin = vminAt
+            suffix = 'attractors'
+
+        for i, pc in enumerate(df.columns):
+            temp_texts = ax.text(angles[i], 1.1 * (vmax - vmin) + vmin, pc, color='k', fontsize=14, ha='center', va='center')
+            temp_texts.set_path_effects([path_effects.Stroke(linewidth=0.5, foreground='w'), path_effects.Normal()])
+
+        self.saveFigure(fig, self.saveDir, self.dataName + '_polar_%s'%(suffix), extension=extension, dpi=dpi)
+
+        return
+
+    def makeHopfieldLandscapePlot(self, legend = False, labels = False, PCx = 0, PCy = 1, colorbar = True, fontsize = 10, plotMesh = True, plotAttractors = True, adjustText = True, axisOff = True, colorbarva = 0.75, colorbarha = 0.85, trPath = None, colormap = matplotlib.colors.LinearSegmentedColormap.from_list('cmap', [(1, 1, 1), (0, 1, 1), (0, 0, 1), (1, 0, 0)], N=1000), dpi = 300, extension = 'png'):
+
+        '''Make heatmap plot of the attractors in their two principal components coordinates
+
+        Parameters:
+            legend: boolean, Default False
+                Whether to add legend containing cell types names
+            
+            labels: boolean, Default False
+                Whether to add labels 
+                
+            PCx: int, Default 0
+                Principal component for x-coordinate of the plot
+                            
+            PCy: int, Default 1
+                Principal component for y-coordinate of the plot
+            
+            colorbar: boolean, Default False
+                Whether to add colorbar
+
+            fontsize: int, Default 10
+                Text labels font size
+            
+            plotMesh: boolean, Default False
+                Whether to plot landscape heatmap
+                
+            plotAttractors: boolean, Default False
+                Whether to plot attractor stars
+                
+            adjustText: boolean, Default False
+                Whether to minimize text labels overlap
+                
+            axisOff: boolean, Default False
+                Whether to hide the axes lines
+
+            colorbarva: float, Default 0.75
+                Vertical position of the bottom of the colorbar
+
+            colorbarha: float, Default 0.85
+                Horizontal position of the colorbar
+
+            trPath: str, Default None
+                Path to trajectories files
+
+            colormap: matplotlib.colormap or str, Default matplotlib.colors.LinearSegmentedColormap.from_list('cmap', [(1, 1, 1), (0, 1, 1), (0, 0, 1), (1, 0, 0)], N=1000)
+                Colormap or its string name
+
+            dpi: int, Default 300
+                Resolution of the figure
+
+            extension: str, Default 'png'
+                Format extension of the figure
+
+        Returns:
+            None
+        
+        Usage:
+            DCS = DigitalCellSorter.DigitalCellSorter()
+
+            DCS.makeHopfieldLandscapePlot()
+        '''
+
+        np.random.seed(0)
+
+        colormap.set_bad('white')
+
+        def add_colorbar(fig, labels, cmap = matplotlib.colors.LinearSegmentedColormap.from_list('GR', [(0, 1, 0), (1, 0, 0)], N=100), fontsize = 10):
+    
+            mapp = cm.ScalarMappable(norm=matplotlib.colors.Normalize(vmin=np.min(labels), vmax=np.max(labels)), cmap=cmap)
+            sp = np.linspace(np.max(labels), np.min(labels), num=6, endpoint=True)
+            mapp.set_array(sp)
+
+            axisColor = fig.add_axes([colorbarha, colorbarva, 0.01, 0.2])
+
+            fig.colorbar(mapp, cax=axisColor, ticks=sp)
+
+            axisColor.tick_params(labelsize=fontsize)
+            axisColor.set_yticklabels(sp.astype(int))
+    
+            return None
+
+        fig = plt.figure(figsize=(8,8))
+        ax = fig.add_axes([0.05,0.05,0.9,0.9])
+
+        if axisOff:
+            ax.axis('off')
+            
+        if trPath is None:
+            trPath = os.path.join(self.saveDir, 'HopfieldTrajectories')
+
+        if not os.path.exists(trPath):
+            print('Data not found', flush=True)
+
+            return
+
+        attrs_xpca, attrs_names = read(os.path.join(trPath, 'attrs'))
+        attrs_xpca = attrs_xpca[:attrs_xpca.shape[1]]
+
+        mesh_xpca = read(os.path.join(trPath, 'mesh'))
+
+        mesh_energy = mesh_xpca[range(len(mesh_xpca)), -1]
+        mesh_xpca = mesh_xpca[range(len(mesh_xpca)), :-1]
+
+        data = np.vstack([attrs_xpca, mesh_xpca])
+
+        coords = data.T[[PCx, PCy], :]
+        attrs2D, mesh2D = coords[:, :attrs_xpca.shape[1]].T, coords[:, attrs_xpca.shape[1]:].T
+    
+        if plotMesh:
+            vmin, vmax = min(mesh_energy), 0.
+
+            vals = mesh_energy.copy()
+            vals[np.where(vals > (vmax - 0.001))[0]] = vmax - 0.001
+            vals[np.where(vals < (vmin + 0.001))[0]] = vmin + 0.001
+
+            xmin, xmax = mesh2D.T[0].min(), mesh2D.T[0].max()
+            ymin, ymax = mesh2D.T[1].min(), mesh2D.T[1].max()
+
+            ngrid = 100
+            grid = np.zeros((ngrid + 1, ngrid + 1))
+            grid[:] = vmin
+
+            i = (ngrid * (mesh2D.T[0] - xmin) / (xmax - xmin)).astype(int)
+            j = (ngrid * (mesh2D.T[1] - ymin) / (ymax - ymin)).astype(int)
+
+            se = pd.Series(index=zip(i,j), data=mesh_energy).groupby(axis=0, level=0).agg(np.min)
+            se.index = pd.MultiIndex.from_tuples(se.index)
+
+            grid[(se.index.get_level_values(0).values, se.index.get_level_values(1).values)] = se.values
+
+            maskedArray = np.ma.array(grid.T, mask=np.isnan(grid.T,))
+
+            im = ax.imshow(maskedArray[::-1], vmin=vmin, vmax=vmax, cmap=colormap, alpha=0.8,
+                        extent=[xmin, xmax, ymin, ymax], interpolation='quadric', zorder=-10**8, clip_on=False)
+
+            data = scipy.ndimage.gaussian_filter(grid.T, 1.5)
+            xgrid = np.linspace(xmin, xmax, num=(ngrid+1))
+            ygrid = np.linspace(ymin, ymax, num=(ngrid+1))
+
+            tempColormap = matplotlib.colors.LinearSegmentedColormap.from_list('cmap', [(0.75, 0.75, 0.75), (0, 1, 1), (0, 0, 1), (1, 0, 0)], N=1000)
+
+            ax.contour(xgrid, ygrid, data, levels=10, cmap=tempColormap, linewidths=0.5, zorder=-10**8+1)
+    
+        if plotAttractors:
+            texts = []
+
+            ax.plot(attrs2D.T[0], attrs2D.T[1], '*', ms=14, color='k', alpha=1.0, zorder=-10**7, clip_on=False)
+            for attr in range(attrs2D.T[0].shape[0]):
+                temp_texts = ax.text(attrs2D.T[0][attr], attrs2D.T[1][attr], attrs_names[attr], fontsize=10, ha='left',va='center', zorder=10 ** 10, clip_on=False)
+                temp_texts.set_path_effects([path_effects.Stroke(linewidth=1, foreground='white'), path_effects.Normal()])
+                texts.append(temp_texts)
+
+            if adjustText:
+                adjust_text(texts, arrowprops=dict(arrowstyle='-', color='k', lw=0.3, alpha=0.5), force_text=(0.05, 0.05))
+
+        if plotMesh and colorbar:
+
+            add_colorbar(fig, [vmax, vmin], cmap=colormap, fontsize=fontsize)
+
+        self.saveFigure(fig, self.saveDir, self.dataName + '_energy_landscape_PC%s_vs_PC%s'%(PCy, PCx), extension=extension, dpi=dpi)
+
+        return

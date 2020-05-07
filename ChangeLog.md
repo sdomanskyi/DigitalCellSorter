@@ -1,4 +1,8 @@
 
+- 1.3.2
+   * Added Hopfield landscape visuzlization capability
+   * Added network of underlying biological gene-gene interaction to the Hopfield annotaiton scheme
+
 - 1.3.1
    * Minor API modifications
 
