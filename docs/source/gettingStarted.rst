@@ -20,25 +20,10 @@ latest release of ``DigitalCellSorter``:
 
     $ pip install DigitalCellSorter
 
-Alternatively, you can install this module directly from GitHub using:
+For detailed instructions and other ways to install ``DigitalCellSorter`` as wells as
+list of optional packages and instructions on how to install them see
+**Prerequisites** section at https://github.com/sdomanskyi/DigitalCellSorter
 
-.. code-block:: bash
-
-    $ pip install git+https://github.com/sdomanskyi/DigitalCellSorter
-
-Also one can create a local copy of this project for development purposes by running:
-
-.. code-block:: bash
-
-    $ git clone https://github.com/sdomanskyi/DigitalCellSorter
-
-To install ``fftw`` from the ``conda-forge`` channel add ``conda-forge`` to your channels.
-Once the conda-forge channel has been enabled, ``fftw`` can be installed as follows:
-
-.. code-block:: bash 
-
-    $ conda config --add channels conda-forge
-    $ conda install fftw
 
 **Loading the package**
 -----------------------

@@ -46,7 +46,6 @@ setup(
         'matplotlib>=3.1.0',
         'scikit-learn>=0.21.2',
         'mygene>=3.1.0',
-        'adjustText>=0.7.3',
-        'fitsne>=1.0.1; platform_system=="Linux" or platform_system=="Darwin"'],
+        'adjustText>=0.7.3'],
     zip_safe=False
 )

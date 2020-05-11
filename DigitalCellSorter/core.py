@@ -648,7 +648,9 @@ class DigitalCellSorter(VisualizationFunctions):
         print('Explained variance:', np.round(np.sum(_PCA.explained_variance_ratio_) * 100., 2), "%", flush=True)
         
         print('Recording xpca, PCs, 2D projection of df_expr', flush=True)
-        pd.DataFrame(data=X_pca, columns=self._df_expr.columns).to_hdf(self.fileHDFpath, key='df_xpca', mode='a', complevel=4, complib='zlib')
+        columns=self._df_expr.columns
+        columns = pd.MultiIndex.from_arrays([columns.get_level_values('batch'), columns.get_level_values('cell')], names=['batch', 'cell'])
+        pd.DataFrame(data=X_pca, columns=columns).to_hdf(self.fileHDFpath, key='df_xpca', mode='a', complevel=4, complib='zlib')
         pd.DataFrame(data=_PCA.components_).to_hdf(self.fileHDFpath, key='df_pcs', mode='a', complevel=4, complib='zlib')
 
         if not PCAonly:
@@ -663,27 +665,53 @@ class DigitalCellSorter(VisualizationFunctions):
                         print('Windows detected. Using FastTSNE submodule wrapper', flush=True)
                         X_projection2 = fast_tsne(X_pca.T, perplexity = 30, seed=42).T
                     else:
-                        import fitsne
-                        X_projection2 = fitsne.FItSNE(np.array(X_pca.T, order='C')).T
+                        try:
+                            import fitsne
+                        except Exception as exception:
+                            print(exception)
+                            print('FI-tSNE package could not be imported. Install the package following \
+                            instructions of DigitalCellSorter installation on GitHub. Defaulting to PCA layout')
+                            self.layout = 'PCA'
+
+                        if self.layout == 'TSNE':
+                            X_projection2 = fitsne.FItSNE(np.array(X_pca.T, order='C')).T
                 else:
                     X_projection2 = TSNE(n_components=2).fit_transform(X_pca.T).T
 
             elif self.layout == 'UMAP':
                 print('Performing UMAP projection from %s to %s features...' % (self.nComponentsPCA, 2), flush=True)
-                import umap
-                X_projection2 = umap.UMAP(random_state=42).fit_transform(X_pca.T).T
+                try:
+                    import umap
+                except Exception as exception:
+                    print(exception)
+                    print('UMAP package could not be imported. Install the package following \
+                    instructions of DigitalCellSorter installation on GitHub. Defaulting to PCA layout')
+                    self.layout = 'PCA'
 
-            elif self.layout == 'PCA':
-                print('Using PC1 and PC2 for layout', flush=True)
-                X_projection2 = X_pca[[0,1],:]
+                if self.layout == 'UMAP':
+                    X_projection2 = umap.UMAP(random_state=42).fit_transform(X_pca.T).T
 
             elif self.layout == 'PHATE':
                 print('Performing PHATE projection from %s to %s features...' % (self.nComponentsPCA, 2), flush=True)
-                import phate
-                X_projection2 = phate.PHATE().fit_transform(X_pca.T).T
+                try:
+                    import phate
+                except Exception as exception:
+                    print(exception)
+                    print('PHATE package could not be imported. Install the package following \
+                    instructions of DigitalCellSorter installation on GitHub. Defaulting to PCA layout')
+                    self.layout = 'PCA'
+
+                if self.layout == 'PHATE':
+                    X_projection2 = phate.PHATE().fit_transform(X_pca.T).T
+
+            if self.layout == 'PCA':
+                print('Using PC1 and PC2 for layout', flush=True)
+                X_projection2 = X_pca[[0,1],:]
 
             print('Recording 2D projection of df_expr', flush=True)
-            pd.DataFrame(data=X_projection2, columns=self._df_expr.columns).to_hdf(self.fileHDFpath, key='df_projection_pre_QC' if self.toggleRemoveLowQualityCells else 'df_projection', mode='a', complevel=4, complib='zlib')
+
+            pd.DataFrame(data=X_projection2, columns=columns).to_hdf(self.fileHDFpath, key='df_projection_pre_QC', mode='a', complevel=4, complib='zlib')
+            pd.DataFrame(data=X_projection2, columns=columns).to_hdf(self.fileHDFpath, key='df_projection', mode='a', complevel=4, complib='zlib')
 
             return X_pca, _PCA.components_, X_projection2
 
@@ -708,34 +736,42 @@ class DigitalCellSorter(VisualizationFunctions):
         print('Calculating clustering of PCA data', flush=True)
         df_xpca = pd.read_hdf(self.fileHDFpath, key='df_xpca')
 
-        X_pca = df_xpca.values
-        clusteringFunction = self.clusteringFunction
+        if type(self.clusteringFunction) is dict:
+            try:
+                import pynndescent
+                import networkx as nx
+                import community
+            except Exception as exception:
+                print(exception)
+                print('Install packages pynndescent, networkx and python-louvain following \
+                instructions of DigitalCellSorter installation on GitHub. Defaulting to agglomerative clustering method')
+                self.clusteringFunction = AgglomerativeClustering
 
-        if type(clusteringFunction) is dict:
+        if type(self.clusteringFunction) is dict:
 
             import pynndescent
             import networkx as nx
             import community
             
             try:
-                k_neighbors = clusteringFunction[k_neighbors]
+                k_neighbors = self.clusteringFunction[k_neighbors]
             except Exception as exception:
                 print(exception)
                 k_neighbors = 40
 
             try:
-                metric = clusteringFunction[metric]
+                metric = self.clusteringFunction[metric]
             except Exception as exception:
                 print(exception)
                 metric = 'euclidean'
             
             try:
-                clusterExpression = clusteringFunction[clusterExpression]
+                clusterExpression = self.clusteringFunction[clusterExpression]
             except Exception as exception:
                 print(exception)
                 clusterExpression = False
 
-            data = self._df_expr.values.T if clusterExpression else X_pca.T
+            data = self._df_expr.values.T if clusterExpression else df_xpca.values.T
 
             print('Searching for %s nearest neighbors' % (k_neighbors), flush=True)
             knn = pynndescent.NNDescent(data, metric=metric, n_neighbors=k_neighbors).query(data, k=k_neighbors)
@@ -750,9 +786,9 @@ class DigitalCellSorter(VisualizationFunctions):
             print('Clustering the graph', flush=True)
             cellClusterIndex = pd.Series(community.best_partition(G)).sort_index().values
         else:
-            data = X_pca
+            data = df_xpca.values
 
-            cellClusterIndex = clusteringFunction(n_clusters=self.nClusters).fit(data.T).labels_.astype(float).astype(str)
+            cellClusterIndex = self.clusteringFunction(n_clusters=self.nClusters).fit(data.T).labels_.astype(float).astype(str)
             print(np.unique(cellClusterIndex, return_counts=True))
 
             if self.doFineClustering:
@@ -1122,12 +1158,14 @@ class DigitalCellSorter(VisualizationFunctions):
 
         print('Making projection plot by clusters')
 
-        df_clusters = pd.read_hdf(self.fileHDFpath, key='df_clusters')
         df_projection = pd.read_hdf(self.fileHDFpath, key='df_projection')
+        df_clusters = pd.read_hdf(self.fileHDFpath, key='df_clusters').reindex(df_projection.columns)
 
         kwargs.setdefault('suffix', 'by_clusters')
 
-        self.makeProjectionPlot(df_projection.values, np.array(['Cluster #%s' % (label[0]) for label in df_clusters.values]), **kwargs)
+        labels = np.array(['Cluster #%s' % (label[0]) if label==label else label for label in df_clusters.values])
+
+        self.makeProjectionPlot(df_projection.values, labels, **kwargs)
 
         return None
 

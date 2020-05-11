@@ -47,13 +47,10 @@ The code runs in Python >= 3.7 environment.
 It is highly recommended to install Anaconda.
 Installers are available at https://www.anaconda.com/distribution/
 
-It uses packages ```numpy```, ```pandas```, ```matplotlib```, ```scikit-learn```, 
+Our software uses packages ```numpy```, ```pandas```, ```matplotlib```, ```scikit-learn```, 
 ```scipy```, ```mygene```, ```fftw```, ```fitsne```, ```adjustText```
-and a few other standard Python packages. Many of these are not instaled by default, and should by installed
-by separately if using certain functionality with Digital Cell Sorter. For example, for use of network-based clustering
-install packages ```pynndescent```, ```networkx```, ```python-louvain```. To use UMAP layout
-install ```umap-learn```, and for PHATE install ```phate```. To use Sankey diagrams install
-```plotly```. Many of the necessary packages are installed with installation of the 
+and a few other standard Python packages. Install ```DigitalCellSorter``` with ```pip```.
+Most of these necessary packages are automatically installed with installation of the 
 latest release of ```DigitalCellSorter```:
 
 	pip install DigitalCellSorter
@@ -62,23 +59,43 @@ Alternatively, you can install this module directly from GitHub using:
 
 	pip install git+https://github.com/sdomanskyi/DigitalCellSorter
 
-Also one can create a local copy of this project for development purposes by running:
+Also one can create a local copy of this project for development purposes, and install the package
+from the cloned directoryg:
 
 	git clone https://github.com/sdomanskyi/DigitalCellSorter
-
-After cloning the package can also be installed from the cloned directory by:
-
 	python setup.py install
 
-To install ```fftw``` from the ```conda-forge``` channel add ```conda-forge``` to your channels.
-Once the conda-forge channel has been enabled, ```fftw``` can be installed as follows:
+Some of the packages used in ```DigitalCellSorter``` are not installed by default, 
+and should by installed
+by separately if using certain functionality with Digital Cell Sorter. For example, 
+for use of network-based clustering
+install packages ```pynndescent```, ```networkx```, ```python-louvain```. 
+To use UMAP layout
+install ```umap-learn```, and for PHATE install ```phate```. 
+
+To use tSNE layout the following need to be installed. First 
+install ```fftw``` from the ```conda-forge``` channel 
+add ```conda-forge``` to your channels, and install ```fftw```:
 
 	conda config --add channels conda-forge
 	conda install fftw
 
-To use Sankey diagrams that are part of Digital Cell Sorter install ```orca```:
+Then to install FI-tSNE for Linux:
+
+	pip install fitsne
+
+On macOS Mojave:
+
+	env CC=clang CXX=clang++ pip install fitsne
+
+On Windows the FI-tSNE is already included with ```DigitalCellSorter```. Note, if neither
+```fitsne```, ```umap``` nor ```phate``` are installed the ```DigitalCellSorter```
+defaults to PCA first two principal components for visualization layout.
+
+To use Sankey diagrams that are part of Digital Cell Sorter install ```plotly``` and ```orca```:
 
     conda install -c plotly plotly-orca
+
 
 ### Loading the package
 
