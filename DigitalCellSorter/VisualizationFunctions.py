@@ -326,7 +326,7 @@ class VisualizationFunctions:
 
         if True:
             ax2 = plt.subplot(gs[1])
-            fontsize = 5
+            fontsize = 5*fontscale
             cells_in_clusters = df_votingResults['# cells in cluster'].values.copy()[ORDER]
             numberOfCells = cells_in_clusters.sum()
 
@@ -1674,7 +1674,7 @@ class VisualizationFunctions:
 
         return dict(zip(labels, list(sets)))
 
-    def makeHopfieldPCplot(self, colormap = cm.hot_r, plotTrLines = False, clusterid = 1, trID = 0, axisOff = False, trPath = None, dpi = 300, extension = 'png'):
+    def makeHopfieldPCplot(self, colormap = cm.hot_r, plotTrLines = False, clusterid = 1, trID = 0, axisOff = False, fontscale = 1., trPath = None, dpi = 300, extension = 'png'):
 
         '''Make radar plot of the attractors in their principal components coordinates
 
@@ -1751,11 +1751,12 @@ class VisualizationFunctions:
 
             color = cm.jet(i/len(attrs_names))
 
-            ax.plot(angles, values, color=color, linewidth=1.0, linestyle='solid', label=celltype)
-            #ax.fill(angles, values, alpha=0.2, color=color)
+            ax.plot(angles, values, color=color, linewidth=1.75, linestyle='solid', label=celltype)
+            #ax.fill(angles, values, alpha=0.2, color=color, zorder=1)
+            ax.fill_between(angles, 0, values, alpha=0.2, facecolor=color)
 
-            temp_texts = ax.text(angles[np.argmax(values)], values[np.argmax(values)], celltype, color=color, fontsize=10, ha='center', va='center')
-            temp_texts.set_path_effects([path_effects.Stroke(linewidth=0.5, foreground='k'), path_effects.Normal()])
+            temp_texts = ax.text(angles[np.argmax(values)], values[np.argmax(values)], celltype, color=color, fontsize=12.*fontscale, ha='center', va='center')
+            temp_texts.set_path_effects([path_effects.Stroke(linewidth=1., foreground='k'), path_effects.Normal()])
 
         if plotTrLines:
             trajectories = read(os.path.join(trPath, 'trajectories%s')%(trID))
@@ -1801,8 +1802,19 @@ class VisualizationFunctions:
             suffix = 'attractors'
 
         for i, pc in enumerate(df.columns):
-            temp_texts = ax.text(angles[i], 1.1 * (vmax - vmin) + vmin, pc, color='k', fontsize=14, ha='center', va='center')
-            temp_texts.set_path_effects([path_effects.Stroke(linewidth=0.5, foreground='w'), path_effects.Normal()])
+            temp_texts = ax.text(angles[i], 1.15 * (vmax - vmin) + vmin, pc, color='k', fontsize=14*fontscale, ha='center', va='center')
+            temp_texts.set_path_effects([path_effects.Stroke(linewidth=0.5*fontscale, foreground='w'), path_effects.Normal()])
+
+        ax.set_axisbelow(True)
+
+        #ax.plot(angles, [0]*len(angles), color='k', linewidth=1., linestyle='-', label=celltype)
+
+        fig.canvas.draw()
+        ylabels = ax.get_yticklabels()
+        ax.set_yticklabels([])
+
+        for label in ylabels:
+            ax.text(label._x, label._y, label._text, zorder=np.inf)
 
         self.saveFigure(fig, self.saveDir, self.dataName + '_polar_%s'%(suffix), extension=extension, dpi=dpi)
 

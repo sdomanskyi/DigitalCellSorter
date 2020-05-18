@@ -195,7 +195,7 @@ class DigitalCellSorter(VisualizationFunctions):
                 saveDir = os.path.join(''), makeMarkerSubplots = False, availableCPUsCount = min(6, os.cpu_count()), zScoreCutoff = 0.3,
                 subclusteringName = None, doQualityControl = True, doBatchCorrection = True, makePlots = True, useUnderlyingNetwork = True,
                 minimumNumberOfMarkersPerCelltype = 10, nameForUnknown = 'Unassigned', nameForLowQC = 'Failed QC', matplotlibMode = None,
-                countDepthCutoffQC = 0.5, numberOfGenesCutoffQC = 0.5, mitochondrialGenesCutoffQC = 1.5, excludedFromQC = None,
+                countDepthCutoffQC = 0.5, numberOfGenesCutoffQC = 0.5, mitochondrialGenesCutoffQC = 1.5, excludedFromQC = None, precutQC = False,
                 thresholdForUnknown_pDCS = 0., thresholdForUnknown_ratio = 0., thresholdForUnknown_Hopfield = 0., thresholdForUnknown = 0.2, 
                 layout = 'TSNE', HopfieldTemperature = 0.1, annotationMethod = 'ratio-pDCS-Hopfield'):
 
@@ -223,6 +223,7 @@ class DigitalCellSorter(VisualizationFunctions):
         self.countDepthCutoffQC = countDepthCutoffQC
         self.numberOfGenesCutoffQC = numberOfGenesCutoffQC
         self.mitochondrialGenesCutoffQC = mitochondrialGenesCutoffQC
+        self.precutQC = precutQC
 
         self.excludedFromQC = excludedFromQC
 
@@ -264,7 +265,7 @@ class DigitalCellSorter(VisualizationFunctions):
         self.toggleRemoveLowQualityCells = doQualityControl
         self.toggleDoBatchCorrection = doBatchCorrection
 
-        self.toggleMakeHistogramNullDistributionPlot = makePlots
+        self.toggleMakeHistogramNullDistributionPlot = False
         self.toggleMakeVotingResultsMatrixPlot = makePlots
         self.toggleMakeMarkerExpressionPlot = makePlots
         self.toggleMakeProjectionPlotsQC = makePlots
@@ -1343,13 +1344,13 @@ class DigitalCellSorter(VisualizationFunctions):
 
         return None    
 
-    def makeIndividualGeneExpressionPlot(self, gene, **kwargs):
+    def makeIndividualGeneExpressionPlot(self, genes, **kwargs):
 
         '''Produce individual gene expression plot on a 2D layout
 
         Parameters:
-            gene: str
-                Name of gene of interest
+            gene: str, or list-like
+                Name of gene of interest. E.g. 'CD4, CD33', 'PECAM1', ['CD4', 'CD33']
 
             hideClusterLabels: boolean, Default False
                 Whether to hide the clusters labels
@@ -1369,22 +1370,22 @@ class DigitalCellSorter(VisualizationFunctions):
         '''
 
         kwargs.setdefault('analyzeBy', 'cluster')
-
-        df_markers_expr = self.getExprOfGene(gene, analyzeBy=kwargs['analyzeBy'])
-
-        if df_markers_expr is None:
-
-            return None
-
-        df_projection = pd.read_hdf(self.fileHDFpath, key='df_projection')
-        
-        hugo_cd_dict = {gene: self.gnc.Convert([gene], 'hugo', 'alias', returnUnknownString=False)[0]}
-
         kwargs.setdefault('NoFrameOnFigures', True)
         kwargs.setdefault('HideClusterLabels', False)
         kwargs.setdefault('outlineClusters', True)
 
-        self.internalMakeMarkerSubplots(df_markers_expr, df_projection.values, hugo_cd_dict, **kwargs)
+        df_projection = pd.read_hdf(self.fileHDFpath, key='df_projection')
+
+        if type(genes) is str:
+            genes = genes.replace(' ', '').split(',')
+
+        for gene in genes:
+            df_markers_expr = self.getExprOfGene(gene, analyzeBy=kwargs['analyzeBy'])
+
+            if not df_markers_expr is None:
+                hugo_cd_dict = {gene: self.gnc.Convert([gene], 'hugo', 'alias', returnUnknownString=False)[0]}
+
+                self.internalMakeMarkerSubplots(df_markers_expr, df_projection.values, hugo_cd_dict, **kwargs)
 
         return None
 
@@ -1686,8 +1687,8 @@ class DigitalCellSorter(VisualizationFunctions):
         kwargs.setdefault('MakeHistogramPlot', True)
 
         # Calculate cutoffs
-        cutoff_count_depth = self.getQualityControlCutoff(df_QC['count_depth'], self.countDepthCutoffQC, plotPathAndName=os.path.join(plotsDir, '%s_count_depth' % (self.dataName)), **kwargs)
-        cutoff_number_of_genes = self.getQualityControlCutoff(df_QC['number_of_genes'], self.numberOfGenesCutoffQC, plotPathAndName=os.path.join(plotsDir, '%s_number_of_genes' % (self.dataName)), **kwargs)
+        cutoff_count_depth = self.getQualityControlCutoff(df_QC['count_depth'], self.countDepthCutoffQC, plotPathAndName=os.path.join(plotsDir, '%s_count_depth' % (self.dataName)), precut=500, **kwargs)
+        cutoff_number_of_genes = self.getQualityControlCutoff(df_QC['number_of_genes'], self.numberOfGenesCutoffQC, plotPathAndName=os.path.join(plotsDir, '%s_number_of_genes' % (self.dataName)), precut=250, **kwargs)
         cutoff_fraction_of_mitochondrialGenes = self.getQualityControlCutoff(df_QC['fraction_of_mitochondrialGenes'], self.mitochondrialGenesCutoffQC, plotPathAndName=os.path.join(plotsDir, '%s_fraction_of_mitochondrialGenes' % (self.dataName)), mito=True, **kwargs)
 
         df_QC['isGoodQuality'] = np.zeros(len(df_QC)).astype(bool)
@@ -1703,7 +1704,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         return index.sort_values()
 
-    def getQualityControlCutoff(self, se, cutoff, mito = False, MakeHistogramPlot = True, **kwargs):
+    def getQualityControlCutoff(self, se, cutoff, precut = 1., mito = False, MakeHistogramPlot = True, **kwargs):
 
         '''Function to calculate QC quality cutoff
 
@@ -1759,7 +1760,11 @@ class DigitalCellSorter(VisualizationFunctions):
 
             cutoff = min(median + 3. * std, x1 - y1 * (x2 - x1) / (y2 - y1))
         else:
-            cutoff = int(cutoff * np.median(subset))
+            if self.precutQC:
+                cutoff = int(cutoff * np.median(subset[subset > precut]))
+                cutoff = min(cutoff, 2 * precut)
+            else:
+                cutoff = int(cutoff * np.median(subset))
 
         kwargs.setdefault('mito', mito)
 
@@ -1965,8 +1970,8 @@ class DigitalCellSorter(VisualizationFunctions):
 
         # Remove scores with small number of supporting markers
         if removeLowQCscores:
-            minimumFraction = 0.10
-            df_Q = (1. * (df_M > 0.)).dot(1. * (df_Z > 0.)) < (minimumFraction * (1. * (df_Z > 0.)).sum(axis=0)[None, :]).astype(int)
+            df_Q = (1. * (df_M > 0.)).dot(1. * (df_Z > 0.)) < ((2. * (df_Z > 0.)).sum(axis=0) / df_M.shape[0])[None, :].astype(int)
+            #df_Q = (1. * (df_M > 0.)).dot(1. * (df_Z > 0.)) < (0.1 * (1. * (df_Z > 0.)).sum(axis=0)[None, :]).astype(int)
             df_V[pd.Series(df_Q.stack().fillna(0.))] = 0.
 
         if giveSignificant:
@@ -2371,7 +2376,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         return df_V.loc['Predicted cell type'].to_dict()
 
-    def propagateHopfield(cls, sigma = None, xi = None, T = 0.2, tmax = 200, fractionToUpdate = 0.5, mode = 4, meshSamplingRate = 100,
+    def propagateHopfield(cls, sigma = None, xi = None, T = 0.2, tmax = 200, fractionToUpdate = 0.5, mode = 4, meshSamplingRate = 200,
                             underlyingNetwork = None, typesNames = None, clustersNames = None, printInfo = False,
                             recordTrajectories = True, id = None, printSwitchingFraction = False, path = None):
 
@@ -2864,7 +2869,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         return df_marker_cell_type
     
-    def mergeIndexDuplicates(cls, df_expr, method = 'average'):
+    def mergeIndexDuplicates(cls, df_expr, method = 'average', printDuplicates = False):
 
         '''Merge index duplicates
 
@@ -2906,7 +2911,9 @@ class DigitalCellSorter(VisualizationFunctions):
                 return df_expr
 
             print('Merged %s duplicated items in the index of size %s' % (len_total - len_unique, len_total), flush=True)
-            print(unique_items[0][unique_items[1] > 1], flush=True)
+            
+            if printDuplicates:
+                print(unique_items[0][unique_items[1] > 1], flush=True)
 
         return df_expr
 
