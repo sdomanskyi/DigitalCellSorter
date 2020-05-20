@@ -1,3 +1,7 @@
+- 1.3.3
+   * Integrated plotly offline figure saving (when orca is unavailable)
+   * Added Quality Control pre-cut
+   * Minor code improvements
 
 - 1.3.2
    * Added Hopfield landscape visuzlization capability

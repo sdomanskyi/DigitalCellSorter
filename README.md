@@ -42,59 +42,114 @@ These instructions will get you a copy of the project up and running on your mac
 
 ### Prerequisites
 
-The code runs in Python >= 3.7 environment. 
+#### Environment setup
+The software runs in Python >= 3.7
 
 It is highly recommended to install Anaconda.
 Installers are available at https://www.anaconda.com/distribution/
+Whether you already had Anaconda installed or just installed it we recommend to
+update all packages by running:
 
-Our software uses packages ```numpy```, ```pandas```, ```matplotlib```, ```scikit-learn```, 
-```scipy```, ```mygene```, ```fftw```, ```fitsne```, ```adjustText```
-and a few other standard Python packages. Install ```DigitalCellSorter``` with ```pip```.
-Most of these necessary packages are automatically installed with installation of the 
-latest release of ```DigitalCellSorter```:
+	conda update conda
+
+With conda, you can create, export, list, remove, and update environments that 
+have different versions of Python and/or packages installed in them. 
+Switching or moving between environments is called activating the environment.
+Create and activate a new environment in conda, and name it for example "DCS":
+
+	conda create --name DCS
+	conda activate DCS
+
+Now, in your new environment, the packages can be installed or updated without affecting
+your other environments. Note, environments use is not necessary, and the 
+default ```(base)``` is used if you dont set up any other. For more information see
+https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html
+
+#### Installation of the ```DigitalCellSorter``` package
+
+Install ```DigitalCellSorter``` with ```pip```. Most of the dependencies packages 
+are automatically installed with installation of the  latest release 
+of ```DigitalCellSorter```:
 
 	pip install DigitalCellSorter
 
-Alternatively, you can install this module directly from GitHub using:
+Alternatively, you can clone and install this module directly from GitHub using:
 
 	pip install git+https://github.com/sdomanskyi/DigitalCellSorter
 
-Also one can create a local copy of this project for development purposes, and install the package
-from the cloned directoryg:
+Similarly, one can create a local copy of this project for development purposes, and 
+install the package from the cloned directory:
 
 	git clone https://github.com/sdomanskyi/DigitalCellSorter
 	python setup.py install
 
+Our software uses packages ```numpy```, ```pandas```, ```matplotlib```, 
+```scikit-learn```, ```scipy```, ```mygene```, ```fftw```, 
+```fitsne```, ```adjustText``` and a few other standard Python packages. 
 Some of the packages used in ```DigitalCellSorter``` are not installed by default, 
-and should by installed
-by separately if using certain functionality with Digital Cell Sorter. For example, 
-for use of network-based clustering
+and should by installed by separately if using certain functionality with 
+Digital Cell Sorter. For example, for network-based clustering
 install packages ```pynndescent```, ```networkx```, ```python-louvain```. 
-To use UMAP layout
-install ```umap-learn```, and for PHATE install ```phate```. 
+Other packages that have to be installed separately are ```fitsne```, ```umap```, 
+```phate``` and ```orca```. The detailed instructions are below.
+ 
 
-To use tSNE layout the following need to be installed. First 
-install ```fftw``` from the ```conda-forge``` channel 
+#### t-SNE
+With datasets containing less than 2000 cells ```sklearn.manifold.TSNE``` is used.
+For large datasets Fast Fourier Transform-accelerated Interpolation-based t-SNE (FIt-SNE)
+implemented by **KlugerLab** is used (https://github.com/KlugerLab/FIt-SNE).
+To use FIt-SNE the following need to be installed. First update ```cython``` by
+
+	pip install --upgrade cython
+
+Then install ```fftw``` from the ```conda-forge``` channel 
 add ```conda-forge``` to your channels, and install ```fftw```:
 
 	conda config --add channels conda-forge
 	conda install fftw
 
-Then to install FI-tSNE for Linux:
+The next installation step is platform specific. To install FI-tSNE for Linux:
 
 	pip install fitsne
 
-On macOS Mojave:
+On macOS Mojave C++ compiler has to be specified explicitly:
 
 	env CC=clang CXX=clang++ pip install fitsne
 
-On Windows the FI-tSNE is already included with ```DigitalCellSorter```. Note, if neither
-```fitsne```, ```umap``` nor ```phate``` are installed the ```DigitalCellSorter```
-defaults to PCA first two principal components for visualization layout.
+On Windows the FI-tSNE wrapper and executable are already 
+included with ```DigitalCellSorter```. 
 
-To use Sankey diagrams that are part of Digital Cell Sorter install ```plotly``` and ```orca```:
+#### Other layouts
+
+To use UMAP layout
+
+	pip install umap-learn
+
+To use PHATE 
+
+	pip install phate
+
+> Note, if neither ```fitsne```, ```umap``` nor ```phate``` are installed 
+> ```DigitalCellSorter``` defaults to PCA two largest principal components for 
+> visualization layout.
+
+#### Interactive HTML figures
+To use Sankey diagrams that are part of Digital Cell Sorter 
+install ```plotly``` and ```orca```:
 
     conda install -c plotly plotly-orca
+    conda install -c anaconda psutil
+
+```orca	``` is necessary to convert Sankey diagrams to static images.
+If for any reason ```orca``` is unavailable the Sankey diagrams will be saved as 
+ineractive HTML figure, that can be opened in a browser (Chrome, Firefox etc.) and 
+saved as static image. The visualization of ```DigitalCellSorter``` are implemented 
+with ```matplotlib```, allowing all the figures to be saved in either raster or 
+vactor format. Since ```plotly``` can convert simple ```matplotlib``` figures 
+(scatter, line, bar plots, but not heatmaps, splines or other complex patch objects) to
+ineractive HTML format ```DigitalCellSorter``` can attempt to save any of its figures
+as HTML. This is particulatly useful with ```Projection``` plots, even though the color
+bars are not rendered in HTML figures.
 
 
 ### Loading the package

@@ -191,11 +191,12 @@ class DigitalCellSorter(VisualizationFunctions):
 
     def __init__(self, df_expr = None, dataName = 'dataName', geneNamesType = 'alias', geneListFileName = None, mitochondrialGenes = None,
                 sigmaOverMeanSigma = 0.01, nClusters = 10, nFineClusters = 3, doFineClustering = True, minSizeForFineClustering = 50, 
-                clusteringFunction = AgglomerativeClustering, nComponentsPCA = 200, nSamples_pDCS = 3 * 10 ** 3,  nSamples_Hopfield = 500,
+                clusteringFunction = AgglomerativeClustering, nComponentsPCA = 200, nSamples_pDCS = 3 * 10 ** 3,  nSamples_Hopfield = 200,
                 saveDir = os.path.join(''), makeMarkerSubplots = False, availableCPUsCount = min(6, os.cpu_count()), zScoreCutoff = 0.3,
                 subclusteringName = None, doQualityControl = True, doBatchCorrection = True, makePlots = True, useUnderlyingNetwork = True,
                 minimumNumberOfMarkersPerCelltype = 10, nameForUnknown = 'Unassigned', nameForLowQC = 'Failed QC', matplotlibMode = None,
-                countDepthCutoffQC = 0.5, numberOfGenesCutoffQC = 0.5, mitochondrialGenesCutoffQC = 1.5, excludedFromQC = None, precutQC = False,
+                countDepthCutoffQC = 0.5, numberOfGenesCutoffQC = 0.5, mitochondrialGenesCutoffQC = 1.5, excludedFromQC = None, 
+                countDepthPrecutQC = 500, numberOfGenesPrecutQC = 250, precutQC = False,
                 thresholdForUnknown_pDCS = 0., thresholdForUnknown_ratio = 0., thresholdForUnknown_Hopfield = 0., thresholdForUnknown = 0.2, 
                 layout = 'TSNE', HopfieldTemperature = 0.1, annotationMethod = 'ratio-pDCS-Hopfield'):
 
@@ -223,8 +224,9 @@ class DigitalCellSorter(VisualizationFunctions):
         self.countDepthCutoffQC = countDepthCutoffQC
         self.numberOfGenesCutoffQC = numberOfGenesCutoffQC
         self.mitochondrialGenesCutoffQC = mitochondrialGenesCutoffQC
+        self.countDepthPrecutQC = countDepthPrecutQC
+        self.numberOfGenesPrecutQC = numberOfGenesPrecutQC
         self.precutQC = precutQC
-
         self.excludedFromQC = excludedFromQC
 
         self.sigmaOverMeanSigma = sigmaOverMeanSigma
@@ -1096,9 +1098,9 @@ class DigitalCellSorter(VisualizationFunctions):
         kwargs.setdefault('colormap', colormap)
         kwargs.setdefault('legend', False)
 
-        self.makeProjectionPlot(df_projection.values, df_markers_expr.columns.get_level_values('label'), **kwargs)
+        fig = self.makeProjectionPlot(df_projection.values, df_markers_expr.columns.get_level_values('label'), **kwargs)
 
-        return None
+        return fig
     
     def makeProjectionPlotByBatches(self, **kwargs):
 
@@ -1135,9 +1137,9 @@ class DigitalCellSorter(VisualizationFunctions):
         kwargs.setdefault('labels', False)
         kwargs.setdefault('suffix', 'by_patients')
 
-        self.makeProjectionPlot(df_projection.values, batches, **kwargs)
+        fig = self.makeProjectionPlot(df_projection.values, batches, **kwargs)
 
-        return None
+        return fig
     
     def makeProjectionPlotByClusters(self, **kwargs):
 
@@ -1166,9 +1168,9 @@ class DigitalCellSorter(VisualizationFunctions):
 
         labels = np.array(['Cluster #%s' % (label[0]) if label==label else label for label in df_clusters.values])
 
-        self.makeProjectionPlot(df_projection.values, labels, **kwargs)
+        fig = self.makeProjectionPlot(df_projection.values, labels, **kwargs)
 
-        return None
+        return fig
 
     def makeProjectionPlotsQualityControl(self, **kwargs):
 
@@ -1203,19 +1205,20 @@ class DigitalCellSorter(VisualizationFunctions):
         kwargs.setdefault('colorbar', True)
 
         kwargs.update(suffix='by_number_of_genes')
-        self.makeProjectionPlot(df_projection.values, df_QC['number_of_genes'].values, **kwargs)
+        fig1 = self.makeProjectionPlot(df_projection.values, df_QC['number_of_genes'].values, **kwargs)
 
         kwargs.update(suffix='by_count_depth')
-        self.makeProjectionPlot(df_projection.values, df_QC['count_depth'].values, **kwargs)
+        fig2 = self.makeProjectionPlot(df_projection.values, df_QC['count_depth'].values, **kwargs)
         
         kwargs.update(suffix='by_fraction_of_mitochondrialGenes')
-        self.makeProjectionPlot(df_projection.values, df_QC['fraction_of_mitochondrialGenes'].values, **kwargs)
+        fig3 = self.makeProjectionPlot(df_projection.values, df_QC['fraction_of_mitochondrialGenes'].values, **kwargs)
 
         kwargs.update(suffix='by_is_quality_cell')
         kwargs.update(colorbar=False)
+
         self.makeProjectionPlot(df_projection.values, df_projection.columns.isin(goodQUalityCells.get_level_values('cell'), level='cell'), **kwargs)
 
-        return None
+        return
 
     def makeMarkerSubplots(self, **kwargs):
 
@@ -1292,9 +1295,9 @@ class DigitalCellSorter(VisualizationFunctions):
         kwargs.setdefault('labels', False)
         kwargs.setdefault('colorbar', True)
 
-        self.makeProjectionPlot(df_projection.values, scores, **kwargs)
+        fig = self.makeProjectionPlot(df_projection.values, scores, **kwargs)
 
-        return None
+        return fig
     
     def makeIndividualGeneTtestPlot(self, gene, analyzeBy = 'label', **kwargs):
 
@@ -1340,9 +1343,9 @@ class DigitalCellSorter(VisualizationFunctions):
 
         kwargs.setdefault('label', '%s\n(%s)' % (gene, ('\n').join(list(alt))))
 
-        self.makeTtestPlot(ttestStatistic, ttestpValue, **kwargs)
+        fig = self.makeTtestPlot(ttestStatistic, ttestpValue, **kwargs)
 
-        return None    
+        return fig    
 
     def makeIndividualGeneExpressionPlot(self, genes, **kwargs):
 
@@ -1687,8 +1690,8 @@ class DigitalCellSorter(VisualizationFunctions):
         kwargs.setdefault('MakeHistogramPlot', True)
 
         # Calculate cutoffs
-        cutoff_count_depth = self.getQualityControlCutoff(df_QC['count_depth'], self.countDepthCutoffQC, plotPathAndName=os.path.join(plotsDir, '%s_count_depth' % (self.dataName)), precut=500, **kwargs)
-        cutoff_number_of_genes = self.getQualityControlCutoff(df_QC['number_of_genes'], self.numberOfGenesCutoffQC, plotPathAndName=os.path.join(plotsDir, '%s_number_of_genes' % (self.dataName)), precut=250, **kwargs)
+        cutoff_count_depth = self.getQualityControlCutoff(df_QC['count_depth'], self.countDepthCutoffQC, plotPathAndName=os.path.join(plotsDir, '%s_count_depth' % (self.dataName)), precut=self.countDepthPrecutQC, **kwargs)
+        cutoff_number_of_genes = self.getQualityControlCutoff(df_QC['number_of_genes'], self.numberOfGenesCutoffQC, plotPathAndName=os.path.join(plotsDir, '%s_number_of_genes' % (self.dataName)), precut=self.numberOfGenesPrecutQC, **kwargs)
         cutoff_fraction_of_mitochondrialGenes = self.getQualityControlCutoff(df_QC['fraction_of_mitochondrialGenes'], self.mitochondrialGenesCutoffQC, plotPathAndName=os.path.join(plotsDir, '%s_fraction_of_mitochondrialGenes' % (self.dataName)), mito=True, **kwargs)
 
         df_QC['isGoodQuality'] = np.zeros(len(df_QC)).astype(bool)

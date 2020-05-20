@@ -6,15 +6,7 @@ These instructions will get you a copy of the project up and running on your mac
 **Installation**
 ----------------
 
-The code runs in Python >= 3.7 environment. 
-
-It is highly recommended to install Anaconda.
-Installers are available at https://www.anaconda.com/distribution/
-
-It uses packages ``numpy``, ``pandas``, ``matplotlib``, ``scikit-learn``, ``scipy``, 
-``mygene``, ``fftw``, ``pynndescent``, ``networkx``, ``python-louvain``, ``fitsne``
-and a few other standard Python packages. Most of these packages are installed with installation of the 
-latest release of ``DigitalCellSorter``:
+Install of the latest release of ``DigitalCellSorter``:
 
 .. code-block:: bash
 

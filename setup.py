@@ -12,7 +12,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 setup(
     name='DigitalCellSorter',
     packages=find_packages(),
-    version='1.3.2',
+    version='1.3.3',
     description='Toolkit for analysis and identification of cell types from heterogeneous single cell RNA-seq data',
     long_description_content_type="text/markdown",
     long_description=long_description,
@@ -41,11 +41,15 @@ setup(
     install_requires=[
         'numpy>=1.16.4',
         'pandas>=0.24.2',
+        'patsy>=0.5.1',
+        'xlrd>=1.2.0',
+        'openpyxl>=3.0.3',
         'tables>=3.4.2',
         'scipy>=1.3.0',
         'matplotlib>=3.1.0',
         'scikit-learn>=0.21.2',
         'mygene>=3.1.0',
+        'plotly>=4.1.1',
         'adjustText>=0.7.3'],
     zip_safe=False
 )
