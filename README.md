@@ -55,7 +55,6 @@ update all packages by running:
 With conda, you can create, export, list, remove, and update environments that 
 have different versions of Python and/or packages installed in them. 
 Switching or moving between environments is called activating the environment.
-Create and activate a new environment in conda, and name it for example "DCS":
 
 	conda create --name DCS
 	conda activate DCS
@@ -65,7 +64,7 @@ your other environments. Note, environments use is not necessary, and the
 default ```(base)``` is used if you dont set up any other. For more information see
 https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html
 
-#### Installation of the ```DigitalCellSorter``` package
+#### Installation of the DigitalCellSorter package
 
 Install ```DigitalCellSorter``` with ```pip```. Most of the dependencies packages 
 are automatically installed with installation of the  latest release 
@@ -92,7 +91,6 @@ Digital Cell Sorter. For example, for network-based clustering
 install packages ```pynndescent```, ```networkx```, ```python-louvain```. 
 Other packages that have to be installed separately are ```fitsne```, ```umap```, 
 ```phate``` and ```orca```. The detailed instructions are below.
- 
 
 #### t-SNE
 With datasets containing less than 2000 cells ```sklearn.manifold.TSNE``` is used.
@@ -150,7 +148,6 @@ vactor format. Since ```plotly``` can convert simple ```matplotlib``` figures
 ineractive HTML format ```DigitalCellSorter``` can attempt to save any of its figures
 as HTML. This is particulatly useful with ```Projection``` plots, even though the color
 bars are not rendered in HTML figures.
-
 
 ### Loading the package
 
