@@ -5,11 +5,12 @@ import os
 import pickle
 import zipfile
 import gzip
+import json
 import shutil
 import time
 import numpy as np
 
-def write(data, fileName):
+def write(data, fileName, jsonFormat = False):
     
     '''Pickle object into a (binary) file
         
@@ -25,12 +26,21 @@ def write(data, fileName):
         write(data, os.path.join('some dir 1', 'some dir 2', 'File with my data'))
     '''
 
+    if jsonFormat:
+        if not os.path.exists(os.path.basename(fileName)):
+            os.makedirs(os.path.basename(fileName))
+        
+        with gzip.GzipFile(fileName, 'w') as tempFile:
+            tempFile.write(json.dumps(data).encode('utf-8'))
+
+        return
+
     with gzip.open(fileName + '.pklz','wb') as temp_file:
         pickle.dump(data, temp_file, protocol=4)
 
     return None
 
-def read(fileName):
+def read(fileName, jsonFormat = False):
 
     '''Unpickle object from a (binary) file
 
@@ -44,8 +54,19 @@ def read(fileName):
         read(os.path.join('some dir 1', 'some dir 2', 'File with my data'))
     '''
 
+    if jsonFormat:
+        if not os.path.exists(os.path.basename(fileName)):
+            os.makedirs(os.path.basename(fileName))
+
+        with gzip.GzipFile(fileName, 'r') as tempFile:
+            data = json.loads(tempFile.read().decode('utf-8'))
+
+        return data
+
     with gzip.open(fileName + '.pklz','rb') as temp_file:
+
         data = pickle.load(temp_file)
+
         return data
 
     return None

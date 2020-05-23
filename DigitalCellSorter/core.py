@@ -189,25 +189,25 @@ class DigitalCellSorter(VisualizationFunctions):
         df_data = DCS.Clean(df_data)
     '''
 
-    def __init__(self, df_expr = None, dataName = 'dataName', geneNamesType = 'alias', geneListFileName = None, mitochondrialGenes = None,
-                sigmaOverMeanSigma = 0.01, nClusters = 10, nFineClusters = 3, doFineClustering = True, minSizeForFineClustering = 50, 
-                clusteringFunction = AgglomerativeClustering, nComponentsPCA = 200, nSamples_pDCS = 3 * 10 ** 3,  nSamples_Hopfield = 200,
-                saveDir = os.path.join(''), makeMarkerSubplots = False, availableCPUsCount = min(6, os.cpu_count()), zScoreCutoff = 0.3,
-                subclusteringName = None, doQualityControl = True, doBatchCorrection = True, makePlots = True, useUnderlyingNetwork = True,
-                minimumNumberOfMarkersPerCelltype = 10, nameForUnknown = 'Unassigned', nameForLowQC = 'Failed QC', matplotlibMode = None,
-                countDepthCutoffQC = 0.5, numberOfGenesCutoffQC = 0.5, mitochondrialGenesCutoffQC = 1.5, excludedFromQC = None, 
-                countDepthPrecutQC = 500, numberOfGenesPrecutQC = 250, precutQC = False,
+    def __init__(self, df_expr = None, dataName = 'dataName', species = 'Human', geneNamesType = 'alias', geneListFileName = None, 
+                 mitochondrialGenes = None, sigmaOverMeanSigma = 0.01, nClusters = 10, nFineClusters = 3, doFineClustering = True, 
+                 minSizeForFineClustering = 50, clusteringFunction = AgglomerativeClustering, nComponentsPCA = 200, nSamples_pDCS = 3 * 10 ** 3, 
+                nSamples_Hopfield = 200, saveDir = os.path.join(''), makeMarkerSubplots = False, availableCPUsCount = min(6, os.cpu_count()), 
+                zScoreCutoff = 0.3, subclusteringName = None, doQualityControl = True, doBatchCorrection = True, makePlots = True, 
+                useUnderlyingNetwork = True, minimumNumberOfMarkersPerCelltype = 10, nameForUnknown = 'Unassigned', nameForLowQC = 'Failed QC',
+                matplotlibMode = None, countDepthCutoffQC = 0.5, numberOfGenesCutoffQC = 0.5, mitochondrialGenesCutoffQC = 1.5, 
+                excludedFromQC = None, countDepthPrecutQC = 500, numberOfGenesPrecutQC = 250, precutQC = False, minSubclusterSize = 25,
                 thresholdForUnknown_pDCS = 0., thresholdForUnknown_ratio = 0., thresholdForUnknown_Hopfield = 0., thresholdForUnknown = 0.2, 
-                layout = 'TSNE', HopfieldTemperature = 0.1, annotationMethod = 'ratio-pDCS-Hopfield'):
+                layout = 'TSNE', safePlotting = True, HopfieldTemperature = 0.1, annotationMethod = 'ratio-pDCS-Hopfield'):
 
         '''Initialization function that is automatically called when an instance on Digital Cell Sorter is created'''
 
-        self.gnc = GeneNameConverter.GeneNameConverter(dictDir=os.path.join(os.path.dirname(__file__), 
-                                                                            'pickledGeneConverterDict', 
-                                                                            'ensembl_hugo_entrez_alias_dict.pythdat'))
+        self.gnc = GeneNameConverter.GeneNameConverter(dictDir=os.path.join(os.path.dirname(__file__)), species = species)
 
+        self.species = species
         self.dataName = dataName
         self.saveDir = saveDir
+        self.safePlotting = safePlotting
 
         if not df_expr is None:
             self.prepare(df_expr)
@@ -229,6 +229,7 @@ class DigitalCellSorter(VisualizationFunctions):
         self.precutQC = precutQC
         self.excludedFromQC = excludedFromQC
 
+        self.minSubclusterSize = minSubclusterSize
         self.sigmaOverMeanSigma = sigmaOverMeanSigma
         self.nClusters = nClusters
         self.doFineClustering = doFineClustering
@@ -280,7 +281,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         self.toggleGetMarkerSubplots = makeMarkerSubplots
 
-        super().__init__(saveDir=saveDir, dataName=dataName, matplotlibMode=matplotlibMode)
+        super().__init__(saveDir=saveDir, dataName=dataName, safePlotting=safePlotting, matplotlibMode=matplotlibMode)
 
         return None
     
@@ -819,6 +820,12 @@ class DigitalCellSorter(VisualizationFunctions):
                     else:
                         print('Small cluster', len(cellsOfCluster))
                         tempCellClusterIndex = np.zeros((subData.T.shape[0],))
+
+                    subSizes = np.unique(tempCellClusterIndex, return_counts=True)[1]
+
+                    if (subSizes < self.minSubclusterSize).any():
+                        print('Fine clusters too small (less than %s)' % (self.minSubclusterSize), subSizes)
+                        tempCellClusterIndex = np.zeros((subData.T.shape[0],))
             
                     fineCellClusterIndex[cellsOfCluster] = np.array([str(cluster) + '.' + label for label in tempCellClusterIndex.astype(int).astype(str)])
 
@@ -1190,6 +1197,10 @@ class DigitalCellSorter(VisualizationFunctions):
             DCS.makeProjectionPlotsQualityControl()
         '''
 
+        def reduce(v, size = 100):
+
+            return np.digitize(v, np.linspace(np.min(v), np.max(v), num=size))
+
         print('Making projection plots of QC', flush=True)
 
         df_QC = pd.read_hdf(self.fileHDFpath, key='QC')
@@ -1205,13 +1216,13 @@ class DigitalCellSorter(VisualizationFunctions):
         kwargs.setdefault('colorbar', True)
 
         kwargs.update(suffix='by_number_of_genes')
-        fig1 = self.makeProjectionPlot(df_projection.values, df_QC['number_of_genes'].values, **kwargs)
+        self.makeProjectionPlot(df_projection.values, reduce(df_QC['number_of_genes'].values), **kwargs)
 
         kwargs.update(suffix='by_count_depth')
-        fig2 = self.makeProjectionPlot(df_projection.values, df_QC['count_depth'].values, **kwargs)
+        self.makeProjectionPlot(df_projection.values, reduce(df_QC['count_depth'].values), **kwargs)
         
         kwargs.update(suffix='by_fraction_of_mitochondrialGenes')
-        fig3 = self.makeProjectionPlot(df_projection.values, df_QC['fraction_of_mitochondrialGenes'].values, **kwargs)
+        self.makeProjectionPlot(df_projection.values, reduce(df_QC['fraction_of_mitochondrialGenes'].values), **kwargs)
 
         kwargs.update(suffix='by_is_quality_cell')
         kwargs.update(colorbar=False)
@@ -1802,7 +1813,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         df = self.alignSeries(se1, se2, tagForMissing)
 
-        counts = {group[0]:{k:len(v) for k, v in group[1].groupby(by='se1').groups.items()} for group in df.reset_index().drop(columns=['index']).set_index('se2').groupby('se2')}
+        counts = {group[0]:{k:len(v) for k, v in group[1].groupby(by='se1').groups.items()} for group in df.reset_index(drop=True).set_index('se2').groupby('se2')}
 
         df = pd.DataFrame.from_dict(counts).fillna(0.0).astype(int)
 
@@ -1973,7 +1984,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         # Remove scores with small number of supporting markers
         if removeLowQCscores:
-            df_Q = (1. * (df_M > 0.)).dot(1. * (df_Z > 0.)) < ((2. * (df_Z > 0.)).sum(axis=0) / df_M.shape[0])[None, :].astype(int)
+            df_Q = (1. * (df_M > 0.)).dot(1. * (df_Z > 0.)) < (0.1 * (df_M > 0.).sum(axis=1)[:, None]).astype(int)
             #df_Q = (1. * (df_M > 0.)).dot(1. * (df_Z > 0.)) < (0.1 * (1. * (df_Z > 0.)).sum(axis=0)[None, :]).astype(int)
             df_V[pd.Series(df_Q.stack().fillna(0.))] = 0.
 
@@ -2702,7 +2713,7 @@ class DigitalCellSorter(VisualizationFunctions):
         '''
 
         print('\nReading PCN (directed, unweighted) network from file')
-        PCN = pd.read_csv(os.path.join('data', 'PCN.txt.gz'), compression='gzip', header=0, index_col=[0], delimiter='\t')['Target']
+        PCN = pd.read_csv(os.path.join('data', 'PCN_%s.txt.gz' % (self.species)), compression='gzip', header=0, index_col=[0], delimiter='\t')['Target']
 
         print('Calculating targets of PCN network genes')
         targets = PCN.groupby(level=0).agg('unique').apply(set).to_dict()
@@ -2725,7 +2736,7 @@ class DigitalCellSorter(VisualizationFunctions):
                 data[iA,iB] = data[iB,iA] = len(targets[geneA].intersection(targets[geneB])) + direct
 
         targetsOverlaps = pd.DataFrame(index=index, columns=index, data=data)
-        print(targetsOverlaps)
+        #print(targetsOverlaps)
 
         subnetwork = 1.*(targetsOverlaps >= min_shared_first_targets)
         print(subnetwork.shape)
@@ -2964,7 +2975,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         if self.KeyInFile('df_markers_expr', self.fileHDFpath):
             try:
-                se = pd.read_hdf(self.fileHDFpath, key='df_markers_expr').T.reset_index().set_index('cell')[infoType]
+                se = pd.read_hdf(self.fileHDFpath, key='df_markers_expr').T.reset_index().set_index(['batch', 'cell'])['label']
             except Exception as exception:
                 print(exception)
                 print('Error reading annotation results', flush=True)
@@ -2983,11 +2994,9 @@ class DigitalCellSorter(VisualizationFunctions):
             if self.KeyInFile('df_projection_pre_QC', self.fileHDFpath):
                 allCells = pd.read_hdf(self.fileHDFpath, key='df_projection_pre_QC').columns
                 allBathes = allCells.get_level_values('batch')
-                allCells = allCells.get_level_values('cell')
             elif self.KeyInFile('df_projection', self.fileHDFpath):
                 allCells = pd.read_hdf(self.fileHDFpath, key='df_projection').columns
                 allBathes = allCells.get_level_values('batch')
-                allCells = allCells.get_level_values('cell')
             else:
                 print('Labelled data not found', flush=True)
 
@@ -2997,7 +3006,7 @@ class DigitalCellSorter(VisualizationFunctions):
                 se = se.reindex(allCells, fill_value=self.nameForLowQC)
             elif infoType=='batch':
                 se_low = pd.Series(data=allBathes, index=allCells)
-
+                se.iloc[:] = se.index.get_level_values('batch').values
                 se = pd.concat([se, se_low.loc[se_low.index.difference(se.index)]])
 
         return se
@@ -3094,7 +3103,16 @@ class DigitalCellSorter(VisualizationFunctions):
         '''
 
         if self.mitochondrialGenes is None:
-            mitoGenesPath = os.path.join(self.defaultGeneListsDir, 'Human.MitoCarta2.0.csv')
+            if self.species == 'Human':
+                mitoGenesPath = os.path.join(self.defaultGeneListsDir, 'Human.MitoCarta2.0.csv')
+            elif self.species == 'Mouse':
+                mitoGenesPath = os.path.join(self.defaultGeneListsDir, 'Mouse.MitoCarta2.0.csv')
+            else:
+                print('Mitochondrial genes for scpecies %s not found' % (self.species))
+                print('Implemented lists are for Human and Mouse')
+
+                raise NotImplementedError
+
             self.mitochondrialGenes = pd.read_csv(mitoGenesPath, index_col=None, header=0)['Symbol'].values.squeeze().tolist()
 
         print('Calculating quality control measures (count depth, number of genes, fraction of mitochondrial genes) for each cell', flush=True)

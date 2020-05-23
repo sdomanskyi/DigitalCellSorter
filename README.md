@@ -64,6 +64,41 @@ your other environments. Note, environments use is not necessary, and the
 default ```(base)``` is used if you dont set up any other. For more information see
 https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html
 
+
+> Note: use of conda environments (for instance DCS exemplified above)
+> with a high performance computer
+> such as MSU HPCC in a batch job, i.e. not on a development node but 
+> submitted to a SLURM queue, requires the following steps. In the slurm 
+> script, before line calling your python script, 
+> add ```conda deactivate``` to deactivate base environnment
+> and ```conda activate DCS```. After calling the script 
+> do ```conda deactivate```. The example testing script is shown below.
+
+
+<details closed><summary>SLURM script example:</summary><p>
+
+	#!/bin/bash --login
+	########## Define Resources Needed with SBATCH Lines ##########
+	#SBATCH --time=00:01:00             # limit of wall clock time - how long the job will run (same as -t)
+	#SBATCH --ntasks=1                  # number of tasks - how many tasks (nodes) that you require (same as -n)
+	#SBATCH --cpus-per-task=1           # number of CPUs (or cores) per task (same as -c)
+	#SBATCH --mem=1G                    # memory required per node - amount of memory (in bytes)
+	##SBATCH --job-name Name_of_Job     # you can give your job a name for easier identification (same as -J)
+  
+	########## Command Lines to Run ##########
+	conda deactivate
+	conda activate DCS 
+	cd ./                               ### change to the directory where your code is located 
+	python test.py        		    ### call your executable
+	scontrol show job $SLURM_JOB_ID     ### write job information to output file
+	conda deactivate
+
+where ```test.py``` is the python script where you import and use 
+```DigitalCellSorter```.
+
+</p></details>
+
+
 #### Installation of the DigitalCellSorter package
 
 Install ```DigitalCellSorter``` with ```pip```. Most of the dependencies packages 
