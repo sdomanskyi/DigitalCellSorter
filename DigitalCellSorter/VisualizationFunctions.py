@@ -9,13 +9,15 @@ import scipy.signal
 import scipy.ndimage
 import scipy.cluster.hierarchy
 from scipy.interpolate import UnivariateSpline
+from scipy.ndimage import gaussian_filter
 
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patheffects as path_effects
 from matplotlib import cm
 
-import plotly.graph_objects
+import plotly.express as px
+import plotly.graph_objects as go
 from plotly.offline import plot as plot_offline
 from plotly.offline import plot_mpl
 from adjustText import adjust_text
@@ -136,6 +138,8 @@ class VisualizationFunctions:
                 print('Error while closing figure')
 
         return
+
+    # MatPlotLib-powered figures
 
     @tryExcept
     def makeHeatmapGeneExpressionPlot(self, df = None, genes = None, nameToAppend = 'heatmap', dpi = 300, extension = 'png', **kwargs):
@@ -1188,97 +1192,6 @@ class VisualizationFunctions:
         return fig
 
     @tryExcept
-    def makeSankeyDiagram(self, df, colormapForIndex = None, colormapForColumns = None, linksColor = 'rgba(100,100,100,0.6)', title = '', attemptSavingHTML = False, quality = 4, nameAppend = '_Sankey_diagram'):
-
-        '''Make a Sankey diagram, also known as 'river plot' with two groups of nodes
-
-        Parameters:
-            df: pandas.DataFrame 
-                With counts (overlaps)
-
-            colormapForIndex: dictionary, Default None
-                Colors to use for nodes specified in the DataFrame index
-
-            colormapForColumns: dictionary, Default None
-                Colors to use for nodes specified in the DataFrame columns
-
-            linksColor: str, Default 'rgba(100,100,100,0.6)'
-                Color of the non-overlapping links
-
-            title: str, Default ''
-                Title to print on the diagram
-
-            interactive: boolean , Default False
-                Whether to launch interactive JavaScript-based graph
-
-            quality: int, Default 4
-                Proportional to the resolution of the figure to save
-
-            nameAppend: str, Default '_Sankey_diagram'
-                Name to append to the figure file
-
-        Returns:
-            None
-        
-        Usage:
-            DCS = DigitalCellSorter.DigitalCellSorter()
-
-            DCS.makeSankeyDiagram(df)
-        '''
-
-        try:
-            temp_index = pd.MultiIndex.from_arrays([df.index, [colormapForIndex[item] for item in df.index]], names=['label', 'color'])
-            temp_columns = pd.MultiIndex.from_arrays([df.columns, [colormapForColumns[item] for item in df.columns]], names=['label', 'color'])
-            df.index = temp_index
-            df.columns = temp_columns
-        except Exception as exception:
-            print(exception)
-            print('Using default node colors')
-            colormapForIndex = None
-            colormapForColumns = None
-
-        if (colormapForIndex is None) or (colormapForColumns is None):
-            nodeColors = ['rgba(150,0,10,0.8)'] * len(df.index) + ['rgba(10,0,150,0.8)'] * len(df.columns)
-            nodeLabels = df.index.to_list() + df.columns.to_list()
-        else:
-            nodeLabels = df.index.get_level_values('label').to_list() + df.columns.get_level_values('label').to_list()
-            nodeColors = df.index.get_level_values('color').to_list() + df.columns.get_level_values('color').to_list()
-
-        sources, targets, values, labels = [], [], [], []
-        for i, item in enumerate(df.index):
-            sources.extend([i] * len(df.loc[item]))
-            targets.extend(list(range(len(df.index), len(df.index) + len(df.loc[item]))))
-            values.extend([j for j in df.loc[item].values])
-            #labels.extend([item + ' -> ' + jtem for jtem in df.loc[item].index])
-
-        colorscales = [dict(label=label, colorscale=[[0, linksColor], [1, linksColor]]) for label in labels]
-
-        if not nodeColors is None:
-            for i in range(len(sources)):
-                if nodeColors[sources[i]] == nodeColors[targets[i]]:
-                    newColor = ','.join(nodeColors[sources[i]].split(',')[:3] + ['0.6)'])
-                    colorscales[i] = dict(label=labels[i], colorscale=[[0, newColor], [1, newColor]])
-
-        fig = plotly.graph_objects.Figure(data=[plotly.graph_objects.Sankey(valueformat = '', valuesuffix = '',
-            node = dict(pad = 20, thickness = 40, line = dict(color = 'white', width = 0.5), label = nodeLabels, color = nodeColors,),
-            link = dict(source = sources, target = targets, value = values, label = labels, colorscales = colorscales, hoverinfo='all'))]) #line ={'color':'rgba(255,0,0,0.8)', 'width':0.1}
-
-        if not title is None:
-            fig.update_layout(title_text=title, font_size=10)
-
-        try:
-            fig.write_image(os.path.join(self.saveDir, self.dataName + nameAppend + '.png'), width=500, height=500, scale=quality)
-
-        except Exception as exception:
-            print('Cannot save static image (likely due to missing orca). Saving to interactive html')
-            attemptSavingHTML = True
-
-        if attemptSavingHTML:
-            plot_offline(fig, filename=os.path.join(self.saveDir, self.dataName + nameAppend + '.html'), auto_open=False)
-
-        return fig
-
-    @tryExcept
     def makePlotOfNewMarkers(self, df_marker_cell_type, df_new_marker_cell_type, dpi = 300, extension = 'png', **kwargs):
 
         '''Produce plot of the new markers extracted from the annotated clusters
@@ -1860,7 +1773,7 @@ class VisualizationFunctions:
         return fig
 
     @tryExcept
-    def makeHopfieldLandscapePlot(self, legend = False, labels = False, PCx = 0, PCy = 1, colorbar = True, fontsize = 10, plotMesh = True, plotAttractors = True, adjustText = True, axisOff = True, colorbarva = 0.75, colorbarha = 0.85, trPath = None, colormap = matplotlib.colors.LinearSegmentedColormap.from_list('cmap', [(1, 1, 1), (0, 1, 1), (0, 0, 1), (1, 0, 0)], N=1000), dpi = 300, extension = 'png', **kwargs):
+    def HopfieldLandscapePlot(self, legend = False, labels = False, PCx = 0, PCy = 1, colorbar = True, fontsize = 10, plotMesh = True, plotAttractors = True, adjustText = True, axisOff = True, colorbarva = 0.75, colorbarha = 0.85, trPath = None, colormap = matplotlib.colors.LinearSegmentedColormap.from_list('cmap', [(1, 1, 1), (0, 1, 1), (0, 0, 1), (1, 0, 0)], N=1000), dpi = 300, extension = 'png', **kwargs):
 
         '''Make heatmap plot of the attractors in their two principal components coordinates
 
@@ -2030,5 +1943,262 @@ class VisualizationFunctions:
             add_colorbar(fig, [vmax, vmin], cmap=colormap, fontsize=fontsize)
 
         self.saveFigure(fig, self.saveDir, self.dataName + '_energy_landscape_PC%s_vs_PC%s'%(PCy, PCx), extension=extension, dpi=dpi, **kwargs)
+
+        return fig
+    
+
+    # Plotly-powered figures
+
+    @tryExcept
+    def makeSankeyDiagram(self, df, colormapForIndex = None, colormapForColumns = None, linksColor = 'rgba(100,100,100,0.6)', title = '', attemptSavingHTML = False, quality = 4, nameAppend = '_Sankey_diagram'):
+
+        '''Make a Sankey diagram, also known as 'river plot' with two groups of nodes
+
+        Parameters:
+            df: pandas.DataFrame 
+                With counts (overlaps)
+
+            colormapForIndex: dictionary, Default None
+                Colors to use for nodes specified in the DataFrame index
+
+            colormapForColumns: dictionary, Default None
+                Colors to use for nodes specified in the DataFrame columns
+
+            linksColor: str, Default 'rgba(100,100,100,0.6)'
+                Color of the non-overlapping links
+
+            title: str, Default ''
+                Title to print on the diagram
+
+            interactive: boolean , Default False
+                Whether to launch interactive JavaScript-based graph
+
+            quality: int, Default 4
+                Proportional to the resolution of the figure to save
+
+            nameAppend: str, Default '_Sankey_diagram'
+                Name to append to the figure file
+
+        Returns:
+            None
+        
+        Usage:
+            DCS = DigitalCellSorter.DigitalCellSorter()
+
+            DCS.makeSankeyDiagram(df)
+        '''
+
+        try:
+            temp_index = pd.MultiIndex.from_arrays([df.index, [colormapForIndex[item] for item in df.index]], names=['label', 'color'])
+            temp_columns = pd.MultiIndex.from_arrays([df.columns, [colormapForColumns[item] for item in df.columns]], names=['label', 'color'])
+            df.index = temp_index
+            df.columns = temp_columns
+        except Exception as exception:
+            print(exception)
+            print('Using default node colors')
+            colormapForIndex = None
+            colormapForColumns = None
+
+        if (colormapForIndex is None) or (colormapForColumns is None):
+            nodeColors = ['rgba(150,0,10,0.8)'] * len(df.index) + ['rgba(10,0,150,0.8)'] * len(df.columns)
+            nodeLabels = df.index.to_list() + df.columns.to_list()
+        else:
+            nodeLabels = df.index.get_level_values('label').to_list() + df.columns.get_level_values('label').to_list()
+            nodeColors = df.index.get_level_values('color').to_list() + df.columns.get_level_values('color').to_list()
+
+        sources, targets, values, labels = [], [], [], []
+        for i, item in enumerate(df.index):
+            sources.extend([i] * len(df.loc[item]))
+            targets.extend(list(range(len(df.index), len(df.index) + len(df.loc[item]))))
+            values.extend([j for j in df.loc[item].values])
+            #labels.extend([item + ' -> ' + jtem for jtem in df.loc[item].index])
+
+        colorscales = [dict(label=label, colorscale=[[0, linksColor], [1, linksColor]]) for label in labels]
+
+        if not nodeColors is None:
+            for i in range(len(sources)):
+                if nodeColors[sources[i]] == nodeColors[targets[i]]:
+                    newColor = ','.join(nodeColors[sources[i]].split(',')[:3] + ['0.6)'])
+                    colorscales[i] = dict(label=labels[i], colorscale=[[0, newColor], [1, newColor]])
+
+        fig = plotly.graph_objects.Figure(data=[plotly.graph_objects.Sankey(valueformat = '', valuesuffix = '',
+            node = dict(pad = 20, thickness = 40, line = dict(color = 'white', width = 0.5), label = nodeLabels, color = nodeColors,),
+            link = dict(source = sources, target = targets, value = values, label = labels, colorscales = colorscales, hoverinfo='all'))]) #line ={'color':'rgba(255,0,0,0.8)', 'width':0.1}
+
+        if not title is None:
+            fig.update_layout(title_text=title, font_size=10)
+
+        try:
+            fig.write_image(os.path.join(self.saveDir, self.dataName + nameAppend + '.png'), width=500, height=500, scale=quality)
+
+        except Exception as exception:
+            print('Cannot save static image (likely due to missing orca). Saving to interactive html')
+            attemptSavingHTML = True
+
+        if attemptSavingHTML:
+            plot_offline(fig, filename=os.path.join(self.saveDir, self.dataName + nameAppend + '.html'), auto_open=False)
+
+        return fig
+
+    @tryExcept
+    def HopfieldLandscapePlot3D(self, PCx = 0, PCy = 1, colorbar = True, fontsize = 12, plotMesh = True, plotAttractors = True, trPath = None, attemptSavingHTML=False, nameAppend = '', quality = 4, **kwargs):
+
+        '''Make heatmap plot of the attractors in their two principal components coordinates
+
+        Parameters:
+            legend: boolean, Default False
+                Whether to add legend containing cell types names
+            
+            labels: boolean, Default False
+                Whether to add labels 
+                
+            PCx: int, Default 0
+                Principal component for x-coordinate of the plot
+                            
+            PCy: int, Default 1
+                Principal component for y-coordinate of the plot
+            
+            colorbar: boolean, Default False
+                Whether to add colorbar
+
+            fontsize: int, Default 10
+                Text labels font size
+            
+            plotMesh: boolean, Default False
+                Whether to plot landscape heatmap
+                
+            plotAttractors: boolean, Default False
+                Whether to plot attractor stars
+                
+            adjustText: boolean, Default False
+                Whether to minimize text labels overlap
+                
+            axisOff: boolean, Default False
+                Whether to hide the axes lines
+
+            colorbarva: float, Default 0.75
+                Vertical position of the bottom of the colorbar
+
+            colorbarha: float, Default 0.85
+                Horizontal position of the colorbar
+
+            trPath: str, Default None
+                Path to trajectories files
+
+            colormap: matplotlib.colormap or str, Default matplotlib.colors.LinearSegmentedColormap.from_list('cmap', [(1, 1, 1), (0, 1, 1), (0, 0, 1), (1, 0, 0)], N=1000)
+                Colormap or its string name
+
+            dpi: int, Default 300
+                Resolution of the figure
+
+            extension: str, Default 'png'
+                Format extension of the figure
+
+        Returns:
+            None
+        
+        Usage:
+            DCS = DigitalCellSorter.DigitalCellSorter()
+
+            DCS.makeHopfieldLandscapePlot()
+        '''
+           
+        if trPath is None:
+            trPath = os.path.join(self.saveDir, 'HopfieldTrajectories')
+
+        if not os.path.exists(trPath):
+            print('Data not found', flush=True)
+
+            return
+
+        attrs_xpca, attrs_names = read(os.path.join(trPath, 'attrs'))
+        attrs_xpca = attrs_xpca[:attrs_xpca.shape[1]]
+
+        mesh_xpca = read(os.path.join(trPath, 'mesh'))
+
+        mesh_energy = mesh_xpca[range(len(mesh_xpca)), -1]
+        mesh_xpca = mesh_xpca[range(len(mesh_xpca)), :-1]
+
+        data = np.vstack([attrs_xpca, mesh_xpca])
+
+        coords = data.T[[PCx, PCy], :]
+        attrs2D, mesh2D = coords[:, :attrs_xpca.shape[1]].T, coords[:, attrs_xpca.shape[1]:].T
+    
+        vmin, vmax = min(mesh_energy), 0.
+
+        vals = mesh_energy.copy()
+        vals[np.where(vals > (vmax - 0.001))[0]] = vmax - 0.001
+        vals[np.where(vals < (vmin + 0.001))[0]] = vmin + 0.001
+
+        xmin, xmax = mesh2D.T[0].min(), mesh2D.T[0].max()
+        ymin, ymax = mesh2D.T[1].min(), mesh2D.T[1].max()
+
+        dx = (xmax - xmin) * 0.05
+        dy = (ymax - ymin) * 0.05
+
+        xmin -= dx
+        xmax += dx
+        ymin -= dy
+        ymax += dy
+
+        ngrid = 100
+        grid = np.zeros((ngrid + 1, ngrid + 1))
+        grid[:] = vmin
+
+        i = (ngrid * (mesh2D.T[0] - xmin) / (xmax - xmin)).astype(int)
+        j = (ngrid * (mesh2D.T[1] - ymin) / (ymax - ymin)).astype(int)
+
+        se = pd.Series(index=zip(i,j), data=mesh_energy).groupby(axis=0, level=0).agg(np.min)
+        se.index = pd.MultiIndex.from_tuples(se.index)
+
+        grid[(se.index.get_level_values(0).values, se.index.get_level_values(1).values)] = se.values
+
+        df = se.unstack(fill_value=vmin)
+
+        fig = go.Figure()
+
+        if plotMesh:
+            fig.add_trace(go.Surface(x=np.linspace(xmin, xmax, df.shape[0]), 
+                                        y=np.linspace(ymin, ymax, df.shape[1]), 
+                                        z=gaussian_filter(df.values.T, sigma=0.75), opacity=1., colorscale="blackbody_r",
+                                        showscale=colorbar,
+                                        hoverinfo='none',
+                                        contours= {'x': {'highlight': False}, 
+                                                'y': {'highlight': False}, 
+                                                'z': {'highlight': False}},))
+
+            fig.update_traces(contours_z=dict(show=True, width=3., highlightwidth=3., usecolormap=False, highlightcolor="limegreen", project=dict(x=True,y=True,z=True), highlight=True, color='grey', size=(vmax-vmin)/10.))
+
+        annotations = []
+        if plotAttractors:
+            for i, point in enumerate(zip(attrs2D.T[0], attrs2D.T[1])):
+                fig.add_trace(go.Scatter3d(x=[point[0], point[0]], y=[point[1], point[1]], z=[vmin, 0.5*vmin],  mode='lines', hoverinfo='none', line=dict(width=2, color='blue'), showlegend=False))
+
+                annotations.append(dict(showarrow=False, x=point[0], y=point[1], z=0.4*vmin, text=attrs_names[i], xanchor="center", xshift=10, opacity=1, font=dict(color='black', size=fontsize)))
+
+            fig.add_trace(go.Scatter3d(x=attrs2D.T[0], y=attrs2D.T[1], z=0. * attrs2D.T[0] + 0.5*vmin, mode='markers', 
+                                        hovertext=attrs_names,
+                                        hoverinfo='text',
+                                        marker=dict(size=5, color='blue'),
+                                        projection=dict(z=dict(show=True)),
+                                        showlegend=False))
+
+        fig.update_layout(title='Hopfield Attractors', autosize=False, width=700, height=700, margin=dict(l=75, r=75, b=75, t=90))
+
+        fig.update_layout(scene = {'xaxis': {'title_text': 'PC1', 'nticks': 10, 'spikesides': False, 'showspikes': False, 'showbackground': False, 'showline': False, 'showticklabels': False, 'showaxeslabels': False}, 'yaxis': {'title_text': 'PC2', 'nticks': 10, 'spikesides': False, 'showspikes': False, 'showbackground': False, 'showline': False, 'showticklabels': False, 'showaxeslabels': False}, 'zaxis': {'title_text': 'Energy', 'range': (vmin, 0.), 'nticks': 10, 'showspikes': False, 'showbackground': False, 'showline': False, 'showticklabels': False, 'showaxeslabels': False}, 'aspectratio': {'x': 1, 'y': 1, 'z': 0.33}, 'annotations': annotations})
+
+        fig.update_layout(scene_camera=dict(up=dict(x=0, y=0, z=2), center=dict(x=0, y=0, z=0), eye=dict(x=0, y=-0.25, z=1.25)))
+
+        fileName = self.dataName + '_energy_landscape_PC%s_vs_PC%s'%(PCy, PCx) + nameAppend
+
+        try:
+            fig.write_image(os.path.join(self.saveDir, fileName + '.png'), width=700, height=700, scale=quality)
+
+        except Exception as exception:
+            print('Cannot save static image (likely due to missing orca). Saving to interactive html')
+            attemptSavingHTML = True
+
+        if attemptSavingHTML:
+            plot_offline(fig, filename=os.path.join(self.saveDir, fileName + '.html'), auto_open=False)
 
         return fig

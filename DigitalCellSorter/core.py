@@ -1403,6 +1403,47 @@ class DigitalCellSorter(VisualizationFunctions):
 
         return None
 
+    def makeHopfieldLandscapePlot(self, meshSamplingRate = 1000, plot3D = True, reuseData = False, **kwargs):
+
+        '''Make and plot Hopfield landscape
+
+        Parameters:
+            meshSamplingRate: int, Default 1000
+                Defines quality of sampling around attractor states
+    
+            plot3D: boolean, Default False
+                Whether to plot 2D or 3D figure
+
+            reuseData: boolean, Default False
+                Whether to attempt using precalculated data.
+
+            Any parameters that function 'HopfieldLandscapePlot' or 'HopfieldLandscapePlot3D' can accept
+
+        Returns:
+            None
+        
+        Usage:
+            DCS = DigitalCellSorter.DigitalCellSorter()
+            DCS.makeHopfieldLandscapePlot()
+        '''
+
+        dataPath = os.path.join(self.saveDir, 'Hopfiled_mode_1')
+
+        if reuseData and (not os.path.exists(dataPath)):
+            reuseData = False
+
+        if not reuseData:
+            df_attrs = self.readMarkerFile()
+
+            self.propagateHopfield(xi=df_attrs.values, typesNames=df_attrs.columns.values, path=dataPath, meshSamplingRate=meshSamplingRate, mode=1)
+
+        if plot3D:
+            fig = self.HopfieldLandscapePlot3D(trPath=dataPath, **kwargs)
+        else:
+            fig = self.HopfieldLandscapePlot(trPath=dataPath, colorbarva=0.15, fontsize=12, **kwargs)
+
+        return fig
+
     
     # Extraction user functions of class ###############################################
     def getAnomalyScores(self, trainingSet, testingSet, printResults = False):
