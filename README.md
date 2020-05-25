@@ -173,6 +173,12 @@ install ```plotly``` and ```orca```:
     conda install -c plotly plotly-orca
     conda install -c anaconda psutil
 
+See 
+[interactive Hopfield landscape figure](http://htmlpreview.github.io/?https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/dataName_energy_landscape_PC1_vs_PC0.html "Hopfield attractors figure")
+and 
+[interactive Sankey diagram figure](http://htmlpreview.github.io/?https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/PanglaoDB_Sankey_SRS3296611.html "Sankey diagram of cell annotation") 
+in a browser.
+
 ```orca	``` is necessary to convert Sankey diagrams to static images.
 If for any reason ```orca``` is unavailable the Sankey diagrams will be saved as 
 ineractive HTML figure, that can be opened in a browser (Chrome, Firefox etc.) and 
