@@ -10,7 +10,7 @@ import shutil
 import time
 import numpy as np
 
-def write(data, fileName, jsonFormat = False):
+def write(data, fileName, compressed = False, jsonFormat = False):
     
     '''Pickle object into a (binary) file
         
@@ -35,12 +35,18 @@ def write(data, fileName, jsonFormat = False):
 
         return
 
-    with gzip.open(fileName + '.pklz','wb') as temp_file:
-        pickle.dump(data, temp_file, protocol=4)
+    if compressed:
+        with gzip.open(fileName + '.pklz','wb') as temp_file:
+
+            pickle.dump(data, temp_file, protocol=4)
+    else:
+        with open(fileName + '.pklz','wb') as temp_file:
+
+            pickle.dump(data, temp_file, protocol=4)
 
     return None
 
-def read(fileName, jsonFormat = False):
+def read(fileName, compressed = False, jsonFormat = False):
 
     '''Unpickle object from a (binary) file
 
@@ -63,11 +69,18 @@ def read(fileName, jsonFormat = False):
 
         return data
 
-    with gzip.open(fileName + '.pklz','rb') as temp_file:
+    if compressed:
+        with gzip.open(fileName + '.pklz', 'rb') as temp_file:
 
-        data = pickle.load(temp_file)
+            data = pickle.load(temp_file)
 
-        return data
+            return data
+    else:
+        with open(fileName + '.pklz', 'rb') as temp_file:
+
+            data = pickle.load(temp_file)
+
+            return data
 
     return None
 

@@ -142,7 +142,7 @@ class VisualizationFunctions:
     # MatPlotLib-powered figures
 
     @tryExcept
-    def makeHeatmapGeneExpressionPlot(self, df = None, genes = None, nameToAppend = 'heatmap', dpi = 300, extension = 'png', **kwargs):
+    def makeHeatmapGeneExpressionPlot(self, df = None, genes = None, normalize = True, saveExcel = True, nameToAppend = 'heatmap', plotBy = 'cluster', figsize = (8, 4), convertGenes = False, dpi = 300, extension = 'png', **kwargs):
 
         '''Make heatmap gene expression plot from a provided gene expression matrix.
 
@@ -179,13 +179,16 @@ class VisualizationFunctions:
                 return
             else:
                 if not genes is None:
-                    converted = []
-                    for gene in genes:
-                        converted.extend(self.getHugoName(gene, printAliases=True))
+                    if convertGenes:
+                        converted = []
+                        for gene in genes:
+                            converted.extend(self.getHugoName(gene, printAliases=True))
 
-                    converted = np.unique(converted)
+                        converted = np.unique(converted)
 
-                    common = self.df_expr.index.intersection(converted)
+                        common = self.df_expr.index.intersection(converted)
+                    else:
+                        common = self.df_expr.index.intersection(genes).drop_duplicates()
 
                     df = self.df_expr.loc[common].copy()
                 else:
@@ -193,23 +196,28 @@ class VisualizationFunctions:
 
                     return
 
-        counts = df.loc[[df.index[0]]].groupby(axis=1, level='cluster').count()
+        counts = df.loc[[df.index[0]]].groupby(axis=1, level=plotBy).count()
         means = df.mean(axis=1)
 
-        df = df.groupby(axis=1, level='cluster').mean()
-        #df = df.replace(0., np.nan).groupby(axis=1, level='cluster').mean().fillna(0.)
-        df.columns = df.columns.get_level_values('cluster')
+        df = df.groupby(axis=1, level=plotBy).mean()
+        #df = df.replace(0., np.nan).groupby(axis=1, level=plotBy).mean().fillna(0.)
+        df.columns = df.columns.get_level_values(plotBy)
         df.columns = list(zip(df.columns.values, counts.values[0]))
 
-        for i in range(df.shape[0]):
-            df.iloc[i,:] -= np.min(df.iloc[i,:])
-            df.iloc[i,:] /= np.max(df.iloc[i,:])
+        if normalize:
+            for i in range(df.shape[0]):
+                df.iloc[i,:] -= np.min(df.iloc[i,:])
+                df.iloc[i,:] /= np.max(df.iloc[i,:])
         
-        df = df.T.iloc[scipy.cluster.hierarchy.dendrogram(scipy.cluster.hierarchy.linkage(df.T, 'ward'), no_plot=True, get_leaves=True)['leaves']].T
+        #df = df.T.iloc[scipy.cluster.hierarchy.dendrogram(scipy.cluster.hierarchy.linkage(df.T, 'ward'), no_plot=True, get_leaves=True)['leaves']].T
+        df = df.iloc[scipy.cluster.hierarchy.dendrogram(scipy.cluster.hierarchy.linkage(df, 'ward'), no_plot=True, get_leaves=True)['leaves']]
 
         df.insert(0, ('Mean', 'All'), means)
 
-        fig, ax = plt.subplots(figsize=(8,8))
+        if saveExcel:
+            df.T.to_excel(os.path.join(self.saveDir, self.dataName + '_' + nameToAppend + '_genes_by_%s' % (plotBy) + '.xlsx'))
+
+        fig, ax = plt.subplots(figsize=figsize)
 
         ax.imshow(df.T.values[1:,:], cmap='Blues', interpolation='None', aspect='auto', 
                   extent=(-0.5, df.shape[0] - 0.5, df.shape[1] - 0.5, +0.5))
@@ -233,7 +241,7 @@ class VisualizationFunctions:
 
         fig.tight_layout()
 
-        self.saveFigure(fig, self.saveDir, self.dataName + '_' + nameToAppend + '_genes', extension=extension, dpi=dpi, **kwargs)
+        self.saveFigure(fig, self.saveDir, self.dataName + '_' + nameToAppend + '_genes_by_%s' % (plotBy), extension=extension, dpi=dpi, **kwargs)
 
         return fig
     
@@ -2021,7 +2029,7 @@ class VisualizationFunctions:
                     newColor = ','.join(nodeColors[sources[i]].split(',')[:3] + ['0.6)'])
                     colorscales[i] = dict(label=labels[i], colorscale=[[0, newColor], [1, newColor]])
 
-        fig = plotly.graph_objects.Figure(data=[plotly.graph_objects.Sankey(valueformat = '', valuesuffix = '',
+        fig = go.Figure(data=[go.Sankey(valueformat = '', valuesuffix = '',
             node = dict(pad = 20, thickness = 40, line = dict(color = 'white', width = 0.5), label = nodeLabels, color = nodeColors,),
             link = dict(source = sources, target = targets, value = values, label = labels, colorscales = colorscales, hoverinfo='all'))]) #line ={'color':'rgba(255,0,0,0.8)', 'width':0.1}
 

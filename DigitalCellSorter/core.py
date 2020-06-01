@@ -193,12 +193,13 @@ class DigitalCellSorter(VisualizationFunctions):
                  mitochondrialGenes = None, sigmaOverMeanSigma = 0.01, nClusters = 10, nFineClusters = 3, doFineClustering = True, 
                  minSizeForFineClustering = 50, clusteringFunction = AgglomerativeClustering, nComponentsPCA = 200, nSamples_pDCS = 3 * 10 ** 3, 
                 nSamples_Hopfield = 200, saveDir = os.path.join(''), makeMarkerSubplots = False, availableCPUsCount = min(6, os.cpu_count()), 
-                zScoreCutoff = 0.3, subclusteringName = None, doQualityControl = True, doBatchCorrection = True, makePlots = True, 
+                zScoreCutoff = 0.3, subclusteringName = None, doQualityControl = True, doBatchCorrection = False, makePlots = True, 
                 useUnderlyingNetwork = True, minimumNumberOfMarkersPerCelltype = 10, nameForUnknown = 'Unassigned', nameForLowQC = 'Failed QC',
                 matplotlibMode = None, countDepthCutoffQC = 0.5, numberOfGenesCutoffQC = 0.5, mitochondrialGenesCutoffQC = 1.5, 
                 excludedFromQC = None, countDepthPrecutQC = 500, numberOfGenesPrecutQC = 250, precutQC = False, minSubclusterSize = 25,
                 thresholdForUnknown_pDCS = 0., thresholdForUnknown_ratio = 0., thresholdForUnknown_Hopfield = 0., thresholdForUnknown = 0.2, 
-                layout = 'TSNE', safePlotting = True, HopfieldTemperature = 0.1, annotationMethod = 'ratio-pDCS-Hopfield'):
+                layout = 'TSNE', safePlotting = True, HopfieldTemperature = 0.1, annotationMethod = 'ratio-pDCS-Hopfield',
+                useNegativeMarkers = True, removeLowQualityScores = True):
 
         '''Initialization function that is automatically called when an instance on Digital Cell Sorter is created'''
 
@@ -218,6 +219,9 @@ class DigitalCellSorter(VisualizationFunctions):
         self.defaultGeneListsDir = os.path.join(os.path.dirname(__file__), 'geneLists')
         self.geneListFileName = geneListFileName
         self.mitochondrialGenes = mitochondrialGenes
+
+        self.useNegativeMarkers = useNegativeMarkers
+        self.removeLowQualityScores = removeLowQualityScores
 
         self.geneNamesType = geneNamesType
 
@@ -1067,7 +1071,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         self.makeHopfieldLandscapePlot()
 
-        self.makeHopfieldPCplot()
+        #self.makeHopfieldPCplot()
 
         return None
 
@@ -1199,7 +1203,9 @@ class DigitalCellSorter(VisualizationFunctions):
 
         def reduce(v, size = 100):
 
-            return np.digitize(v, np.linspace(np.min(v), np.max(v), num=size))
+            bins =  np.linspace(np.min(v), np.max(v), num=size)
+
+            return bins[np.digitize(v, bins) - 1]
 
         print('Making projection plots of QC', flush=True)
 
@@ -1264,7 +1270,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         return None
 
-    def makeAnomalyScoresPlot(self, cells = 'All', **kwargs):
+    def makeAnomalyScoresPlot(self, cells = 'All', suffix = '', **kwargs):
 
         '''Make anomaly scores plot
 
@@ -1297,9 +1303,16 @@ class DigitalCellSorter(VisualizationFunctions):
                 raise ValueError
 
         df_sel = self.getExprOfCells(cells)
+        df_sel.columns = pd.MultiIndex.from_arrays([df_sel.columns.get_level_values('batch'), 
+                                                 df_sel.columns.get_level_values('cell') ], 
+                                                 names=['batch', 'cell']) 
 
         scores = self.getAnomalyScores(df_sel, df_sel)
-        scores = pd.DataFrame(index=cells, data=scores).reindex(df_projection.columns).values.T[0]
+        scores = pd.DataFrame(index=df_sel.columns, data=scores)
+        scores.columns = ['score']
+        scores.sort_values(by='score', ascending=False).to_excel(os.path.join(self.saveDir, 'anomalyScores%s.xlsx' % (suffix)), merge_cells=False)
+        
+        scores = scores.reindex(df_projection.columns).values.T[0]
 
         kwargs.setdefault('suffix', 'by_anomaly_score')
         kwargs.setdefault('legend', False)
@@ -1472,16 +1485,15 @@ class DigitalCellSorter(VisualizationFunctions):
 
         print('Calculating anomaly scores of the selected cells', flush=True)
 
-        instanceIsolationForest = IsolationForest(max_samples=np.min([trainingSet.shape[1] - 1, 100]), 
-                                                  random_state=np.random.RandomState(None), 
-                                                  contamination='auto',
-                                                  behaviour="new")
+        instanceIsolationForest = IsolationForest(max_samples=np.min([trainingSet.shape[1] - 1, 100]), random_state=np.random.RandomState(None))
 
+        print('Training isolation forest')
         instanceIsolationForest.fit(trainingSet.values.T)
 
         if type(testingSet) is pd.Series:
             testingSet = testingSet.to_frame()
 
+        print('Scoring samples')
         scores = instanceIsolationForest.score_samples(testingSet.values.T)
 
         scores *= -1.
@@ -2070,7 +2082,7 @@ class DigitalCellSorter(VisualizationFunctions):
         temp = self.calculateV((df_marker_cell_type, 
                                 df_markers_expr, 
                                 df_markers_expr.columns.get_level_values('cluster').values, 
-                                self.zScoreCutoff, True, True))
+                                self.zScoreCutoff, True, self.removeLowQualityScores))
         df_V = temp[0].unstack()
         df_V.index.name = None
         df_Z_best = temp[1]
@@ -2184,7 +2196,7 @@ class DigitalCellSorter(VisualizationFunctions):
         temp = self.calculateV((df_marker_cell_type, 
                                 df_markers_expr, 
                                 df_markers_expr.columns.get_level_values('cluster').values, 
-                                self.zScoreCutoff, True, True))
+                                self.zScoreCutoff, True, self.removeLowQualityScores))
         df_V = temp[0].unstack()
         df_V.index.name = None
         df_Z_best = temp[1]
@@ -2234,6 +2246,8 @@ class DigitalCellSorter(VisualizationFunctions):
 
         # Check and keep only cell types with at least a minium number of +1 markers
         df_marker_cell_type = df_marker_cell_type[df_marker_cell_type.columns[np.abs(df_marker_cell_type).sum(axis=0) > self.minimumNumberOfMarkersPerCelltype]]
+
+        print(df_marker_cell_type.shape)
 
         # Remove unused markers
         df_marker_cell_type = df_marker_cell_type.loc[np.abs(df_marker_cell_type).sum(axis=1) > 0]
@@ -2285,7 +2299,8 @@ class DigitalCellSorter(VisualizationFunctions):
                                          xi=df_marker_cell_type.values, 
                                          typesNames=df_marker_cell_type.columns.values, underlyingNetwork=underlyingNetwork,
                                          clustersNames=df_sig.columns.values, id = i, T = self.HopfieldTemperature, 
-                                         path = os.path.join(self.saveDir, 'HopfieldTrajectories'))
+                                         path = os.path.join(self.saveDir, 'HopfieldTrajectories'),
+                                         recordTrajectories = False)
 
             # Determine top scores
             res = np.argmax(hop, axis=0)
@@ -2768,7 +2783,7 @@ class DigitalCellSorter(VisualizationFunctions):
         data = np.zeros((len(index), len(index))).astype(int)
 
         for iA in range(len(index)):
-            print(iA, end=', ', flush=True)
+            #print(iA, end=', ', flush=True)
             geneA = index[iA]
 
             for iB in range(iA, len(index)):
@@ -2897,7 +2912,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         df_marker_cell_type = df_marker_cell_type.loc[np.abs(df_marker_cell_type).sum(axis=1) > 0]
         print('Markers/celltypes:', df_marker_cell_type.shape, flush=True)
-        print('Markers/celltypes:', df_marker_cell_type.sum(axis=0), flush=True)
+        #print('Markers/celltypes:', df_marker_cell_type.sum(axis=0), flush=True)
 
         # Merge duplicates that might have appeared after gene name conversion
         df_marker_cell_type = df_marker_cell_type.groupby(level=0, axis=0).sum()
@@ -2921,6 +2936,11 @@ class DigitalCellSorter(VisualizationFunctions):
         print('Markers/celltypes:', df_marker_cell_type.shape, flush=True)
 
         df_marker_cell_type.columns = df_marker_cell_type.columns.str.strip()
+
+        if not self.useNegativeMarkers:
+            df_marker_cell_type[df_marker_cell_type < 0.] = 0.
+            df_marker_cell_type = df_marker_cell_type.loc[np.abs(df_marker_cell_type).sum(axis=1) > 0]
+            print('Removed negative markers. Markers/celltypes:', df_marker_cell_type.shape, flush=True)
 
         return df_marker_cell_type
     
@@ -3228,7 +3248,7 @@ class DigitalCellSorter(VisualizationFunctions):
                 print('ComBat transformation', flush=True)
                 print('Reading positions of zeros', flush=True)
                 where_zeros = self._df_expr == 0.
-                values = combat(pd.DataFrame(data=self._df_expr.values.copy(), index=self._df_expr.index.values.copy(), columns=cells), pd.Series(data=patients, index=cells)).values
+                values = combat(pd.DataFrame(data=self._df_expr.values.copy(), index=self._df_expr.index.values.copy(), columns=range(len(cells))), pd.Series(data=patients, index=range(len(cells)))).values
                 self._df_expr = pd.DataFrame(data=values, index=self._df_expr.index, columns=self._df_expr.columns)
                 print('Setting original zeros back to zeros', flush=True)
                 self._df_expr[where_zeros] = 0.

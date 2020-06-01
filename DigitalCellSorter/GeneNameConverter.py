@@ -25,7 +25,9 @@ class GeneNameConverter:
         #Try getting dictionary from disk, and if it can't be found, initialize an empty dict
         try:
             self.conversionDict = read(self.dictDir)
-        except IOError:
+        except Exception as exception:
+            print(exception)
+
             self.conversionDict = {'hugo': {'entrez': {}, 'ensembl': {}, 'alias': {}},
                                    'entrez': {'hugo': {}, 'ensembl': {}, 'retired': {}},
                                    'ensembl': {'entrez': {}, 'hugo': {}},
