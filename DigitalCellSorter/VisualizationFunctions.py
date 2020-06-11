@@ -942,7 +942,7 @@ class VisualizationFunctions:
             index = df['Predicted cell type']
 
             if not clusterName is None:
-                barName = self.dataName + ': ' + clusterName
+                barName = self.dataName # + ': ' + clusterName
             else:
                 barName = self.dataName
 
@@ -1008,7 +1008,7 @@ class VisualizationFunctions:
             
         handles, labels = ax.get_legend_handles_labels()
         ms = np.max([len(item) for item in labels]) - len('cell')
-        labels = [item.replace(' ','\n').replace('B\n', 'B ').replace('T\n', 'T ') if len(item) >= ms else item for item in labels[::-1]]
+        labels = [item.replace(' ','\n').replace('\nCD4', ' CD4').replace('CD4\n', 'CD4 ').replace('\ncell', ' cell').replace('B\n', 'B ').replace('T\n', 'T ') if len(item) >= ms else item for item in labels[::-1]]
 
         if legendStyle:
             ax.legend(handles[::-1], labels, loc='upper left', bbox_to_anchor=(1,1), ncol=1, frameon=False, fontsize=14, labelspacing=1, title = ''.join([' ' for _ in range(60)]))
@@ -1096,7 +1096,7 @@ class VisualizationFunctions:
         if plotPathAndName is None:
             plotPathAndName = 'QC_Plot'
 
-        range_min = np.min(subset)
+        range_min = 0. #np.min(subset)
 
         if mito:
             range_max = max(1.1 * cutoff, np.quantile(subset, quantilePlotCutoff) + 0.05)
@@ -1318,7 +1318,7 @@ class VisualizationFunctions:
 
         fig = plt.figure(figsize=(5,5))
 
-        ax = fig.add_axes([0.35,0.02,0.63,0.63])
+        ax = fig.add_axes([0.35,0.02,0.6,0.6])
         
         cmap = plt.cm.PuOr_r #BrBG #PiYG #seismic
         cmap.set_bad('grey')
@@ -1958,7 +1958,7 @@ class VisualizationFunctions:
     # Plotly-powered figures
 
     @tryExcept
-    def makeSankeyDiagram(self, df, colormapForIndex = None, colormapForColumns = None, linksColor = 'rgba(100,100,100,0.6)', title = '', attemptSavingHTML = False, quality = 4, nameAppend = '_Sankey_diagram'):
+    def makeSankeyDiagram(self, df, colormapForIndex = None, colormapForColumns = None, linksColor = 'rgba(100,100,100,0.6)', title = '', attemptSavingHTML = False, quality = 4, width = 400, height = 400, border = 20, nameAppend = '_Sankey_diagram'):
 
         '''Make a Sankey diagram, also known as 'river plot' with two groups of nodes
 
@@ -2019,7 +2019,10 @@ class VisualizationFunctions:
             sources.extend([i] * len(df.loc[item]))
             targets.extend(list(range(len(df.index), len(df.index) + len(df.loc[item]))))
             values.extend([j for j in df.loc[item].values])
-            #labels.extend([item + ' -> ' + jtem for jtem in df.loc[item].index])
+            if type(item) is tuple:
+                labels.extend([str(item[0]) + ' -> ' + str(jtem[0]) for jtem in df.loc[item].index])
+            else:
+                labels.extend([str(item) + ' -> ' + str(jtem) for jtem in df.loc[item].index])
 
         colorscales = [dict(label=label, colorscale=[[0, linksColor], [1, linksColor]]) for label in labels]
 
@@ -2036,14 +2039,17 @@ class VisualizationFunctions:
         if not title is None:
             fig.update_layout(title_text=title, font_size=10)
 
+        fig.update_layout(margin=dict(l=border, r=border, t=border, b=border))
+
         try:
-            fig.write_image(os.path.join(self.saveDir, self.dataName + nameAppend + '.png'), width=500, height=500, scale=quality)
+            fig.write_image(os.path.join(self.saveDir, self.dataName + nameAppend + '.png'), width=width, height=height, scale=quality)
 
         except Exception as exception:
             print('Cannot save static image (likely due to missing orca). Saving to interactive html')
             attemptSavingHTML = True
 
         if attemptSavingHTML:
+            fig.update_layout(margin=dict(l=200, r=200, t=100, b=100))
             plot_offline(fig, filename=os.path.join(self.saveDir, self.dataName + nameAppend + '.html'), auto_open=False)
 
         return fig

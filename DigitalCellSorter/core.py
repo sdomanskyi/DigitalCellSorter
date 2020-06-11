@@ -531,13 +531,10 @@ class DigitalCellSorter(VisualizationFunctions):
         if nameTo is None:
             nameTo = 'hugo'
 
-        if nameTo == 'hugo' and nameFrom == 'alias':
-            reversed = self.createReverseDictionary(self.gnc.conversionDict[nameTo][nameFrom])
-            self._df_expr.index = [reversed[gene][0] if (gene in reversed.keys()) else gene for gene in self._df_expr.index]
-        else:
+        if nameTo != nameFrom:
             self._df_expr.index = self.gnc.Convert(list(self._df_expr.index), nameFrom, nameTo, returnUnknownString=False)
 
-        self._df_expr = self.mergeIndexDuplicates(self.df_expr, **kwargs)
+            self._df_expr = self.mergeIndexDuplicates(self.df_expr, **kwargs)
 
         return None
 
@@ -1069,10 +1066,6 @@ class DigitalCellSorter(VisualizationFunctions):
         if self.toggleGetMarkerSubplots:
             self.makeMarkerSubplots()
 
-        self.makeHopfieldLandscapePlot()
-
-        #self.makeHopfieldPCplot()
-
         return None
 
 
@@ -1270,7 +1263,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         return None
 
-    def makeAnomalyScoresPlot(self, cells = 'All', suffix = '', **kwargs):
+    def makeAnomalyScoresPlot(self, cells = 'All', suffix = '', noPlot = False, **kwargs):
 
         '''Make anomaly scores plot
 
@@ -1293,25 +1286,32 @@ class DigitalCellSorter(VisualizationFunctions):
             DCS.makeAnomalyScoresPlot(cells)
         '''
 
-        df_projection = pd.read_hdf(self.fileHDFpath, key='df_projection')
+        if self._df_expr is None:
+            self.loadExpressionData()
 
         if type(cells) is str:
             if cells == 'All':
-                cells = df_projection.columns
+                cells = pd.MultiIndex.from_arrays([self._df_expr.columns.get_level_values('batch'), 
+                                                   self._df_expr.columns.get_level_values('cell') ], names=['batch', 'cell']) 
             else:
                 print('"cells" value "%s" is unknown' % (cells))
                 raise ValueError
 
         df_sel = self.getExprOfCells(cells)
+
         df_sel.columns = pd.MultiIndex.from_arrays([df_sel.columns.get_level_values('batch'), 
-                                                 df_sel.columns.get_level_values('cell') ], 
-                                                 names=['batch', 'cell']) 
+                                                    df_sel.columns.get_level_values('cell') ], names=['batch', 'cell'])
 
         scores = self.getAnomalyScores(df_sel, df_sel)
         scores = pd.DataFrame(index=df_sel.columns, data=scores)
         scores.columns = ['score']
         scores.sort_values(by='score', ascending=False).to_excel(os.path.join(self.saveDir, 'anomalyScores%s.xlsx' % (suffix)), merge_cells=False)
         
+        if noPlot:
+
+            return
+
+        df_projection = pd.read_hdf(self.fileHDFpath, key='df_projection')
         scores = scores.reindex(df_projection.columns).values.T[0]
 
         kwargs.setdefault('suffix', 'by_anomaly_score')
@@ -1412,7 +1412,13 @@ class DigitalCellSorter(VisualizationFunctions):
             if not df_markers_expr is None:
                 hugo_cd_dict = {gene: self.gnc.Convert([gene], 'hugo', 'alias', returnUnknownString=False)[0]}
 
-                self.internalMakeMarkerSubplots(df_markers_expr, df_projection.values, hugo_cd_dict, **kwargs)
+                cells = pd.MultiIndex.from_arrays([df_markers_expr.columns.get_level_values('batch'),
+                                                   df_markers_expr.columns.get_level_values('cell')], 
+                                                  names=['batch', 'cell'])
+
+                self.internalMakeMarkerSubplots(df_markers_expr, 
+                                                df_projection.reindex(cells, axis=1).values, 
+                                                hugo_cd_dict, **kwargs)
 
         return None
 
@@ -1485,7 +1491,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         print('Calculating anomaly scores of the selected cells', flush=True)
 
-        instanceIsolationForest = IsolationForest(max_samples=np.min([trainingSet.shape[1] - 1, 100]), random_state=np.random.RandomState(None))
+        instanceIsolationForest = IsolationForest(n_jobs=self.availableCPUsCount, max_samples=np.min([trainingSet.shape[1] - 1, 256]))
 
         print('Training isolation forest')
         instanceIsolationForest.fit(trainingSet.values.T)
@@ -1514,35 +1520,17 @@ class DigitalCellSorter(VisualizationFunctions):
             gene: str
                 'hugo' or 'alias' name of a gene
 
-            printAliases: boolean, Default False
-                Print aliases of the found hugos
-
         Returns:
-            list
-                List containing the input name with any found hugo names
+            str
+                Hugo name if found, otherwise input name
 
         Usage:
             DCS = DigitalCellSorter.DigitalCellSorter()
 
             DCS.getHugoName('CD138')
         '''
-        
-        conversionDict = self.gnc.conversionDict['hugo']['alias']
 
-        se = pd.Series(conversionDict).apply(','.join).str.split(',', expand=True)
-
-        names = se.index[np.apply_along_axis(lambda arr: gene in arr, axis=1, arr=se.values)].values
-
-        if printAliases:
-            try:
-                print(gene, ':', conversionDict[gene])
-            except Exception as exception:
-                print(exception)
-
-            for name in names:
-                print(name, ':', conversionDict[name])
-
-        return [gene] + names.tolist()
+        return self.gnc.Convert(gene, 'alias', 'hugo', returnUnknownString=False)
 
     def getExprOfGene(self, gene, analyzeBy = 'cluster'):
 
@@ -1826,6 +1814,7 @@ class DigitalCellSorter(VisualizationFunctions):
             y2 = smoothed[wh]
 
             cutoff = min(median + 3. * std, x1 - y1 * (x2 - x1) / (y2 - y1))
+            cutoff = max(median + 1. * std, cutoff)
         else:
             if self.precutQC:
                 cutoff = int(cutoff * np.median(subset[subset > precut]))
@@ -2594,14 +2583,10 @@ class DigitalCellSorter(VisualizationFunctions):
                     if False:
                         mesh_energy = np.array([getHopfieldEnergy(s) for s in mesh_sigma])
                     else:
-                        c = 0
-
-                        print('Calculating chunks:')
+                        print('Calculating chunks')
 
                         def func(mesh_sigma):
-                            nonlocal c
-                            c += 1
-                            print(c, end=' ', flush=True)
+
                             return -0.5 * ((J).dot(mesh_sigma.T) * mesh_sigma.T).sum(axis=0)[:,None]
 
                         mesh_energy = np.vstack([func(item) for item in np.split(mesh_sigma, meshSamplingRate)])
@@ -2771,6 +2756,9 @@ class DigitalCellSorter(VisualizationFunctions):
         print('\nReading PCN (directed, unweighted) network from file')
         PCN = pd.read_csv(os.path.join('data', 'PCN_%s.txt.gz' % (self.species)), compression='gzip', header=0, index_col=[0], delimiter='\t')['Target']
 
+        PCN.index = self.gnc.Convert(PCN.index.tolist(), 'alias', 'hugo', returnUnknownString=False)
+        PCN[:] = self.gnc.Convert(PCN.values.tolist(), 'alias', 'hugo', returnUnknownString=False)
+
         print('Calculating targets of PCN network genes')
         targets = PCN.groupby(level=0).agg('unique').apply(set).to_dict()
 
@@ -2897,9 +2885,7 @@ class DigitalCellSorter(VisualizationFunctions):
         df_marker_cell_type = pd.read_excel(self.geneListFileName, index_col=0, header=[0,1]).replace(np.nan, 0.).replace(0, 0.)
         df_marker_cell_type.columns.names = ['CellTypeGrouped', 'CellType']
 
-        reversed = self.createReverseDictionary(self.gnc.conversionDict['hugo']['alias'])
-
-        df_marker_cell_type.index = [reversed[gene][0] if (gene in reversed.keys()) else gene for gene in df_marker_cell_type.index]
+        df_marker_cell_type.index = self.gnc.Convert(list(df_marker_cell_type.index), 'alias', 'hugo', returnUnknownString=False)
 
         df_marker_cell_type = df_marker_cell_type.drop(columns=[col for col in df_marker_cell_type.columns if col[0] == 'NA'])
         df_marker_cell_type = df_marker_cell_type.groupby(level='CellTypeGrouped', axis=1).agg(mergeFunction).fillna(0.)
@@ -2912,7 +2898,6 @@ class DigitalCellSorter(VisualizationFunctions):
 
         df_marker_cell_type = df_marker_cell_type.loc[np.abs(df_marker_cell_type).sum(axis=1) > 0]
         print('Markers/celltypes:', df_marker_cell_type.shape, flush=True)
-        #print('Markers/celltypes:', df_marker_cell_type.sum(axis=0), flush=True)
 
         # Merge duplicates that might have appeared after gene name conversion
         df_marker_cell_type = df_marker_cell_type.groupby(level=0, axis=0).sum()
