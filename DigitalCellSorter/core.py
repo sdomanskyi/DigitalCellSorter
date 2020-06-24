@@ -199,11 +199,12 @@ class DigitalCellSorter(VisualizationFunctions):
                 excludedFromQC = None, countDepthPrecutQC = 500, numberOfGenesPrecutQC = 250, precutQC = False, minSubclusterSize = 25,
                 thresholdForUnknown_pDCS = 0., thresholdForUnknown_ratio = 0., thresholdForUnknown_Hopfield = 0., thresholdForUnknown = 0.2, 
                 layout = 'TSNE', safePlotting = True, HopfieldTemperature = 0.1, annotationMethod = 'ratio-pDCS-Hopfield',
-                useNegativeMarkers = True, removeLowQualityScores = True):
+                useNegativeMarkers = True, removeLowQualityScores = True, updateConversionDictFile = True, verbose = 1):
 
         '''Initialization function that is automatically called when an instance on Digital Cell Sorter is created'''
 
-        self.gnc = GeneNameConverter.GeneNameConverter(dictDir=os.path.join(os.path.dirname(__file__)), species = species)
+        self.gnc = GeneNameConverter.GeneNameConverter(dictDir=os.path.join(os.path.dirname(__file__)), 
+                                                       species=species, updateConversionDictFile=updateConversionDictFile, verbose=verbose)
 
         self.species = species
         self.dataName = dataName
@@ -215,6 +216,8 @@ class DigitalCellSorter(VisualizationFunctions):
         else:
             self._df_expr = None
         
+        self.verbose = verbose
+
         self.defaultGeneListFileName = 'CIBERSORT_LM22'
         self.defaultGeneListsDir = os.path.join(os.path.dirname(__file__), 'geneLists')
         self.geneListFileName = geneListFileName
@@ -285,7 +288,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         self.toggleGetMarkerSubplots = makeMarkerSubplots
 
-        super().__init__(saveDir=saveDir, dataName=dataName, safePlotting=safePlotting, matplotlibMode=matplotlibMode)
+        super().__init__(saveDir=saveDir, dataName=dataName, safePlotting=safePlotting, matplotlibMode=matplotlibMode, verbose=verbose)
 
         return None
     
@@ -324,7 +327,8 @@ class DigitalCellSorter(VisualizationFunctions):
 
         if self._df_expr is None:
 
-            print('Expression data is not assigned')
+            if self.verbose >= 1:
+                print('Expression data is not assigned')
 
         return self._df_expr
     
@@ -358,7 +362,8 @@ class DigitalCellSorter(VisualizationFunctions):
                 if os.path.isfile(os.path.join(self.defaultGeneListsDir, value + '.xlsx')):
                     self._geneListFileName = os.path.join(self.defaultGeneListsDir, value + '.xlsx')
                 else:
-                    print('Gene list file not found. Uning default list: %s'%(self.defaultGeneListFileName), flush=True)
+                    if self.verbose >= 1:
+                        print('Gene list file not found. Uning default list: %s'%(self.defaultGeneListFileName), flush=True)
 
                     self._geneListFileName = os.path.join(self.defaultGeneListsDir, self.defaultGeneListFileName + '.xlsx')
 
@@ -385,15 +390,18 @@ class DigitalCellSorter(VisualizationFunctions):
         '''
 
         if type(obj) is pd.Series:
-            print('Received data in a form of pandas.Series', flush=True)
-            print('Validating it and converting it to pandas.DataFrame', flush=True)
+            if self.verbose >= 1:
+                print('Received data in a form of pandas.Series', flush=True)
+                print('Validating it and converting it to pandas.DataFrame', flush=True)
 
             if not 'cell' in obj.index.names:
-                print('Column "cell" not found. Returning None', flush=True)
+                if self.verbose >= 1:
+                    print('Column "cell" not found. Returning None', flush=True)
                 return None
 
             if not 'gene' in obj.index.names:
-                print('Column "gene" not found. Returning None', flush=True)
+                if self.verbose >= 1:
+                    print('Column "gene" not found. Returning None', flush=True)
                 return None
 
             if not 'batch' in obj.index.names:
@@ -408,30 +416,35 @@ class DigitalCellSorter(VisualizationFunctions):
 
             self._df_expr = obj
 
-            print('Done', flush=True)
+            if self.verbose >= 2:
+                print('Done', flush=True)
 
             return None
 
         elif type(obj) is pd.DataFrame:
-            print('Received data in a form of pandas.DataFrame', flush=True)
-            print('Validating pandas.DataFrame', flush=True)
+            if self.verbose >= 1:
+                print('Received data in a form of pandas.DataFrame', flush=True)
+                print('Validating pandas.DataFrame', flush=True)
 
             try:
                 obj.index.name = 'gene'
             except Exception as exception:
-                print(exception)
-                print('DataFrame index format is not understood. Returning None', flush=True)
+                if self.verbose >= 1:
+                    print(exception)
+                    print('DataFrame index format is not understood. Returning None', flush=True)
                 return None
 
             if len(obj.columns.names) > 1:
                 if not 'cell' in obj.columns.names:
-                    print('Columns level "cell" not found. Returning None', flush=True)
+                    if self.verbose >= 1:
+                        print('Columns level "cell" not found. Returning None', flush=True)
                     return None
             else:
                 obj.columns.names = ['cell']
 
             if not 'batch' in obj.columns.names:
-                print('Columns level "batch" not found. Assuming one batch in the data.', flush=True)
+                if self.verbose >= 2:
+                    print('Columns level "batch" not found. Assuming one batch in the data.', flush=True)
                 batch = np.array(['batch0'] * len(obj.columns.get_level_values('cell')))
             else:
                 batch = obj.columns.get_level_values('batch')
@@ -440,7 +453,8 @@ class DigitalCellSorter(VisualizationFunctions):
 
             self._df_expr = obj
 
-            print('Done', flush=True)
+            if self.verbose >= 2:
+                print('Done', flush=True)
 
             return None
 
@@ -448,44 +462,55 @@ class DigitalCellSorter(VisualizationFunctions):
             columns = pd.read_csv(obj, header=0, index_col=None, nrows=5).columns.values.tolist()
 
             if ('cell' in columns) and ('gene' in columns) and ('expr' in columns):
-                print('Received data in a form of condensed matrix. Reading data', flush=True)
+                if self.verbose >= 1:
+                    print('Received data in a form of condensed matrix. Reading data', flush=True)
                 df_expr = pd.read_csv(obj, header=0, index_col=None)
 
-                print('Converting it to pandas.DataFrame')
+                if self.verbose >= 2:
+                    print('Converting it to pandas.DataFrame')
 
                 if not 'cell' in df_expr.columns:
-                    print('The column with "cell" identifiers is not found. Returning None', flush=True)
+                    if self.verbose >= 1:
+                        print('The column with "cell" identifiers is not found. Returning None', flush=True)
                     return None
 
                 if not 'gene' in df_expr.columns:
-                    print('The column with "gene" identifiers is not found. Returning None', flush=True)
+                    if self.verbose >= 1:
+                        print('The column with "gene" identifiers is not found. Returning None', flush=True)
                     return None
 
                 if not 'expr' in df_expr.columns:
-                    print('The column with expression values is not found. Returning None', flush=True)
+                    if self.verbose >= 1:
+                        print('The column with expression values is not found. Returning None', flush=True)
                     return None
 
                 if not 'batch' in df_expr.columns:
-                    print('The column with "batch" identifiers is not found. Assuming one batch in the data', flush=True)
+                    if self.verbose >= 2:
+                        print('The column with "batch" identifiers is not found. Assuming one batch in the data', flush=True)
                     df_expr['batch'] = np.array(['batch0'] * len(df_expr))
 
                 self._df_expr = df_expr.set_index(['batch', 'cell', 'gene'])['expr'].unstack(level='gene').T
 
-                print('Done', flush=True)
+                if self.verbose >= 2:
+                    print('Done', flush=True)
 
                 return None
             else:
-                print('Received data in a form of matrix. Reading data', flush=True)
+                if self.verbose >= 1:
+                    print('Received data in a form of matrix. Reading data', flush=True)
                 df_expr = pd.read_csv(obj, header=None, index_col=0)
 
-                print('Converting it to pandas.DataFrame', flush=True)
+                if self.verbose >= 2:
+                    print('Converting it to pandas.DataFrame', flush=True)
 
                 if not 'cell' in df_expr.index:
-                    print('The row with "cell" identifiers is not found. Returning None', flush=True)
+                    if self.verbose >= 1:
+                        print('The row with "cell" identifiers is not found. Returning None', flush=True)
                     return None
 
                 if not 'batch' in df_expr.index:
-                    print('The row with "batch" identifiers is not found. Assuming one batch in the data', flush=True)
+                    if self.verbose >= 2:
+                        print('The row with "batch" identifiers is not found. Assuming one batch in the data', flush=True)
                     df_expr.loc['batch'] = np.array(['batch0'] * df_expr.shape[1])
 
                 df_expr = df_expr.T.set_index(['batch', 'cell']).T
@@ -494,11 +519,15 @@ class DigitalCellSorter(VisualizationFunctions):
 
                 self._df_expr = df_expr
 
-                print('Done', flush=True)
+                if self.verbose >= 2:
+                    print('Done', flush=True)
 
                 return None
         else:
-            print('Unknown input data format. Returning None', flush=True)
+            if self.verbose >= 1:
+                print('Unknown input data format. Returning None', flush=True)
+
+            return None
 
         return None
 
@@ -534,7 +563,7 @@ class DigitalCellSorter(VisualizationFunctions):
         if nameTo != nameFrom:
             self._df_expr.index = self.gnc.Convert(list(self._df_expr.index), nameFrom, nameTo, returnUnknownString=False)
 
-            self._df_expr = self.mergeIndexDuplicates(self.df_expr, **kwargs)
+            self._df_expr = self.mergeIndexDuplicates(self.df_expr, verbose=self.verbose, **kwargs)
 
         return None
 
@@ -557,18 +586,21 @@ class DigitalCellSorter(VisualizationFunctions):
 
         # Replace any NaN(s) with zeros.
         self._df_expr.fillna(0.0, inplace=True)
-        print('Replaced missing values with zeros. Data size: %s genes, %s cells' % self._df_expr.shape, flush=True)
+        if self.verbose >= 1:
+            print('Replaced missing values with zeros. Data size: %s genes, %s cells' % self._df_expr.shape, flush=True)
 
         # Check is any names in the index are duplicated, remove duplicates
         self._df_expr = self.mergeIndexDuplicates(self._df_expr) 
 
         # Keep only cells with at least one expressed gene.
         self._df_expr = self._df_expr.T[self._df_expr.sum(axis=0) > 0].T
-        print('Removed all-zero cells. Data size: %s genes, %s cells' % self._df_expr.shape, flush=True)
+        if self.verbose >= 1:
+            print('Removed all-zero cells. Data size: %s genes, %s cells' % self._df_expr.shape, flush=True)
 
         # Keep only genes expressed in at least one cell.
         self._df_expr = self._df_expr[self._df_expr.sum(axis=1) > 0]
-        print('Removed all-zero genes. Data size: %s genes, %s cells' % self._df_expr.shape, flush=True)
+        if self.verbose >= 1:
+            print('Removed all-zero genes. Data size: %s genes, %s cells' % self._df_expr.shape, flush=True)
 
         return None
 
@@ -592,10 +624,12 @@ class DigitalCellSorter(VisualizationFunctions):
 
         # Scale all cells.
         median = np.median(np.sum(self._df_expr,axis=0)).astype(float) if median is None else median
-        print('Rescaling all cells by "sum of values = %s".' % (median), flush=True)
+        if self.verbose >= 1:
+            print('Rescaling all cells by "sum of values = %s".' % (median), flush=True)
         self._df_expr = self._df_expr.apply(lambda q: q * median / np.sum(q),axis=0)
 
-        print('Log-transforming data.', flush=True)
+        if self.verbose >= 1:
+            print('Log-transforming data.', flush=True)
         # Replace zeros with minimum value.
         MIN = np.min(self._df_expr.values[self._df_expr.values > 0.])
         if MIN <= 0.:
@@ -608,12 +642,14 @@ class DigitalCellSorter(VisualizationFunctions):
 
         # Keep only genes expressed in at least one cell.
         self._df_expr = self._df_expr[self._df_expr.sum(axis=1) > 0]
-        print('Removed all-zero genes. Data size: %s genes, %s cells' % self._df_expr.shape, flush=True)  
+        if self.verbose >= 1:
+            print('Removed all-zero genes. Data size: %s genes, %s cells' % self._df_expr.shape, flush=True)  
 
         if not self.sigmaOverMeanSigma is None:
             # Keep only those genes with large enough standard deviation.
             self._df_expr = self._df_expr[np.std(self._df_expr, axis=1) / np.mean(np.std(self._df_expr.values)) > self.sigmaOverMeanSigma]
-            print('Removed constant genes. Data size: %s genes, %s cells' % self._df_expr.shape, flush=True)
+            if self.verbose >= 1:
+                print('Removed constant genes. Data size: %s genes, %s cells' % self._df_expr.shape, flush=True)
 
         # Sort rows by gene name
         self._df_expr = self._df_expr.sort_index()
@@ -642,17 +678,20 @@ class DigitalCellSorter(VisualizationFunctions):
             xPCA, PCs, tSNE = DCS.project()
         '''
 
-        print('Preparing xpca, PCs, 2D projection of df_expr', flush=True)
+        if self.verbose >= 1:
+            print('Preparing xpca, PCs, 2D projection of df_expr', flush=True)
 
-        print('Performing PC projection from %s to %s features...' % (self._df_expr.shape[0], self.nComponentsPCA), flush=True)
+        if self.verbose >= 2:
+            print('Performing PC projection from %s to %s features...' % (self._df_expr.shape[0], self.nComponentsPCA), flush=True)
         _PCA = PCA(n_components=self.nComponentsPCA)
 
         idx = np.argsort(np.var(self._df_expr.values.T, axis=0) / np.mean(self._df_expr.values.T, axis=0))[-2000:]
         X_pca = _PCA.fit_transform(self._df_expr.values.T[:, idx]).T
 
-        print('Explained variance:', np.round(np.sum(_PCA.explained_variance_ratio_) * 100., 2), "%", flush=True)
-        
-        print('Recording xpca, PCs, 2D projection of df_expr', flush=True)
+        if self.verbose >= 2:
+            print('Explained variance:', np.round(np.sum(_PCA.explained_variance_ratio_) * 100., 2), "%", flush=True)
+            print('Recording xpca, PCs, 2D projection of df_expr', flush=True)
+
         columns=self._df_expr.columns
         columns = pd.MultiIndex.from_arrays([columns.get_level_values('batch'), columns.get_level_values('cell')], names=['batch', 'cell'])
         pd.DataFrame(data=X_pca, columns=columns).to_hdf(self.fileHDFpath, key='df_xpca', mode='a', complevel=4, complib='zlib')
@@ -663,20 +702,23 @@ class DigitalCellSorter(VisualizationFunctions):
                 if X_pca.T.shape[0] < 2000:
                     do_fast_tsne = False
 
-                print('Performing tSNE projection from %s to %s features...' % (self.nComponentsPCA,2), flush=True)
+                if self.verbose >= 1:
+                    print('Performing tSNE projection from %s to %s features...' % (self.nComponentsPCA,2), flush=True)
                 if do_fast_tsne:
                     if platform.system() == "Windows":
                         from .FastTSNE import fast_tsne
-                        print('Windows detected. Using FastTSNE submodule wrapper', flush=True)
+                        if self.verbose >= 3:
+                            print('Windows detected. Using FastTSNE submodule wrapper', flush=True)
                         X_projection2 = fast_tsne(X_pca.T, perplexity = 30, seed=42).T
                     else:
                         try:
                             import fitsne
                         except Exception as exception:
-                            print(exception)
-                            print('FI-tSNE package could not be imported. Install the package following \
-                            instructions of DigitalCellSorter installation on GitHub. Defaulting to PCA layout')
-                            self.layout = 'PCA'
+                            if self.verbose >= 1:
+                                print(exception)
+                                print('FI-tSNE package could not be imported. Install the package following \
+                                instructions of DigitalCellSorter installation on GitHub. Defaulting to PCA layout')
+                                self.layout = 'PCA'
 
                         if self.layout == 'TSNE':
                             X_projection2 = fitsne.FItSNE(np.array(X_pca.T, order='C')).T
@@ -684,12 +726,14 @@ class DigitalCellSorter(VisualizationFunctions):
                     X_projection2 = TSNE(n_components=2).fit_transform(X_pca.T).T
 
             elif self.layout == 'UMAP':
-                print('Performing UMAP projection from %s to %s features...' % (self.nComponentsPCA, 2), flush=True)
+                if self.verbose >= 1:
+                    print('Performing UMAP projection from %s to %s features...' % (self.nComponentsPCA, 2), flush=True)
                 try:
                     import umap
                 except Exception as exception:
-                    print(exception)
-                    print('UMAP package could not be imported. Install the package following \
+                    if self.verbose >= 1:
+                        print(exception)
+                        print('UMAP package could not be imported. Install the package following \
                     instructions of DigitalCellSorter installation on GitHub. Defaulting to PCA layout')
                     self.layout = 'PCA'
 
@@ -697,23 +741,26 @@ class DigitalCellSorter(VisualizationFunctions):
                     X_projection2 = umap.UMAP(random_state=42).fit_transform(X_pca.T).T
 
             elif self.layout == 'PHATE':
-                print('Performing PHATE projection from %s to %s features...' % (self.nComponentsPCA, 2), flush=True)
+                if self.verbose >= 1:
+                    print('Performing PHATE projection from %s to %s features...' % (self.nComponentsPCA, 2), flush=True)
                 try:
                     import phate
                 except Exception as exception:
-                    print(exception)
-                    print('PHATE package could not be imported. Install the package following \
-                    instructions of DigitalCellSorter installation on GitHub. Defaulting to PCA layout')
+                    if self.verbose >= 1:
+                        print(exception)
+                        print('PHATE package could not be imported. Install the package following instructions of DigitalCellSorter installation on GitHub. Defaulting to PCA layout')
                     self.layout = 'PCA'
 
                 if self.layout == 'PHATE':
                     X_projection2 = phate.PHATE().fit_transform(X_pca.T).T
 
             if self.layout == 'PCA':
-                print('Using PC1 and PC2 for layout', flush=True)
+                if self.verbose >= 1:
+                    print('Using PC1 and PC2 for layout', flush=True)
                 X_projection2 = X_pca[[0,1],:]
 
-            print('Recording 2D projection of df_expr', flush=True)
+            if self.verbose >= 2:
+                print('Recording 2D projection of df_expr', flush=True)
 
             pd.DataFrame(data=X_projection2, columns=columns).to_hdf(self.fileHDFpath, key='df_projection_pre_QC', mode='a', complevel=4, complib='zlib')
             pd.DataFrame(data=X_projection2, columns=columns).to_hdf(self.fileHDFpath, key='df_projection', mode='a', complevel=4, complib='zlib')
@@ -738,7 +785,8 @@ class DigitalCellSorter(VisualizationFunctions):
             DCS.cluster()
         '''
 
-        print('Calculating clustering of PCA data', flush=True)
+        if self.verbose >= 1:
+            print('Calculating clustering of PCA data', flush=True)
         df_xpca = pd.read_hdf(self.fileHDFpath, key='df_xpca')
 
         if type(self.clusteringFunction) is dict:
@@ -747,9 +795,10 @@ class DigitalCellSorter(VisualizationFunctions):
                 import networkx as nx
                 import community
             except Exception as exception:
-                print(exception)
-                print('Install packages pynndescent, networkx and python-louvain following \
-                instructions of DigitalCellSorter installation on GitHub. Defaulting to agglomerative clustering method')
+                if self.verbose >= 1:
+                    print(exception)
+                    print('Install packages pynndescent, networkx and python-louvain following \
+                    instructions of DigitalCellSorter installation on GitHub. Defaulting to agglomerative clustering method')
                 self.clusteringFunction = AgglomerativeClustering
 
         if type(self.clusteringFunction) is dict:
@@ -761,40 +810,48 @@ class DigitalCellSorter(VisualizationFunctions):
             try:
                 k_neighbors = self.clusteringFunction[k_neighbors]
             except Exception as exception:
-                print(exception)
+                if self.verbose >= 2:
+                    print(exception)
                 k_neighbors = 40
 
             try:
                 metric = self.clusteringFunction[metric]
             except Exception as exception:
-                print(exception)
+                if self.verbose >= 2:
+                    print(exception)
                 metric = 'euclidean'
             
             try:
                 clusterExpression = self.clusteringFunction[clusterExpression]
             except Exception as exception:
-                print(exception)
+                if self.verbose >= 2:
+                    print(exception)
                 clusterExpression = False
 
             data = self._df_expr.values.T if clusterExpression else df_xpca.values.T
 
-            print('Searching for %s nearest neighbors' % (k_neighbors), flush=True)
+            if self.verbose >= 2:
+                print('Searching for %s nearest neighbors' % (k_neighbors), flush=True)
             knn = pynndescent.NNDescent(data, metric=metric, n_neighbors=k_neighbors).query(data, k=k_neighbors)
 
-            print('k(=%s) nearest neighbors found. Constructing a NetworkX graph' % (k_neighbors), flush=True)
+            if self.verbose >= 2:
+                print('k(=%s) nearest neighbors found. Constructing a NetworkX graph' % (k_neighbors), flush=True)
             A = np.zeros((len(knn[0]),len(knn[0])))
             for i in range(len(knn[0])):
                 A[i, knn[0][i]] = knn[1][i]
 
             G = nx.from_numpy_array(A)
 
-            print('Clustering the graph', flush=True)
+            if self.verbose >= 2:
+                print('Clustering the graph', flush=True)
             cellClusterIndex = pd.Series(community.best_partition(G)).sort_index().values
         else:
             data = df_xpca.values
 
             cellClusterIndex = self.clusteringFunction(n_clusters=self.nClusters).fit(data.T).labels_.astype(float).astype(str)
-            print(np.unique(cellClusterIndex, return_counts=True))
+
+            if self.verbose >= 2:
+                print(np.unique(cellClusterIndex, return_counts=True))
 
             if self.doFineClustering:
                 fineCellClusterIndex = cellClusterIndex.copy()
@@ -815,17 +872,20 @@ class DigitalCellSorter(VisualizationFunctions):
                             for i, subCluster in enumerate(model.biclusters_[0]):
                                 tempCellClusterIndex[np.where(subCluster)[0]] = i
                         except Exception as exception:
-                            print(exception)
-                            print('Exception', subData.shape, cellsOfCluster.shape)
+                            if self.verbose >= 1:
+                                print(exception)
+                                print('Exception', subData.shape, cellsOfCluster.shape)
                             tempCellClusterIndex = np.zeros((subData.T.shape[0],))
                     else:
-                        print('Small cluster', len(cellsOfCluster))
+                        if self.verbose >= 2:
+                            print('Small cluster', len(cellsOfCluster))
                         tempCellClusterIndex = np.zeros((subData.T.shape[0],))
 
                     subSizes = np.unique(tempCellClusterIndex, return_counts=True)[1]
 
                     if (subSizes < self.minSubclusterSize).any():
-                        print('Fine clusters too small (less than %s)' % (self.minSubclusterSize), subSizes)
+                        if self.verbose >= 2:
+                            print('Fine clusters too small (less than %s)' % (self.minSubclusterSize), subSizes)
                         tempCellClusterIndex = np.zeros((subData.T.shape[0],))
             
                     fineCellClusterIndex[cellsOfCluster] = np.array([str(cluster) + '.' + label for label in tempCellClusterIndex.astype(int).astype(str)])
@@ -874,23 +934,26 @@ class DigitalCellSorter(VisualizationFunctions):
         df_marker_cell_type = pd.read_hdf(self.fileHDFpath, key='df_marker_cell_type')
 
         df_markers_expr = self._df_expr.loc[self._df_expr.index.intersection(df_marker_cell_type.index)]
-        print('Selected genes common with the marker list. Data shape:', df_markers_expr.shape, flush=True)
+
+        if self.verbose >= 1:
+            print('Selected genes common with the marker list. Data shape:', df_markers_expr.shape, flush=True)
 
         methodsToUse = self.annotationMethod.split('-')
 
         if 'pDCS' in methodsToUse:
-            print('\nCalculating results by %s method' % ('pDCS'), flush = True)
+            if self.verbose >= 1:
+                print('\nCalculating results by %s method' % ('pDCS'), flush = True)
             annotationResults_pDCS = list(self.annotateWith_pDCS_Scheme(df_markers_expr.copy(), df_marker_cell_type.T.copy()))
 
         if 'ratio' in methodsToUse:
-            print('\nCalculating results by %s method' % ('ratio'), flush = True)
+            if self.verbose >= 1:
+                print('\nCalculating results by %s method' % ('ratio'), flush = True)
             annotationResults_ratio = list(self.annotateWith_ratio_Scheme(df_markers_expr.copy(), df_marker_cell_type.T.copy()))
 
         if 'Hopfield' in methodsToUse:
-            print('\nCalculating results by %s method' % ('Hopfield'), flush = True)
+            if self.verbose >= 1:
+                print('\nCalculating results by %s method' % ('Hopfield'), flush = True)
             annotationResults_Hopfield = list(self.annotateWith_Hopfield_Scheme(df_markers_expr.copy(), df_marker_cell_type.T.copy()))
-            #self.annotateWith_Hopfield_Scheme(df_markers_expr.copy(), df_marker_cell_type.T.copy())
-            #return
 
         if ('pDCS' in methodsToUse) and ('ratio' in methodsToUse) and ('Hopfield' in methodsToUse):
             annotationResults = annotationResults_pDCS
@@ -927,14 +990,16 @@ class DigitalCellSorter(VisualizationFunctions):
             annotationResults = annotationResults_Hopfield
 
         else:
-            print('Annotation method %s not supported' % (self.annotationMethod), flush=True)
+            if self.verbose >= 1:
+                print('Annotation method %s not supported' % (self.annotationMethod), flush=True)
 
             return
 
         annotationResults = self.recordAnnotationResults(*tuple(annotationResults))
 
-        print(annotationResults, flush=True)
-        print('Updating the expression data with annotation results', flush=True)
+        if self.verbose >= 1:
+            print(annotationResults, flush=True)
+            print('Updating the expression data with annotation results', flush=True)
 
         df_markers_expr = df_markers_expr.T.reset_index().T
 
@@ -1018,21 +1083,24 @@ class DigitalCellSorter(VisualizationFunctions):
         # Plot voting results matrix
         ##############################################################################################
         if self.toggleMakeVotingResultsMatrixPlot:
-            print('Making voting results matrix plot', flush=True)
+            if self.verbose >= 2:
+                print('Making voting results matrix plot', flush=True)
             self.makeAnnotationResultsMatrixPlot()
 
         ##############################################################################################
         # Plot null distributions
         ##############################################################################################
         if self.toggleMakeHistogramNullDistributionPlot:
-            print('Making null distributions plot', flush=True)
+            if self.verbose >= 2:
+                print('Making null distributions plot', flush=True)
             self.makeHistogramNullDistributionPlot()
         
         ##############################################################################################
         # Plot mean marker expression
         ##############################################################################################
         if self.toggleMakeMarkerExpressionPlot:
-            print('Making marker expression plot', flush=True)
+            if self.verbose >= 2:
+                print('Making marker expression plot', flush=True)
             self.makeMarkerExpressionPlot()
 
         ##############################################################################################
@@ -1088,7 +1156,8 @@ class DigitalCellSorter(VisualizationFunctions):
             DCS.makeProjectionPlotAnnotated()
         '''
 
-        print('Making projection plot by clusters with annotated labels')
+        if self.verbose >= 3:
+            print('Making projection plot by clusters with annotated labels')
 
         df_markers_expr = pd.read_hdf(self.fileHDFpath, key='df_markers_expr')
 
@@ -1124,7 +1193,8 @@ class DigitalCellSorter(VisualizationFunctions):
             DCS.makeProjectionPlotByBatches()
         '''
 
-        print('Making projection plot by batches')
+        if self.verbose >= 3:
+            print('Making projection plot by batches')
 
         df_projection = pd.read_hdf(self.fileHDFpath, key='df_projection')
 
@@ -1163,7 +1233,8 @@ class DigitalCellSorter(VisualizationFunctions):
             DCS.makeProjectionPlotByClusters()
         '''
 
-        print('Making projection plot by clusters')
+        if self.verbose >= 3:
+            print('Making projection plot by clusters')
 
         df_projection = pd.read_hdf(self.fileHDFpath, key='df_projection')
         df_clusters = pd.read_hdf(self.fileHDFpath, key='df_clusters').reindex(df_projection.columns)
@@ -1200,7 +1271,8 @@ class DigitalCellSorter(VisualizationFunctions):
 
             return bins[np.digitize(v, bins) - 1]
 
-        print('Making projection plots of QC', flush=True)
+        if self.verbose >= 3:
+            print('Making projection plots of QC', flush=True)
 
         df_QC = pd.read_hdf(self.fileHDFpath, key='QC')
         if self.toggleRemoveLowQualityCells:
@@ -1294,7 +1366,8 @@ class DigitalCellSorter(VisualizationFunctions):
                 cells = pd.MultiIndex.from_arrays([self._df_expr.columns.get_level_values('batch'), 
                                                    self._df_expr.columns.get_level_values('cell') ], names=['batch', 'cell']) 
             else:
-                print('"cells" value "%s" is unknown' % (cells))
+                if self.verbose >= 1:
+                    print('"cells" value "%s" is unknown' % (cells))
                 raise ValueError
 
         df_sel = self.getExprOfCells(cells)
@@ -1489,17 +1562,20 @@ class DigitalCellSorter(VisualizationFunctions):
             cutoff = DCS.getAnomalyScores(df_expr.iloc[:, 5:], df_expr.iloc[:, :5])
         '''
 
-        print('Calculating anomaly scores of the selected cells', flush=True)
+        if self.verbose >= 1:
+            print('Calculating anomaly scores of the selected cells', flush=True)
 
         instanceIsolationForest = IsolationForest(n_jobs=self.availableCPUsCount, max_samples=np.min([trainingSet.shape[1] - 1, 256]))
 
-        print('Training isolation forest')
+        if self.verbose >= 2:
+            print('Training isolation forest')
         instanceIsolationForest.fit(trainingSet.values.T)
 
         if type(testingSet) is pd.Series:
             testingSet = testingSet.to_frame()
 
-        print('Scoring samples')
+        if self.verbose >= 2:
+            print('Scoring samples')
         scores = instanceIsolationForest.score_samples(testingSet.values.T)
 
         scores *= -1.
@@ -1560,14 +1636,16 @@ class DigitalCellSorter(VisualizationFunctions):
         fileName = self.fileHDFpath
 
         if not os.path.isfile(fileName):
-            print('Processed data file not found')
+            if self.verbose >= 1:
+                print('Processed data file not found')
             return
         
         try:
             df_markers_expr = pd.read_hdf(fileName, key='df_expr').xs(key=gene, axis=0, level=-1).T
         except Exception as exception:
-            print(exception)
-            print('Gene %s not in index' % (gene))
+            if self.verbose >= 2:
+                print(exception)
+                print('Gene %s not in index' % (gene))
             return
 
         df_markers_expr.index = [gene]
@@ -1619,7 +1697,8 @@ class DigitalCellSorter(VisualizationFunctions):
                                    self._df_expr.columns.get_level_values('cell') ], names=['batch', 'cell'])
 
         if cells.reindex(index)[1] is None:
-            print('Selected expression of all cells')
+            if self.verbose >= 2:
+                print('Selected expression of all cells')
 
             return self.df_expr
 
@@ -1660,12 +1739,14 @@ class DigitalCellSorter(VisualizationFunctions):
             condition = se == clusterIndex
 
             if not condition.any():
-                print('No cells found')
+                if self.verbose >= 1:
+                    print('No cells found')
                 return None
 
             selectedCells = se[condition].index
 
-            print('Selected %s cells from cluster: %s' % (len(selectedCells), clusterIndex))
+            if self.verbose >= 2:
+                print('Selected %s cells from cluster: %s' % (len(selectedCells), clusterIndex))
 
             return selectedCells
 
@@ -1676,12 +1757,14 @@ class DigitalCellSorter(VisualizationFunctions):
             condition = se == eval(clusterName.split('#')[1])
 
             if not condition.any():
-                print('No cells found')
+                if self.verbose >= 1:
+                    print('No cells found')
                 return None
 
             selectedCells = se[condition].index
 
-            print('Selected %s cells from cluster: %s' % (len(selectedCells), clusterName))
+            if self.verbose >= 2:
+                print('Selected %s cells from cluster: %s' % (len(selectedCells), clusterName))
 
             return selectedCells
 
@@ -1689,20 +1772,23 @@ class DigitalCellSorter(VisualizationFunctions):
 
         if celltype is None and clusterIndex is None:
 
-            print('Available cell types:', np.unique(se.str.split(' #', expand=True)[0].values))
-            print('Note: To get a specific cell type call this function with a specified cell type')
+            if self.verbose >= 1:
+                print('Available cell types:', np.unique(se.str.split(' #', expand=True)[0].values))
+                print('Note: To get a specific cell type call this function with a specified cell type')
 
             return se
 
         condition = se.str.find(celltype) != -1
 
         if not condition.any():
-            print('No cells found')
+            if self.verbose >= 1:
+                print('No cells found')
             return None
 
         selectedCells = se[condition].index
 
-        print('Selected %s cells of type: %s' % (len(selectedCells), celltype))
+        if self.verbose >= 2:
+            print('Selected %s cells of type: %s' % (len(selectedCells), celltype))
 
         return selectedCells
 
@@ -1931,19 +2017,27 @@ class DigitalCellSorter(VisualizationFunctions):
         df_new_marker_genes = df_gene_cluster_centroids_merged.T
 
         df_new_marker_genes[df_new_marker_genes < 0.] = 0.
-        print('New marker cell type shape:', df_new_marker_genes.shape)
+
+        if self.verbose >= 2:
+            print('New marker cell type shape:', df_new_marker_genes.shape)
 
         df_new_marker_genes = df_new_marker_genes.T.loc[df_new_marker_genes.max(axis=0) >= zScoreCutoff].T
-        print('New marker cell type shape:', df_new_marker_genes.shape)
+
+        if self.verbose >= 2:
+            print('New marker cell type shape:', df_new_marker_genes.shape)
 
         df_new_marker_genes = df_new_marker_genes.loc[df_new_marker_genes.max(axis=1) >= zScoreCutoff]
-        print('New marker cell type shape:', df_new_marker_genes.shape)
+
+        if self.verbose >= 2:
+            print('New marker cell type shape:', df_new_marker_genes.shape)
 
         df_new_marker_list = pd.DataFrame()
         for i, celltype in enumerate(df_new_marker_genes.index.values):
             all = df_new_marker_genes.loc[celltype]
             sel = all[all > 1.0].sort_values()[:top]
-            print('Candidates of %s:' % (celltype), len(sel))
+
+            if self.verbose >= 3:
+                print('Candidates of %s:' % (celltype), len(sel))
             df_new_marker_list = pd.concat([df_new_marker_list, sel], sort=False, axis=1)
 
         df_new_marker_list = df_new_marker_list.fillna(0.).sort_index()
@@ -1954,7 +2048,10 @@ class DigitalCellSorter(VisualizationFunctions):
 
         df_new_marker_list.index.name = 'Marker'
         fileName = os.path.join(self.saveDir, 'new_markers.xlsx')
-        print('Recording results to:', fileName)
+
+        if self.verbose >= 3:
+            print('Recording results to:', fileName)
+
         writer = pd.ExcelWriter(fileName)
         df_new_marker_list.to_excel(writer, 'MarkerCellType')
         df_temp = pd.Series(data=df_new_marker_list.columns, index=df_new_marker_list.columns)
@@ -2061,7 +2158,8 @@ class DigitalCellSorter(VisualizationFunctions):
         df_negative /= (df_negative < 0.).sum(axis=0).fillna(1.).replace(0., 1.).replace(0, 1.)
         df_marker_cell_type = df_positive + df_negative
 
-        print(df_marker_cell_type.shape)
+        if self.verbose >= 2:
+            print(df_marker_cell_type.shape)
 
         # Align df_markers_expr and df_marker_cell_type
         df_markers_expr.sort_index(inplace=True, axis=0)
@@ -2092,23 +2190,29 @@ class DigitalCellSorter(VisualizationFunctions):
 
         if self.nSamples_pDCS < batch_size:
             self.nSamples_pDCS = batch_size
-            print('Distribution size too small. Increasing it to minimum batch size: %s' % (self.nSamples_pDCS))
+
+            if self.verbose >= 2:
+                print('Distribution size too small. Increasing it to minimum batch size: %s' % (self.nSamples_pDCS))
 
         N_batches = int(self.nSamples_pDCS / batch_size)
 
         if self.nSamples_pDCS != batch_size * N_batches:
             self.nSamples_pDCS = batch_size * N_batches
-            print('Adjusting distribution size: %s' % (self.nSamples_pDCS))
+
+            if self.verbose >= 2:
+                print('Adjusting distribution size: %s' % (self.nSamples_pDCS))
 
         # Generate random cluster index
         randomClusterIndex = np.vstack([np.random.choice(df_markers_expr_copy.columns.get_level_values('cluster'), size=df_markers_expr_copy.shape[1], replace=False) for i in range(self.nSamples_pDCS)]).astype(int)
 
         # Generate random cluster configurations and calculate scores (Pkc) of those
-        print('Generating null distribution')
+        if self.verbose >= 2:
+            print('Generating null distribution')
 
         def process_batch(batch_range):
 
-            print('\t', batch_range)
+            if self.verbose >= 2:
+                print('\t', batch_range)
 
             tuples = [(df_marker_cell_type, df_markers_expr_copy, randomClusterIndex[i], self.zScoreCutoff, False, False) for i in batch_range]
 
@@ -2130,7 +2234,8 @@ class DigitalCellSorter(VisualizationFunctions):
         min_value = np.nanmin(random_df_V.values)
         max_value = np.nanmax(random_df_V.values)
 
-        print('Min:', min_value, '\t', 'Max:', max_value)
+        if self.verbose >= 2:
+            print('Min:', min_value, '\t', 'Max:', max_value)
 
         Nbins = 300
 
@@ -2140,7 +2245,8 @@ class DigitalCellSorter(VisualizationFunctions):
         df_null_distributions.index = [min_value] + (scipy.stats.rv_histogram(np.histogram(random_df_V.iloc[0], bins=Nbins, range=(min_value,max_value)))._hbins).tolist()
 
         # Calculate z-score (Lkc) for the best clustering
-        print('Processing voting results')
+        if self.verbose >= 2:
+            print('Processing voting results')
         sigma = pd.Series(data=np.nanstd(random_df_V.values, axis=1), index=random_df_V.index).replace(0., np.inf).unstack()
         mean = pd.Series(data=np.nanmean(random_df_V.values, axis=1), index=random_df_V.index).unstack()
         df_L = (df_V - mean) / sigma
@@ -2175,7 +2281,9 @@ class DigitalCellSorter(VisualizationFunctions):
         df_positive /= (df_positive > 0.).sum(axis=0).fillna(1.).replace(0., 1.).replace(0, 1.)
         df_negative /= (df_negative < 0.).sum(axis=0).fillna(1.).replace(0., 1.).replace(0, 1.)
         df_marker_cell_type = df_positive + df_negative
-        print(df_marker_cell_type.shape)
+
+        if self.verbose >= 2:
+            print(df_marker_cell_type.shape)
 
         # Align df_markers_expr and df_marker_cell_type
         df_markers_expr.sort_index(inplace=True, axis=0)
@@ -2236,7 +2344,8 @@ class DigitalCellSorter(VisualizationFunctions):
         # Check and keep only cell types with at least a minium number of +1 markers
         df_marker_cell_type = df_marker_cell_type[df_marker_cell_type.columns[np.abs(df_marker_cell_type).sum(axis=0) > self.minimumNumberOfMarkersPerCelltype]]
 
-        print(df_marker_cell_type.shape)
+        if self.verbose >= 2:
+            print(df_marker_cell_type.shape)
 
         # Remove unused markers
         df_marker_cell_type = df_marker_cell_type.loc[np.abs(df_marker_cell_type).sum(axis=1) > 0]
@@ -2248,7 +2357,8 @@ class DigitalCellSorter(VisualizationFunctions):
         df_marker_cell_type[df_marker_cell_type < 0.] /= (df_marker_cell_type[df_marker_cell_type < 0.] < 0).sum(axis=1).replace(0, 1.).values[:, None]
         df_marker_cell_type[df_marker_cell_type < 0.] /= (df_marker_cell_type[df_marker_cell_type < 0.] < 0).sum(axis=0).replace(0, 1.).values
 
-        print(df_marker_cell_type.shape)
+        if self.verbose >= 2:
+            print(df_marker_cell_type.shape)
 
         # Order gene expression index in the same order as markers index
         df_markers_expr = df_markers_expr.loc[df_marker_cell_type.index]
@@ -2264,24 +2374,28 @@ class DigitalCellSorter(VisualizationFunctions):
             try:
                 underlyingNetwork = self.getSubnetworkOfPCN(df_marker_cell_type.index.values, min_shared_first_targets=1)
 
-                print('Recording underlying network', flush=True)
+                if self.verbose >= 3:
+                    print('Recording underlying network', flush=True)
                 underlyingNetwork.to_hdf(self.fileHDFpath, key='df_underlyingNetwork', mode='a', complevel=4, complib='zlib')
 
                 underlyingNetwork = underlyingNetwork.values
             except Exception as exception:
-                print(exception)
-                print('Not using underlying network connection')
+                if self.verbose >= 1:
+                    print(exception)
+                    print('Not using underlying network connection')
                 underlyingNetwork = None
         else:
             underlyingNetwork = None
 
-        print('Generating Hopfield networks:', flush=True)
+        if self.verbose >= 2:
+            print('Generating Hopfield networks:', flush=True)
 
         listOfSeries = []
 
         for i in range(self.nSamples_Hopfield):
             if i % np.int(self.nSamples_Hopfield / 10) == 0:
-                print('\n%s%%' % (np.int(100 * i / self.nSamples_Hopfield)), end='\t', flush=True)
+                if self.verbose >= 2:
+                    print('\n%s%%' % (np.int(100 * i / self.nSamples_Hopfield)), end='\t', flush=True)
 
             # Run Hopfield network dynamics
             hop = self.propagateHopfield(sigma=df_sig.values * 2. - 1., 
@@ -2289,7 +2403,7 @@ class DigitalCellSorter(VisualizationFunctions):
                                          typesNames=df_marker_cell_type.columns.values, underlyingNetwork=underlyingNetwork,
                                          clustersNames=df_sig.columns.values, id = i, T = self.HopfieldTemperature, 
                                          path = os.path.join(self.saveDir, 'HopfieldTrajectories'),
-                                         recordTrajectories = False)
+                                         recordTrajectories = False, verbose=self.verbose)
 
             # Determine top scores
             res = np.argmax(hop, axis=0)
@@ -2299,7 +2413,8 @@ class DigitalCellSorter(VisualizationFunctions):
 
             listOfSeries.append(res)
 
-        print(flush=True)
+        if self.verbose >= 2:
+            print(flush=True)
 
         r = np.vstack(listOfSeries)
 
@@ -2407,7 +2522,9 @@ class DigitalCellSorter(VisualizationFunctions):
         
         # Record the results to spreadsheets
         fileName = os.path.join(self.saveDir, self.dataName + '_annotation.xlsx')
-        print('Recording voting results to:', fileName)
+
+        if self.verbose >= 2:
+            print('Recording voting results to:', fileName)
         writer = pd.ExcelWriter(fileName)
         df_L.columns.name = 'cluster'
         df_L.T.to_excel(writer, 'z-scores', columns=['Predicted cell type', 
@@ -2437,7 +2554,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
     def propagateHopfield(cls, sigma = None, xi = None, T = 0.2, tmax = 200, fractionToUpdate = 0.5, mode = 4, meshSamplingRate = 200,
                             underlyingNetwork = None, typesNames = None, clustersNames = None, printInfo = False,
-                            recordTrajectories = True, id = None, printSwitchingFraction = False, path = None):
+                            recordTrajectories = True, id = None, printSwitchingFraction = False, path = None, verbose = 0):
 
         '''Function is used internally to propagate Hopfield network 
         over a set number of time steps
@@ -2502,7 +2619,8 @@ class DigitalCellSorter(VisualizationFunctions):
         '''
           
         if xi is None:
-            print('xi is None')
+            if verbose >= 3:
+                print('xi is None')
 
             return
 
@@ -2515,7 +2633,8 @@ class DigitalCellSorter(VisualizationFunctions):
             xi[xi <= 0.] = -1.
 
         if printInfo:
-            print('Unique nodes across Hopfield network:', len(np.unique(xi, axis=0)))
+            if verbose >= 3:
+                print('Unique nodes across Hopfield network:', len(np.unique(xi, axis=0)))
 
         if mode == 1:
             A = xi.T
@@ -2526,8 +2645,9 @@ class DigitalCellSorter(VisualizationFunctions):
             try:
                 Q_inv = np.linalg.inv(Q)    # n,n
             except Exception as exception:
-                print(exception)
-                print('Cannot invert matrix Q')
+                if verbose >= 3:
+                    print(exception)
+                    print('Cannot invert matrix Q')
 
                 return
 
@@ -2536,10 +2656,12 @@ class DigitalCellSorter(VisualizationFunctions):
 
         if not underlyingNetwork is None:
             if J.shape == underlyingNetwork.shape:
-                #print('Udsing network of underlying interactions')
+                if verbose >= 3:
+                    print('Udsing network of underlying interactions')
                 J *= underlyingNetwork
             else:
-                print('Network of underlying interactions shape is inconsistent with J. Ignoring it')
+                if verbose >= 3:
+                    print('Network of underlying interactions shape is inconsistent with J. Ignoring it')
 
         getHopfieldEnergy = lambda s: -0.5 * s[None, :].dot(J).dot(s)
 
@@ -2571,7 +2693,8 @@ class DigitalCellSorter(VisualizationFunctions):
                     mesh_energy = np.array([getHopfieldEnergy(s) for s in mesh_sigma])
                     write(np.hstack([mesh_coords[:,:2], mesh_energy]), os.path.join(path, 'mesh'))
                 else:
-                    print('Generating samples in the vicinity of attractors')
+                    if verbose >= 4:
+                        print('Generating samples in the vicinity of attractors')
                     temp = []
                     for i in range(xi.shape[1]):
                         for j in range(25):
@@ -2579,11 +2702,13 @@ class DigitalCellSorter(VisualizationFunctions):
                             temp.append(np.array([st * ((np.random.rand(st.shape[0]) > 0.025*j) * 2. - 1.) for i in range(meshSamplingRate)]))
                     mesh_sigma = np.vstack(temp)
 
-                    print('Calculating energy of the samples')
+                    if verbose >= 4:
+                        print('Calculating energy of the samples')
                     if False:
                         mesh_energy = np.array([getHopfieldEnergy(s) for s in mesh_sigma])
                     else:
-                        print('Calculating chunks')
+                        if verbose >= 4:
+                            print('Calculating chunks')
 
                         def func(mesh_sigma):
 
@@ -2591,17 +2716,20 @@ class DigitalCellSorter(VisualizationFunctions):
 
                         mesh_energy = np.vstack([func(item) for item in np.split(mesh_sigma, meshSamplingRate)])
 
-                    print('\nProjecting samples on PCs')
+                    if verbose >= 4:
+                        print('\nProjecting samples on PCs')
                     mesh_coords = pca.transform(mesh_sigma)
 
-                    print('Recording mesh data')
+                    if verbose >= 4:
+                        print('Recording mesh data')
                     write(np.hstack([mesh_coords, mesh_energy]), os.path.join(path, 'mesh'))
 
         if recordTrajectories:
             write((np.vstack([attrs, variance]), typesNames), os.path.join(path, 'attrs'))
 
         if sigma is None:
-            print('Sigma is None')
+            if verbose >= 4:
+                print('Sigma is None')
 
             return
 
@@ -2616,8 +2744,6 @@ class DigitalCellSorter(VisualizationFunctions):
 
         for t in range(tmax): 
             h = (J).dot(sigma)
-
-            #print(np.round((100.*(sigma==0.)*1.).sum().sum()/(sigma.shape[0]*sigma.shape[1]), 2), end=', ', flush=True)
                 
             if recordTrajectories:
                 if id == 0 or id is None:
@@ -2753,25 +2879,28 @@ class DigitalCellSorter(VisualizationFunctions):
             df_subnetwork = DCS.getSubnetworkOfPCN(genes)
         '''
 
-        print('\nReading PCN (directed, unweighted) network from file')
+        if self.verbose >= 2:
+            print('\nReading PCN (directed, unweighted) network from file')
         PCN = pd.read_csv(os.path.join('data', 'PCN_%s.txt.gz' % (self.species)), compression='gzip', header=0, index_col=[0], delimiter='\t')['Target']
 
         PCN.index = self.gnc.Convert(PCN.index.tolist(), 'alias', 'hugo', returnUnknownString=False)
         PCN[:] = self.gnc.Convert(PCN.values.tolist(), 'alias', 'hugo', returnUnknownString=False)
 
-        print('Calculating targets of PCN network genes')
+        if self.verbose >= 2:
+            print('Calculating targets of PCN network genes')
         targets = PCN.groupby(level=0).agg('unique').apply(set).to_dict()
 
         del PCN
 
         index = pd.Index(set(subnetworkGenes).intersection(set(targets.keys()))).sort_values()
-        print('Number of PCN genes: %s'%(len(index)))
 
-        print('Calculating number of common targets for %s genes'%(len(index)))
+        if self.verbose >= 2:
+            print('Number of PCN genes: %s'%(len(index)))
+            print('Calculating number of common targets for %s genes'%(len(index)))
+
         data = np.zeros((len(index), len(index))).astype(int)
 
         for iA in range(len(index)):
-            #print(iA, end=', ', flush=True)
             geneA = index[iA]
 
             for iB in range(iA, len(index)):
@@ -2780,17 +2909,22 @@ class DigitalCellSorter(VisualizationFunctions):
                 data[iA,iB] = data[iB,iA] = len(targets[geneA].intersection(targets[geneB])) + direct
 
         targetsOverlaps = pd.DataFrame(index=index, columns=index, data=data)
-        #print(targetsOverlaps)
 
         subnetwork = 1.*(targetsOverlaps >= min_shared_first_targets)
-        print(subnetwork.shape)
+
+        if self.verbose >= 2:
+            print(subnetwork.shape)
 
         subnetwork = subnetwork.reindex(subnetworkGenes, axis=0).reindex(subnetworkGenes, axis=1).fillna(0.)
-        print(subnetwork.shape)
+
+        if self.verbose >= 2:
+            print(subnetwork.shape)
 
         con = subnetwork.sum().sum()
         tot = (len(subnetwork)-1)*len(subnetwork)
-        print('\nConnections in subnetwork: %s, out of %s possible (%s%%)\n'%(con, tot, np.round(100.*con/tot, 0)))
+
+        if self.verbose >= 2:
+            print('\nConnections in subnetwork: %s, out of %s possible (%s%%)\n'%(con, tot, np.round(100.*con/tot, 0)))
 
         return subnetwork
 
@@ -2897,7 +3031,9 @@ class DigitalCellSorter(VisualizationFunctions):
         df_marker_cell_type[where_negative] = -1.
 
         df_marker_cell_type = df_marker_cell_type.loc[np.abs(df_marker_cell_type).sum(axis=1) > 0]
-        print('Markers/celltypes:', df_marker_cell_type.shape, flush=True)
+
+        if self.verbose >= 2:
+            print('Markers/celltypes:', df_marker_cell_type.shape, flush=True)
 
         # Merge duplicates that might have appeared after gene name conversion
         df_marker_cell_type = df_marker_cell_type.groupby(level=0, axis=0).sum()
@@ -2918,18 +3054,21 @@ class DigitalCellSorter(VisualizationFunctions):
 
         df_marker_cell_type = df_marker_cell_type.apply(norm, axis=0)
 
-        print('Markers/celltypes:', df_marker_cell_type.shape, flush=True)
+        if self.verbose >= 1:
+            print('Markers/celltypes:', df_marker_cell_type.shape, flush=True)
 
         df_marker_cell_type.columns = df_marker_cell_type.columns.str.strip()
 
         if not self.useNegativeMarkers:
             df_marker_cell_type[df_marker_cell_type < 0.] = 0.
             df_marker_cell_type = df_marker_cell_type.loc[np.abs(df_marker_cell_type).sum(axis=1) > 0]
-            print('Removed negative markers. Markers/celltypes:', df_marker_cell_type.shape, flush=True)
+
+            if self.verbose >= 2:
+                print('Removed negative markers. Markers/celltypes:', df_marker_cell_type.shape, flush=True)
 
         return df_marker_cell_type
     
-    def mergeIndexDuplicates(cls, df_expr, method = 'average', printDuplicates = False):
+    def mergeIndexDuplicates(cls, df_expr, method = 'average', printDuplicates = False, verbose = 1):
 
         '''Merge index duplicates
 
@@ -2966,11 +3105,13 @@ class DigitalCellSorter(VisualizationFunctions):
                 df_expr = df_expr.loc[~df_expr.index.duplicated(keep='first')]
 
             else:
-                print('Unknown method')
+                if verbose >= 1:
+                    print('Unknown method')
 
                 return df_expr
 
-            print('Merged %s duplicated items in the index of size %s' % (len_total - len_unique, len_total), flush=True)
+            if verbose >= 1:
+                print('Merged %s duplicated items in the index of size %s' % (len_total - len_unique, len_total), flush=True)
             
             if printDuplicates:
                 print(unique_items[0][unique_items[1] > 1], flush=True)
@@ -2993,7 +3134,8 @@ class DigitalCellSorter(VisualizationFunctions):
             DCS.recordExpressionData()
         '''
 
-        print('Recording compressed DataFrame', flush=True)
+        if self.verbose >= 1:
+            print('Recording compressed DataFrame', flush=True)
 
         self._df_expr.replace(0, np.nan).T.stack().to_frame().to_hdf(self.fileHDFpath, key='df_expr', mode='a', complevel=4, complib='zlib')
 
@@ -3023,8 +3165,9 @@ class DigitalCellSorter(VisualizationFunctions):
             try:
                 se = pd.read_hdf(self.fileHDFpath, key='df_markers_expr').T.reset_index().set_index(['batch', 'cell'])['label']
             except Exception as exception:
-                print(exception)
-                print('Error reading annotation results', flush=True)
+                if self.verbose >= 1:
+                    print(exception)
+                    print('Error reading annotation results', flush=True)
 
                 return
 
@@ -3032,7 +3175,8 @@ class DigitalCellSorter(VisualizationFunctions):
                 se = se.str.split(' #', expand=True)[0]
 
         else:
-            print('Annotation results not found', flush=True)
+            if self.verbose >= 1:
+                print('Annotation results not found', flush=True)
 
             return
 
@@ -3044,7 +3188,8 @@ class DigitalCellSorter(VisualizationFunctions):
                 allCells = pd.read_hdf(self.fileHDFpath, key='df_projection').columns
                 allBathes = allCells.get_level_values('batch')
             else:
-                print('Labelled data not found', flush=True)
+                if self.verbose >= 1:
+                    print('Labelled data not found', flush=True)
 
                 return
 
@@ -3074,13 +3219,15 @@ class DigitalCellSorter(VisualizationFunctions):
         '''
 
         if self.KeyInFile('df_expr', self.fileHDFpath):
-            print('Loading processed data', flush=True)
+            if self.verbose >= 2:
+                print('Loading processed data', flush=True)
 
             self._df_expr = pd.read_hdf(self.fileHDFpath, key='df_expr').unstack(level=-1, fill_value=0.).T
             self._df_expr.index = self._df_expr.index.get_level_values(-1)
             self._df_expr.sort_index(inplace=True)
         else:
-            print('Processed data not found')
+            if self.verbose >= 1:
+                print('Processed data not found')
 
         return
 
@@ -3109,7 +3256,9 @@ class DigitalCellSorter(VisualizationFunctions):
         # Remove non-expressed markers
         if not expressedGenes is None:
             df_marker_cell_type = df_marker_cell_type.loc[df_marker_cell_type.index.intersection(expressedGenes)]
-            print('Removed non-expressed genes. Markers/celltypes shape:', df_marker_cell_type.shape, flush=True)
+
+            if self.verbose >= 2:
+                print('Removed non-expressed genes. Markers/celltypes shape:', df_marker_cell_type.shape, flush=True)
 
         # Remove underepresented cell types
         df_marker_cell_type = df_marker_cell_type[df_marker_cell_type.columns[(df_marker_cell_type > 0.).sum(axis=0) >= self.minimumNumberOfMarkersPerCelltype]]
@@ -3154,14 +3303,16 @@ class DigitalCellSorter(VisualizationFunctions):
             elif self.species == 'Mouse':
                 mitoGenesPath = os.path.join(self.defaultGeneListsDir, 'Mouse.MitoCarta2.0.csv')
             else:
-                print('Mitochondrial genes for scpecies %s not found' % (self.species))
-                print('Implemented lists are for Human and Mouse')
+                if self.verbose >= 1:
+                    print('Mitochondrial genes for scpecies %s not found' % (self.species))
+                    print('Implemented lists are for Human and Mouse')
 
                 raise NotImplementedError
 
             self.mitochondrialGenes = pd.read_csv(mitoGenesPath, index_col=None, header=0)['Symbol'].values.squeeze().tolist()
 
-        print('Calculating quality control measures (count depth, number of genes, fraction of mitochondrial genes) for each cell', flush=True)
+        if self.verbose >= 2:
+            print('Calculating quality control measures (count depth, number of genes, fraction of mitochondrial genes) for each cell', flush=True)
 
         df_QC = pd.concat([(self._df_expr).sum(axis=0), 
                            (self._df_expr > 0).sum(axis=0), 
@@ -3195,7 +3346,9 @@ class DigitalCellSorter(VisualizationFunctions):
         if self.toggleRemoveLowQualityCells:
             self._df_expr = self._df_expr[self._df_expr.columns.intersection(index).sort_values()]
             self._df_expr = self._df_expr[self._df_expr.sum(axis=1) > 0]
-            print('Removed low quality cells. Data size: %s genes, %s cells' % self._df_expr.shape, flush=True)
+
+            if self.verbose >= 1:
+                print('Removed low quality cells. Data size: %s genes, %s cells' % self._df_expr.shape, flush=True)
 
             df_projection = pd.read_hdf(self.fileHDFpath, key='df_projection_pre_QC')
             df_projection[self._df_expr.columns].to_hdf(self.fileHDFpath, key='df_projection', mode='a', complevel=4, complib='zlib')
@@ -3228,19 +3381,30 @@ class DigitalCellSorter(VisualizationFunctions):
             patients = self._df_expr.columns.get_level_values('batch').values.copy()
 
             if len(np.unique(patients)) == 1:
-                print('Only one batch provided. Batch correction is not necessary', flush=True)
+                if self.verbose >= 2:
+                    print('Only one batch provided. Batch correction is not necessary', flush=True)
             else:
-                print('ComBat transformation', flush=True)
-                print('Reading positions of zeros', flush=True)
+                if self.verbose >= 1:
+                    print('ComBat transformation', flush=True)
+
+                if self.verbose >= 2:
+                    print('Reading positions of zeros', flush=True)
                 where_zeros = self._df_expr == 0.
                 values = combat(pd.DataFrame(data=self._df_expr.values.copy(), index=self._df_expr.index.values.copy(), columns=range(len(cells))), pd.Series(data=patients, index=range(len(cells)))).values
                 self._df_expr = pd.DataFrame(data=values, index=self._df_expr.index, columns=self._df_expr.columns)
-                print('Setting original zeros back to zeros', flush=True)
+
+                if self.verbose >= 2:
+                    print('Setting original zeros back to zeros', flush=True)
+
                 self._df_expr[where_zeros] = 0.
-                print('Setting negative values to zeros', flush=True)
+
+                if self.verbose >= 2:
+                    print('Setting negative values to zeros', flush=True)
+
                 self._df_expr[self._df_expr < 0.0] = 0.
 
         else:
-            print('Batch effect correction method unknown')
+            if self.verbose >= 1:
+                print('Batch effect correction method unknown')
 
         return

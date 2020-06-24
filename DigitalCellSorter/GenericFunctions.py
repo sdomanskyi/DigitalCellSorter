@@ -26,23 +26,28 @@ def write(data, fileName, compressed = False, jsonFormat = False):
         write(data, os.path.join('some dir 1', 'some dir 2', 'File with my data'))
     '''
 
-    if jsonFormat:
-        if not os.path.exists(os.path.basename(fileName)):
-            os.makedirs(os.path.basename(fileName))
+    try:
+        if jsonFormat:
+            if not os.path.exists(os.path.basename(fileName)):
+                os.makedirs(os.path.basename(fileName))
         
-        with gzip.GzipFile(fileName, 'w') as tempFile:
-            tempFile.write(json.dumps(data).encode('utf-8'))
+            with gzip.GzipFile(fileName, 'w') as tempFile:
+                tempFile.write(json.dumps(data).encode('utf-8'))
 
-        return
+            return
 
-    if compressed:
-        with gzip.open(fileName + '.pklz','wb') as temp_file:
+        if compressed:
+            with gzip.open(fileName + '.pklz','wb') as temp_file:
 
-            pickle.dump(data, temp_file, protocol=4)
-    else:
-        with open(fileName + '.pklz','wb') as temp_file:
+                pickle.dump(data, temp_file, protocol=4)
+        else:
+            with open(fileName + '.pklz','wb') as temp_file:
 
-            pickle.dump(data, temp_file, protocol=4)
+                pickle.dump(data, temp_file, protocol=4)
+
+    except Exception as exception:
+
+        print(exception)
 
     return None
 

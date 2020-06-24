@@ -6,8 +6,11 @@ import mygene
 
 class GeneNameConverter:
     
-    def __init__(self, dictDir = None, jumpStart = True, species = 'Human'):
+    def __init__(self, dictDir = None, jumpStart = True, species = 'Human', updateConversionDictFile = True, verbose = 1):
 
+        self.updateConversionDictFile = updateConversionDictFile
+
+        self.verbose = verbose
         self.species = species
 
         if self.species == 'Human':
@@ -26,7 +29,8 @@ class GeneNameConverter:
         try:
             self.conversionDict = read(self.dictDir)
         except Exception as exception:
-            print(exception)
+            if self.verbose >= 1:
+                print(exception)
 
             self.conversionDict = {'hugo': {'entrez': {}, 'ensembl': {}, 'alias': {}},
                                    'entrez': {'hugo': {}, 'ensembl': {}, 'retired': {}},
@@ -45,7 +49,8 @@ class GeneNameConverter:
                 except IOError: 
                     pass
             else:
-                write(self.conversionDict, self.dictDir)
+                if self.updateConversionDictFile:
+                    write(self.conversionDict, self.dictDir)
 
         return
     
@@ -260,7 +265,8 @@ class GeneNameConverter:
                 if targetGene is not None:
                     self.conversionDict['alias'][target][hugo] = targetGene
         
-        write(self.conversionDict,self.dictDir)
+        if self.updateConversionDictFile:
+            write(self.conversionDict,self.dictDir)
 
         return
 

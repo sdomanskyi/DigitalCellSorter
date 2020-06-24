@@ -28,7 +28,7 @@ class VisualizationFunctions:
 
     '''Class of visualization functions for DigitalCellSorter'''
 
-    def __init__(self, dataName = 'dataName', saveDir = os.path.join(''), matplotlibMode = 'Agg', safePlotting = True):
+    def __init__(self, dataName = 'dataName', saveDir = os.path.join(''), matplotlibMode = 'Agg', safePlotting = True, verbose = 1):
 
         '''Function called automatically'''
 
@@ -36,6 +36,7 @@ class VisualizationFunctions:
         self.dataName = dataName
         self.matplotlibMode = matplotlibMode
         self.safePlotting = safePlotting
+        self.verbose = verbose
 
         return
 
@@ -63,8 +64,9 @@ class VisualizationFunctions:
               func(self, *args, **kwargs)
 
             except Exception as exception:
-              print('Something went wrong while making plot: %s' % (func))
-              print('\tError message: %s\n' % (exception))
+                if self.verbose >= 1:
+                    print('Something went wrong while making plot: %s' % (func))
+                    print('\tError message: %s\n' % (exception))
         else:
             func(self, *args, **kwargs)
 
@@ -104,9 +106,10 @@ class VisualizationFunctions:
             if not extension[0] == '.':
                 extension = ''.join(['.', extension])
         except Exception as exception:
-            print(exception)
-            print('Figure extension/format error')
-            print('Example of acceptable extension: \".png\"')
+            if self.verbose >= 1:
+                print(exception)
+                print('Figure extension/format error')
+                print('Example of acceptable extension: \".png\"')
 
             return
 
@@ -114,28 +117,33 @@ class VisualizationFunctions:
             try:
                 fig.savefig(os.path.join(saveDir, label + extension), dpi=dpi)
             except Exception as exception:
-                print(exception)
+                if self.verbose >= 1:
+                    print(exception)
 
         elif extension in ['.svg', '.eps', '.pdf']:
             try:
                 fig.savefig(os.path.join(saveDir, label + extension))
             except Exception as exception:
-                print(exception)
+                if self.verbose >= 1:
+                    print(exception)
         else:
-            print('Unsupported format. Figure not saved')
+            if self.verbose >= 1:
+                print('Unsupported format. Figure not saved')
 
         if attemptSavingHTML:
             try:
                 plot_mpl(fig, filename=os.path.join(saveDir, label + '.html'), auto_open=False)
             except Exception as exception:
-                print('Saving to iteractive HTML did not succeed')
+                if self.verbose >= 1:
+                    print('Saving to iteractive HTML did not succeed')
 
         if close:
             try:
                 plt.close(fig)
             except Exception as exception:
-                print(exception)
-                print('Error while closing figure')
+                if self.verbose >= 1:
+                    print(exception)
+                    print('Error while closing figure')
 
         return
 
@@ -192,7 +200,8 @@ class VisualizationFunctions:
 
                     df = self.df_expr.loc[common].copy()
                 else:
-                    print('Plotting all expressed genes not supported. Provide a smaller list of genes')
+                    if self.verbose >= 1:
+                        print('Plotting all expressed genes not supported. Provide a smaller list of genes')
 
                     return
 
@@ -512,7 +521,8 @@ class VisualizationFunctions:
             if self.saveDir is not None: 
                 self.saveFigure(fig, directory, '%s_%s_%s_%s' % (self.dataName,marker,suffix.replace(',','_').replace('/','_'),analyzeBy), extension=extension, dpi=dpi, **kwargs)
 
-                print(marker, end=" ", flush=True)
+                if self.verbose >= 2:
+                    print(marker, end=" ", flush=True)
 
             return
         
@@ -524,9 +534,11 @@ class VisualizationFunctions:
         YLIM = [mins[1] - deltas[1],maxs[1] + deltas[1]]
 
         if len(df.index) > 1:
-            print('\nSaving marker expression plots:\n')
+            if self.verbose >= 2:
+                print('\nSaving marker expression plots:\n')
         else:
-            print('Saving expression plot of:', end=' ', flush=True)
+            if self.verbose >= 2:
+                print('Saving expression plot of:', end=' ', flush=True)
 
         if analyzeBy == 'celltype':
             try:
@@ -538,7 +550,9 @@ class VisualizationFunctions:
 
         for counter,marker in enumerate(df.index.values):
             MarkerSubplot(counter, marker, pd.DataFrame(data=np.reshape(np.array(df.loc[marker]), (1,len(df.loc[marker]))), columns=df.columns, index=[marker]), analyzeBy, X_projection, index, hugo_cd_dict, self.dataName, self.saveDir, NoFrameOnFigures, HideClusterLabels, XLIM, YLIM, os.path.join(self.saveDir, saveSubDir, ''), outlineClusters)
-        print()
+
+        if self.verbose >= 1:
+            print()
 
         return
 
@@ -667,13 +681,15 @@ class VisualizationFunctions:
         try:
             df_noise_dict = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_annotation.xlsx'), sheet_name='Null distributions', index_col=0, header=[0,1], skiprows=[2])
         except Exception as exception:
-            print(exception)
-            print('Error loading distributions from the results file')
+            if self.verbose >= 2:
+                print(exception)
+                print('Error loading distributions from the results file')
 
             return
 
         if len(df_noise_dict) == 0:
-            print('Null distribution is empty in the results file')
+            if self.verbose >= 1:
+                print('Null distribution is empty in the results file')
 
             return
 
@@ -716,11 +732,13 @@ class VisualizationFunctions:
                 minx = np.round(df_noise_dict.index.values[0], 3)
                 maxx = np.round(df_noise_dict.index.values[-1], 3)
 
-            print(cell_types[i], end=':\t')
+            if self.verbose >= 2:
+                print(cell_types[i], end=':\t')
 
             for j in range(num_of_clusters):
 
-                print(j, end=',', flush=True)
+                if self.verbose >= 2:
+                    print(j, end=',', flush=True)
 
                 fontsize = 3
 
@@ -766,7 +784,8 @@ class VisualizationFunctions:
 
                 ax.tick_params(direction='in', length=1, width=0.1, colors='k')
 
-            print()
+            if self.verbose >= 1:
+                print()
         
         self.saveFigure(fig, self.saveDir, self.dataName + '_null_distributions', extension=extension, dpi=dpi, **kwargs)
 
@@ -855,7 +874,8 @@ class VisualizationFunctions:
         possible_cluster_labels = np.sort(np.unique(cellClusterIndexLabel))
 
         if labels:
-            print(possible_cluster_labels)
+            if self.verbose >= 3:
+                print(possible_cluster_labels)
 
         texts = []
 
@@ -972,8 +992,9 @@ class VisualizationFunctions:
 
                     colors[self.nameForLowQC] = (0.6, 0.6, 0.6, 1.)
                 except Exception as exception:
-                    print(exception)
-                    print('QC data not found')
+                    if self.verbose >= 1:
+                        print(exception)
+                        print('QC data not found')
 
             df_main = df_main.apply(lambda x: 100. * x / np.sum(df_main, axis=0), axis=1).loc[np.sum(df_main, axis=1) > 0].sort_values(by=[s]).drop(columns=[s])
 
@@ -1038,7 +1059,8 @@ class VisualizationFunctions:
         saveName = "%s_subclustering_stacked_barplot_%s" % (self.dataName, ('All cell clusters' if clusterName == None else clusterName).replace(' ', '_').replace('*', ''))
         self.saveFigure(fig, self.saveDir, saveName, extension=extension, dpi=dpi, **kwargs)
 
-        print('Saved stacked bar plot: %s' % ('All cell clusters' if clusterName == None else clusterName))
+        if self.verbose >= 2:
+            print('Saved stacked bar plot: %s' % ('All cell clusters' if clusterName == None else clusterName))
 
         return fig
     
@@ -1115,7 +1137,8 @@ class VisualizationFunctions:
         try:
             title = os.path.basename(plotPathAndName)
         except Exception as exception:
-            print(exception)
+            if self.verbose >= 1:
+                print(exception)
             title = plotPathAndName
 
         if includeTitle:
@@ -1137,7 +1160,8 @@ class VisualizationFunctions:
         try:
             x, y = cutoff, sg[np.where(spline_data.T[0] >= cutoff)[0][0]]
         except Exception as exception:
-            print(exception)
+            if self.verbose >= 1:
+                print(exception)
             x, y = cutoff, 0.
 
         ax.plot([x,x], [0,y], 'k', lw=2)
@@ -1156,7 +1180,9 @@ class VisualizationFunctions:
             texts = []
 
             dist_std, dist_median, dist_mean = np.round(np.std(subset),precision), np.round(np.median(subset),precision), np.round(np.mean(subset),precision)
-            print(plotPathAndName, '\tstd:', dist_std,  '\tmedian:', dist_median,  '\tmean:', dist_mean)
+
+            if self.verbose >= 2:
+                print(plotPathAndName, '\tstd:', dist_std,  '\tmedian:', dist_median,  '\tmean:', dist_mean)
 
             xspan = ax.get_xlim()[1] - ax.get_xlim()[0]
             yspan = ax.get_ylim()[1] - ax.get_ylim()[0]
@@ -1246,13 +1272,17 @@ class VisualizationFunctions:
             if celltype in df_marker_cell_type.columns:
                 known_markers = df_marker_cell_type[celltype][df_marker_cell_type[celltype] > 0.].index.values
                 xy = np.array([np.array([np.where(genes == marker)[0][0], i]) for marker in known_markers if marker in genes])
-                print('Overlapping positive markers of %s: %s (%s)' % (celltype, len(xy), len(known_markers)))
+
+                if self.verbose >= 3:
+                    print('Overlapping positive markers of %s: %s (%s)' % (celltype, len(xy), len(known_markers)))
                 if len(xy) > 0:
                     ax.plot(xy.T[0], xy.T[1], 'go', markeredgecolor='r', ms=1.0, markeredgewidth=0.2)
 
                 known_markers = df_marker_cell_type[celltype][df_marker_cell_type[celltype] < 0.].index.values
                 xy = np.array([np.array([np.where(genes == marker)[0][0], i]) for marker in known_markers if marker in genes])
-                print('Overlapping negative markers of %s: %s (%s)' % (celltype, len(xy), len(known_markers)))
+
+                if self.verbose >= 3:
+                    print('Overlapping negative markers of %s: %s (%s)' % (celltype, len(xy), len(known_markers)))
                 if len(xy) > 0:
                     ax.plot(xy.T[0], xy.T[1], 'ro', markeredgecolor='r', ms=1.0, markeredgewidth=0.2)
 
@@ -1412,8 +1442,9 @@ class VisualizationFunctions:
             df_marker_expression = pd.read_excel(os.path.join(self.saveDir, self.dataName + '_annotation.xlsx'), 
                                                     sheet_name='Marker cell type weight matrix', index_col=0, header=0).T
         except Exception as exception:
-            print(exception)
-            print('Marker expression data unavailable')
+            if self.verbose >= 1:
+                print(exception)
+                print('Marker expression data unavailable')
             df_marker_expression = None
             listUnexpressedMarkers = False
 
@@ -1424,7 +1455,8 @@ class VisualizationFunctions:
                 if not df_marker_expression is None:
                     df_marker_cell_type = df_marker_expression
                 else:
-                    print("Try using option 'all'")
+                    if self.verbose >= 1:
+                        print("Try using option 'all'")
 
                     return
 
@@ -1449,9 +1481,10 @@ class VisualizationFunctions:
                 pos = set(df.index[(df.loc[:, celltype] > 0.)].values)
                 neg = set(df.index[(df.loc[:, celltype] < 0.)].values)
             except Exception as exception:
-                print(exception)
-                print('Cell type %s not found' % (celltype))
-                print('Available celltypes are: %s' % (df.columns.values.tolist()))
+                if self.verbose >= 1:
+                    print(exception)
+                    print('Cell type %s not found' % (celltype))
+                    print('Available celltypes are: %s' % (df.columns.values.tolist()))
 
                 return
 
@@ -1488,7 +1521,8 @@ class VisualizationFunctions:
                 
                 setsE, allE = getEightAll(t1pe, t2pe, t1ne, t2ne)
             except Exception as exception:
-                print(exception)
+                if self.verbose >= 1:
+                    print(exception)
                 listUnexpressedMarkers = False
 
         labels = '+/*', '+/-', '*/-', '-/-', '-/*', '-/+', '*/+', '+/+'
@@ -1679,7 +1713,8 @@ class VisualizationFunctions:
             trPath = os.path.join(self.saveDir, 'HopfieldTrajectories')
 
         if not os.path.exists(trPath):
-            print('Data not found', flush=True)
+            if self.verbose >= 1:
+                print('Data not found', flush=True)
 
             return
 
@@ -1733,7 +1768,8 @@ class VisualizationFunctions:
             inId = initial[clusterid]
             outId = final[clusterid]
 
-            print('ClusterID: %s, Initial state: %s (%s), Final state: %s (%s)'%(clusterNames[clusterid], typesNames[inId], inId, typesNames[outId], outId))
+            if self.verbose >= 3:
+                print('ClusterID: %s, Initial state: %s (%s), Final state: %s (%s)'%(clusterNames[clusterid], typesNames[inId], inId, typesNames[outId], outId))
 
             suffix = clusterNames[clusterid]
 
@@ -1872,7 +1908,8 @@ class VisualizationFunctions:
             trPath = os.path.join(self.saveDir, 'HopfieldTrajectories')
 
         if not os.path.exists(trPath):
-            print('Data not found', flush=True)
+            if self.verbose >= 1:
+                print('Data not found', flush=True)
 
             return
 
@@ -2002,8 +2039,9 @@ class VisualizationFunctions:
             df.index = temp_index
             df.columns = temp_columns
         except Exception as exception:
-            print(exception)
-            print('Using default node colors')
+            if self.verbose >= 2:
+                print(exception)
+                print('Using default node colors')
             colormapForIndex = None
             colormapForColumns = None
 
@@ -2045,7 +2083,8 @@ class VisualizationFunctions:
             fig.write_image(os.path.join(self.saveDir, self.dataName + nameAppend + '.png'), width=width, height=height, scale=quality)
 
         except Exception as exception:
-            print('Cannot save static image (likely due to missing orca). Saving to interactive html')
+            if self.verbose >= 2:
+                print('Cannot save static image (likely due to missing orca). Saving to interactive html')
             attemptSavingHTML = True
 
         if attemptSavingHTML:
@@ -2121,7 +2160,8 @@ class VisualizationFunctions:
             trPath = os.path.join(self.saveDir, 'HopfieldTrajectories')
 
         if not os.path.exists(trPath):
-            print('Data not found', flush=True)
+            if self.verbose >= 1:
+                print('Data not found', flush=True)
 
             return
 
@@ -2209,7 +2249,8 @@ class VisualizationFunctions:
             fig.write_image(os.path.join(self.saveDir, fileName + '.png'), width=700, height=700, scale=quality)
 
         except Exception as exception:
-            print('Cannot save static image (likely due to missing orca). Saving to interactive html')
+            if self.verbose >= 2:
+                print('Cannot save static image (likely due to missing orca). Saving to interactive html')
             attemptSavingHTML = True
 
         if attemptSavingHTML:
