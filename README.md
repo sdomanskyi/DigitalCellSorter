@@ -192,6 +192,16 @@ bars are not rendered in HTML figures.
 
 ### Loading the package
 
+Use the latest release of PyPI package. 
+
+For a quick-start demo with a dataset of ~5k PBMCs execute 
+in the terminal and follow prompts:
+
+	python -m DigitalCellSorter
+
+The second, more detailed demonstration analysis with step-by-step 
+explanation is discussed here
+and in the demo section at the end of this README.
 In your script import the package:
 
 	import DigitalCellSorter

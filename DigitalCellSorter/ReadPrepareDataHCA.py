@@ -248,3 +248,35 @@ def PrepareDataOnePatient_PREVIEW_DATASET(filename, patient, saveFolderName,
     print('-------------------------------------------------------------------------\n')
 
     return None
+
+def prepareDemo5kData(dir):
+
+    # http://cf.10xgenomics.com/samples/cell-exp/3.1.0/manual_5k_pbmc_NGSC3_ch1/manual_5k_pbmc_NGSC3_ch1_filtered_feature_bc_matrix.tar.gz
+
+    targetFile = os.path.join(dir, 'manual_5k_pbmc_NGSC3_ch1.gz')
+
+    if not os.path.isfile(targetFile):
+        try:
+            df_data = pd.read_csv(os.path.join(dir, 'matrix.mtx'), delimiter=' ', index_col=[0,1], header=None, skiprows=[0,1,2])[2]
+            df_data.name = 'count'
+            df_data = df_data.unstack(fill_value=0).astype(int)
+
+            genes = pd.read_csv(os.path.join(dir, 'features.tsv'), delimiter='\t', index_col=None, header=None)[1] 
+            genes.index = genes.index + 1
+            df_data.index = pd.Index(genes.loc[df_data.index].values, name='gene')
+            df_data.columns = pd.read_csv(os.path.join(dir, 'barcodes.tsv'), delimiter='\t', index_col=0, header=None).index
+            df_data.columns.names = ['cell']
+
+            df_data = df_data.groupby(axis=0, level=0).sum()
+
+            df_data.to_pickle(targetFile, protocol=4)
+
+        except Exception as exception:
+            print(exception)
+
+    else:
+        df_data = pd.read_pickle(targetFile)
+
+        print(df_data)
+
+    return df_data

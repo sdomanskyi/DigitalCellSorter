@@ -1,3 +1,6 @@
+- 1.3.6
+   * Added quick-demo materials
+   
 - 1.3.5
    * Miscellaneous code improvements and bug fixes
 
