@@ -2223,6 +2223,8 @@ class DigitalCellSorter(VisualizationFunctions):
 
             return temp_random_df_V
 
+        multiprocessing.set_start_method('spawn')
+
         random_df_V = pd.concat([process_batch(range(i * batch_size,(i + 1) * batch_size)) for i in range(N_batches)], sort=False, axis=1)
 
         random_df_V.index = pd.MultiIndex.from_arrays([random_df_V.index.get_level_values(0),
