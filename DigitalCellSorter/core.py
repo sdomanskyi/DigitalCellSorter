@@ -195,7 +195,7 @@ class DigitalCellSorter(VisualizationFunctions):
                 nSamples_Hopfield = 200, saveDir = os.path.join(''), makeMarkerSubplots = False, availableCPUsCount = min(6, os.cpu_count()), 
                 zScoreCutoff = 0.3, subclusteringName = None, doQualityControl = True, doBatchCorrection = False, makePlots = True, 
                 useUnderlyingNetwork = True, minimumNumberOfMarkersPerCelltype = 10, nameForUnknown = 'Unassigned', nameForLowQC = 'Failed QC',
-                matplotlibMode = None, countDepthCutoffQC = 0.5, numberOfGenesCutoffQC = 0.5, mitochondrialGenesCutoffQC = 1.5, 
+                matplotlibMode = 'Agg', countDepthCutoffQC = 0.5, numberOfGenesCutoffQC = 0.5, mitochondrialGenesCutoffQC = 1.5, 
                 excludedFromQC = None, countDepthPrecutQC = 500, numberOfGenesPrecutQC = 250, precutQC = False, minSubclusterSize = 25,
                 thresholdForUnknown_pDCS = 0., thresholdForUnknown_ratio = 0., thresholdForUnknown_Hopfield = 0., thresholdForUnknown = 0.2, 
                 layout = 'TSNE', safePlotting = True, HopfieldTemperature = 0.1, annotationMethod = 'ratio-pDCS-Hopfield',
@@ -2659,7 +2659,7 @@ class DigitalCellSorter(VisualizationFunctions):
         if not underlyingNetwork is None:
             if J.shape == underlyingNetwork.shape:
                 if verbose >= 3:
-                    print('Udsing network of underlying interactions')
+                    print('Using network of underlying interactions')
                 J *= underlyingNetwork
             else:
                 if verbose >= 3:

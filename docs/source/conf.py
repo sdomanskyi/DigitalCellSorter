@@ -52,7 +52,7 @@ author = 'S. Domanskyi , A. Szedlak, N. T. Hawkins, J. Wang, G. Paternostro, C. 
 # The short X.Y version
 version = '1.3'
 # The full version, including alpha/beta/rc tags
-release = '1.3.4'
+release = '1.3.6'
 
 
 # -- General configuration ---------------------------------------------------

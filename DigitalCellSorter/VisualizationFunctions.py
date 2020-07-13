@@ -150,7 +150,7 @@ class VisualizationFunctions:
     # MatPlotLib-powered figures
 
     @tryExcept
-    def makeHeatmapGeneExpressionPlot(self, df = None, genes = None, normalize = True, saveExcel = True, nameToAppend = 'heatmap', plotBy = 'cluster', figsize = (8, 4), convertGenes = False, dpi = 300, extension = 'png', **kwargs):
+    def makeHeatmapGeneExpressionPlot(self, df = None, genes = None, normalize = True, subtract = False, saveExcel = True, nameToAppend = 'heatmap', plotBy = 'cluster', figsize = (8, 4), convertGenes = False, dpi = 300, extension = 'png', fontsize = 10, **kwargs):
 
         '''Make heatmap gene expression plot from a provided gene expression matrix.
 
@@ -215,10 +215,11 @@ class VisualizationFunctions:
 
         if normalize:
             for i in range(df.shape[0]):
-                df.iloc[i,:] -= np.min(df.iloc[i,:])
+                if subtract:
+                    df.iloc[i,:] -= np.min(df.iloc[i,:])
+
                 df.iloc[i,:] /= np.max(df.iloc[i,:])
         
-        #df = df.T.iloc[scipy.cluster.hierarchy.dendrogram(scipy.cluster.hierarchy.linkage(df.T, 'ward'), no_plot=True, get_leaves=True)['leaves']].T
         df = df.iloc[scipy.cluster.hierarchy.dendrogram(scipy.cluster.hierarchy.linkage(df, 'ward'), no_plot=True, get_leaves=True)['leaves']]
 
         df.insert(0, ('Mean', 'All'), means)
@@ -242,8 +243,8 @@ class VisualizationFunctions:
         ylabels = ['(' + str(col[1]) + ')%s#' % ('    ' if len(col[0]) <= 3 else '  ') + str(col[0]) for col in df.columns]
         ylabels[0] = 'Mean across all cells'
 
-        ax.set_xticklabels(df.index, rotation=90, fontsize=10)
-        ax.set_yticklabels(ylabels, rotation=0, fontsize=10)
+        ax.set_xticklabels(df.index, rotation=90, fontsize=fontsize)
+        ax.set_yticklabels(ylabels, rotation=0, fontsize=fontsize)
 
         ax.set_xlim([-0.5, df.shape[0] - 0.5])
         ax.set_ylim([-0.5, df.shape[1] - 0.5])

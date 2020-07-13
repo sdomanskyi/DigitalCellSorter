@@ -3,7 +3,7 @@
 [![DOI](https://badge.fury.io/gh/sdomanskyi%2FDigitalCellSorter.svg)](https://badge.fury.io/gh/sdomanskyi%2FDigitalCellSorter)
 [![DOI](https://badge.fury.io/py/DigitalCellSorter.svg)](https://pypi.org/project/DigitalCellSorter)
 [![DOI](https://readthedocs.org/projects/digital-cell-sorter/badge/?version=latest)](https://digital-cell-sorter.readthedocs.io/en/latest/?badge=latest)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3749878.svg)](https://doi.org/10.5281/zenodo.3749878) 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.2533377.svg)](https://doi.org/10.5281/zenodo.2533377) 
 
 Digital Cell Sorter (DCS): a single cell RNA-seq analysis toolkit for clustering, cell type identification, and anomaly detection.
 
