@@ -173,7 +173,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (master_doc, 'DigitalCellSorter.tex', 'DigitalCellSorter Documentation',
-     'S. Domanskyi , A. Szedlak, N. T Hawkins, J. Wang, G. Paternostro, C. Piermarocchi', 'manual'),
+     'S. Domanskyi, A. Szedlak, N. T Hawkins, J. Wang, T. Bertus, A. Hakansson, G. Paternostro, C. Piermarocchi', 'manual'),
 ]
 
 
