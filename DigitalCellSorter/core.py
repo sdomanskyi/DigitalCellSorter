@@ -203,6 +203,8 @@ class DigitalCellSorter(VisualizationFunctions):
 
         '''Initialization function that is automatically called when an instance on Digital Cell Sorter is created'''
 
+        self.verbose = verbose
+
         self.gnc = GeneNameConverter.GeneNameConverter(dictDir=os.path.join(os.path.dirname(__file__)), 
                                                        species=species, updateConversionDictFile=updateConversionDictFile, verbose=verbose)
 
@@ -215,8 +217,6 @@ class DigitalCellSorter(VisualizationFunctions):
             self.prepare(df_expr)
         else:
             self._df_expr = None
-        
-        self.verbose = verbose
 
         self.defaultGeneListFileName = 'CIBERSORT_LM22'
         self.defaultGeneListsDir = os.path.join(os.path.dirname(__file__), 'geneLists')
