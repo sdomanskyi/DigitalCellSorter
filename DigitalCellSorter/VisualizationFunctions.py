@@ -150,7 +150,7 @@ class VisualizationFunctions:
     # MatPlotLib-powered figures
 
     @tryExcept
-    def makeHeatmapGeneExpressionPlot(self, df = None, genes = None, normalize = True, subtract = False, saveExcel = True, nameToAppend = 'heatmap', plotBy = 'cluster', figsize = (8, 4), convertGenes = False, dpi = 300, extension = 'png', fontsize = 10, **kwargs):
+    def makeHeatmapGeneExpressionPlot(self, df = None, genes = None, normalize = True, subtract = False, saveExcel = True, nameToAppend = 'heatmap', plotBy = 'cluster', figsize = (8, 4), convertGenes = False, orderGenes=False, orderClusters=False, dpi = 300, extension = 'png', fontsize = 10, **kwargs):
 
         '''Make heatmap gene expression plot from a provided gene expression matrix.
 
@@ -179,37 +179,53 @@ class VisualizationFunctions:
             DCS.makeHeatmapGeneExpressionPlot()
         '''
 
+        lengthListGenes = []
+        labelsListGenes = []
+
+        if not genes is None:
+            if type(genes) in [list, np.array, tuple]:
+                if convertGenes:
+                    genes = np.unique(self.gnc.Convert(genes, 'alias', 'hugo', returnUnknownString=False))
+
+            elif type(genes) in [dict]:
+                if convertGenes:
+                    for key in genes.keys():
+                        genes[key] = self.gnc.Convert(genes[key], 'alias', 'hugo', returnUnknownString=False)
+
+                lengthListGenes = []
+                listGenes = []
+                for key in genes.keys():
+                    listGenes.extend(genes[key])
+                    lengthListGenes.append(len(genes[key]))
+                    labelsListGenes.append(key)
+
+                genes = listGenes
+                print('Length of genes lists:', lengthListGenes)
+
+        else:
+            if self.verbose >= 1:
+                print('Plotting all expressed genes not supported. Provide a smaller list of genes')
+
+            return
+
         if df is None:
             if self.df_expr is None:
                 self.loadExpressionData()
 
             if self.df_expr is None:
                 return
-            else:
-                if not genes is None:
-                    if convertGenes:
-                        converted = []
-                        for gene in genes:
-                            converted.extend(self.getHugoName(gene, printAliases=True))
 
-                        converted = np.unique(converted)
+            common = pd.Index(genes).intersection(self.df_expr.index) #.drop_duplicates()
+            df = self.df_expr.loc[common].copy()
 
-                        common = self.df_expr.index.intersection(converted)
-                    else:
-                        common = self.df_expr.index.intersection(genes).drop_duplicates()
-
-                    df = self.df_expr.loc[common].copy()
-                else:
-                    if self.verbose >= 1:
-                        print('Plotting all expressed genes not supported. Provide a smaller list of genes')
-
-                    return
+        else:
+            common = pd.Index(genes).intersection(df.index).drop_duplicates()
+            df = df.loc[common]
 
         counts = df.loc[[df.index[0]]].groupby(axis=1, level=plotBy).count()
         means = df.mean(axis=1)
 
         df = df.groupby(axis=1, level=plotBy).mean()
-        #df = df.replace(0., np.nan).groupby(axis=1, level=plotBy).mean().fillna(0.)
         df.columns = df.columns.get_level_values(plotBy)
         df.columns = list(zip(df.columns.values, counts.values[0]))
 
@@ -220,7 +236,11 @@ class VisualizationFunctions:
 
                 df.iloc[i,:] /= np.max(df.iloc[i,:])
         
-        df = df.iloc[scipy.cluster.hierarchy.dendrogram(scipy.cluster.hierarchy.linkage(df, 'ward'), no_plot=True, get_leaves=True)['leaves']]
+        if orderGenes:
+            df = df.iloc[scipy.cluster.hierarchy.dendrogram(scipy.cluster.hierarchy.linkage(df, 'ward'), no_plot=True, get_leaves=True)['leaves']]
+
+        if orderClusters:
+            df = df.T.iloc[scipy.cluster.hierarchy.dendrogram(scipy.cluster.hierarchy.linkage(df.T, 'ward'), no_plot=True, get_leaves=True)['leaves']].T
 
         df.insert(0, ('Mean', 'All'), means)
 
@@ -236,6 +256,13 @@ class VisualizationFunctions:
                   extent=(-0.5, df.shape[0] - 0.5, -0.5, +0.5))
 
         ax.axhline(y=0.5, c='k', lw=1.5)
+
+        if len(lengthListGenes) != 0:
+            currPosition = 0
+            for label, value in zip(labelsListGenes, lengthListGenes):
+                currPosition += value
+                ax.axvline(x=currPosition - 0.5, c='k', lw=1)
+                ax.text(currPosition - 0.5*value - 0.5, df.shape[1], label, fontsize=10, c='k', ha='center', va='bottom')
 
         ax.set_xticks(range(df.shape[0]))
         ax.set_yticks(range(df.shape[1]))

@@ -26,6 +26,8 @@ import copy
 import multiprocessing
 import warnings
 
+multiprocessing.set_start_method('spawn', force=True)
+
 import numpy as np
 import pandas as pd
 
@@ -2222,8 +2224,6 @@ class DigitalCellSorter(VisualizationFunctions):
             pool.join()
 
             return temp_random_df_V
-
-        multiprocessing.set_start_method('spawn')
 
         random_df_V = pd.concat([process_batch(range(i * batch_size,(i + 1) * batch_size)) for i in range(N_batches)], sort=False, axis=1)
 
