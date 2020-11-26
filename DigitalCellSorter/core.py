@@ -51,6 +51,115 @@ from .VisualizationFunctions import VisualizationFunctions
 from .GenericFunctions import read, write
 from .VisualizationFunctions import cm
 
+def readMTXdata(dataDir, origin, fileMatrix = None, fileBarcodes = None, fileGenes = None, headerRows = None, sampleName = None, stripGeneVersions = True, saveData = True, dropGeneDuplicates = True, dropCellDuplicates = True):
+
+    '''Read MTX format into pandas DataFrame compatible with DCS input format
+
+    Parameters
+        dataDir: str
+            Path to gene expression counts data
+
+        origin: str
+            Name of the software where the data was generated. Supported options are:
+                'kb-python' for kallisto-bustools
+                'cellranger' for cellRanger
+
+        fileMatrix: str, Default None
+            Name of the matrix file
+
+        fileBarcodes: str, Default None
+            Name of the cell barcodes file
+
+        fileGenes: str, Default None
+            Name of the genes file
+
+        headerRows: list, Default None
+            List of rows in matrix file to skip
+
+        sampleName: str, Default None
+            Name of the data sample to include in the batch level
+
+        stripGeneVersions: boolean, Default True
+            Remove ensembl gene version. E.g. "ENSG00000236246.1" --> "ENSG00000236246"
+
+        saveData: boolean, Default True
+            Whether to save data in hdf format. If True then the data is saved to
+            a compressed hdf at the same location as matrix data
+
+        dropGeneDuplicates: boolean, Default True
+            Whether to remove gene duplicates (keep first)
+
+        dropGeneDuplicates: boolean, Default True
+            Whether to remove barcode duplicates (keep first)
+
+    Returns:
+        pandas.DataFrame
+            Table that has genes in rows and cells in columns
+
+    Usage:
+        df = readMTX(dataDir='filtered_feature_bc_matrix/', origin='cellranger')        
+        #df = readMTX(dataDir='counts_filtered/', origin='kb-python')
+
+        DCS = DigitalCellSorter.DigitalCellSorter()
+        DCS.prepare(df)
+        DCS.convert('ensembl', 'hugo')
+        print(DCS.df_expr)
+    '''
+
+    if origin == 'kb-python':
+        if headerRows is None:
+            headerRows = [0, 1, 2]
+
+        genes_level = 0
+
+        if fileMatrix is None:
+            fileMatrix='cells_x_genes.mtx'
+
+        if fileBarcodes is None:
+            fileBarcodes='cells_x_genes.barcodes.txt'
+
+        if fileGenes is None:
+            fileGenes='cells_x_genes.genes.txt'
+
+    elif origin == 'cellranger':
+        if headerRows is None:
+            headerRows = [0, 1]
+
+        genes_level = 1
+
+        if fileMatrix is None:
+            fileMatrix='matrix.mtx.gz'
+
+        if fileBarcodes is None:
+            fileBarcodes='barcodes.tsv.gz'
+
+        if fileGenes is None:
+            fileGenes='features.tsv.gz'
+
+    df_expr = pd.read_csv(os.path.join(dataDir, fileMatrix), delimiter=' ', index_col=[0,1], header=None, skiprows=headerRows)[2].astype(int).unstack(genes_level, fill_value=0)
+    df_expr.index = pd.read_csv(os.path.join(dataDir, fileGenes), delimiter='\t', index_col=None, header=None)[0].loc[df_expr.index - 1].values
+    df_expr.columns = pd.read_csv(os.path.join(dataDir, fileBarcodes), delimiter='\t', index_col=0, header=None).index
+
+    if stripGeneVersions:
+        df_expr.index = df_expr.index.str.split('.', expand=True).get_level_values(0)
+
+    if dropGeneDuplicates:
+        df_expr = df_expr.loc[~df_expr.index.duplicated(keep='first')]
+
+    if dropCellDuplicates:
+        df_expr = df_expr.T.loc[~df_expr.T.index.duplicated(keep='first')].T
+
+    df_expr.index.name = 'gene'
+    df_expr.columns.name = 'cell'
+
+    if not sampleName is None:
+        df_expr = pd.concat([df_expr], axis=1, keys=[sampleName], names=['batch'], sort=False)
+
+    if saveData:
+        df_expr.to_hdf(os.path.join(dataDir, 'data.h5'), key='df', mode='a', complevel=4, complib='zlib')
+
+    return df_expr
+
 class DigitalCellSorter(VisualizationFunctions):
 
     '''Class of Digital Cell Sorter with methods for processing single cell 
@@ -193,6 +302,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
     def __init__(self, df_expr = None, dataName = 'dataName', species = 'Human', geneNamesType = 'alias', geneListFileName = None, 
                  mitochondrialGenes = None, sigmaOverMeanSigma = 0.01, nClusters = 10, nFineClusters = 3, doFineClustering = True, 
+                 splitFineClusters = False, subSplitSize = 100, medianScaleFactor = 10000,
                  minSizeForFineClustering = 50, clusteringFunction = AgglomerativeClustering, nComponentsPCA = 200, nSamples_pDCS = 3 * 10 ** 3, 
                 nSamples_Hopfield = 200, saveDir = os.path.join(''), makeMarkerSubplots = False, availableCPUsCount = min(6, os.cpu_count()), 
                 zScoreCutoff = 0.3, subclusteringName = None, doQualityControl = True, doBatchCorrection = False, makePlots = True, 
@@ -238,10 +348,14 @@ class DigitalCellSorter(VisualizationFunctions):
         self.precutQC = precutQC
         self.excludedFromQC = excludedFromQC
 
+        self.medianScaleFactor = medianScaleFactor
+
         self.minSubclusterSize = minSubclusterSize
         self.sigmaOverMeanSigma = sigmaOverMeanSigma
         self.nClusters = nClusters
         self.doFineClustering = doFineClustering
+        self.splitFineClusters = splitFineClusters
+        self.subSplitSize = subSplitSize
         self.nFineClusters = nFineClusters
         self.minSizeForFineClustering = minSizeForFineClustering
         self.nComponentsPCA = nComponentsPCA
@@ -890,15 +1004,48 @@ class DigitalCellSorter(VisualizationFunctions):
                             print('Fine clusters too small (less than %s)' % (self.minSubclusterSize), subSizes)
                         tempCellClusterIndex = np.zeros((subData.T.shape[0],))
             
-                    fineCellClusterIndex[cellsOfCluster] = np.array([str(cluster) + '.' + label for label in tempCellClusterIndex.astype(int).astype(str)])
+                    fineCellClusterIndex[cellsOfCluster] = np.array([str(cluster)[:-1] + label for label in tempCellClusterIndex.astype(int).astype(str)])
+
+                    if self.splitFineClusters:
+                        for fineCluster in np.unique(fineCellClusterIndex[cellsOfCluster]):
+                            cellsOfFineCluster = cellsOfCluster[fineCellClusterIndex[cellsOfCluster] == fineCluster]
+                            subSubData = data[:, cellsOfFineCluster]
+
+                            M = scipy.spatial.distance.squareform(scipy.spatial.distance.pdist(subSubData.T, metric='euclidean'))
+                            subLabels = np.zeros(M.shape[0]).astype(int)
+
+                            subSubSize = self.subSplitSize
+                            subClustersSizes = []
+                            tempNum = 0
+                            while tempNum < len(subLabels):
+                                if tempNum + 2*subSubSize <= len(subLabels):
+                                    subClustersSizes.append(subSubSize)
+                                    tempNum += subSubSize
+                                else:
+                                    subClustersSizes.append(len(subLabels) - tempNum)
+                                    tempNum += len(subLabels) - tempNum
+
+                            for ic, subClusterSize in enumerate(subClustersSizes):
+                                chosenCell = np.nanmean(M, axis=0).argmax()
+
+                                wh = M[chosenCell].argsort()[:subClusterSize-1]
+                                M[chosenCell, wh] = np.nan
+                                subLabels[wh] = [ic]*len(wh)
+
+                            prevLabels = fineCellClusterIndex[cellsOfFineCluster]
+                            addLabels = ['.' + label for label in subLabels.astype(str)]
+
+                            fineCellClusterIndex[cellsOfFineCluster] = np.array([prevLabel + addLabel for prevLabel, addLabel in zip(prevLabels, addLabels)]) 
 
                 cellClusterIndex = fineCellClusterIndex
+
+        if 'cluster' in self._df_expr.columns.names:
+            self._df_expr = self._df_expr.droplevel('cluster', axis=1)
 
         df_clusters = pd.DataFrame(data=cellClusterIndex, index=self._df_expr.columns)
         df_clusters.columns = ['cluster']
 
         df_clusters.to_hdf(self.fileHDFpath, key='df_clusters', mode='a', complevel=4, complib='zlib')
-
         self._df_expr = pd.concat([df_clusters, self._df_expr.T], sort=False, axis=1).reset_index().set_index(['batch', 'cell', 'cluster']).T
 
         return
@@ -1043,7 +1190,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         # Normalize and then correct for batch effects
         if not dataIsNormalized:
-            self.normalize()
+            self.normalize(median=self.medianScaleFactor)
 
         if self.toggleDoBatchCorrection:
             self.batchEffectCorrection()

@@ -1,3 +1,7 @@
+- 1.3.7
+   * Added a function to import data from kallisto-bustools and cellranger
+   * Updated documentation 
+
 - 1.3.6
    * Added quick-demo materials
    

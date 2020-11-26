@@ -50,9 +50,9 @@ copyright = '2020, S. Domanskyi, A. Szedlak, N. T Hawkins, J. Wang, T. Bertus, A
 author = 'S. Domanskyi, A. Szedlak, N. T Hawkins, J. Wang, T. Bertus, A. Hakansson, G. Paternostro, C. Piermarocchi'
 
 # The short X.Y version
-version = '1.3'
+version = '1.3.7'
 # The full version, including alpha/beta/rc tags
-release = '1.3.6'
+release = '1.3.7'
 
 
 # -- General configuration ---------------------------------------------------
