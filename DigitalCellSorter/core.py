@@ -1681,7 +1681,7 @@ class DigitalCellSorter(VisualizationFunctions):
         if plot3D:
             fig = self.HopfieldLandscapePlot3D(trPath=dataPath, **kwargs)
         else:
-            fig = self.HopfieldLandscapePlot(trPath=dataPath, colorbarva=0.15, fontsize=12, **kwargs)
+            fig = self.HopfieldLandscapePlot(trPath=dataPath, colorbarva=0.1, colorbarha=0.82, fontsize=17, **kwargs)
 
         return fig
 

@@ -1,3 +1,8 @@
+- 1.3.7.1
+   * Added makeViolinPlot visualization function enabling exploratory analysis of the numeric values distributions for comparison between categorical variables
+
+   * Updated visualization functions returning
+
 - 1.3.7
    * Added a function to import data from kallisto-bustools and cellranger
    * Updated documentation 

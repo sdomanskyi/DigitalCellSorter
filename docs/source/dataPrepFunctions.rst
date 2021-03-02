@@ -40,40 +40,40 @@ and ``bustools`` single-cell RNA-seq workflow (Bray, N. L., Pimentel, H., Melste
 
     .. container:: header
 
-       **Output from kb count command above**
-    [2020-11-20 14:32:51,136]    INFO Using index kallisto_index/homo_sapiens/transcriptome.idx to generate BUS file to . from
+        **Output from kb count command above**
+        [2020-11-20 14:32:51,136]    INFO Using index kallisto_index/homo_sapiens/transcriptome.idx to generate BUS file to . from
     
-    [2020-11-20 14:32:51,136]    INFO         pbmc_1k_v3_fastqs/pbmc_1k_v3_S1_L001_R1_001.fastq.gz
+        [2020-11-20 14:32:51,136]    INFO         pbmc_1k_v3_fastqs/pbmc_1k_v3_S1_L001_R1_001.fastq.gz
     
-    [2020-11-20 14:32:51,136]    INFO         pbmc_1k_v3_fastqs/pbmc_1k_v3_S1_L001_R2_001.fastq.gz
+        [2020-11-20 14:32:51,136]    INFO         pbmc_1k_v3_fastqs/pbmc_1k_v3_S1_L001_R2_001.fastq.gz
     
-    [2020-11-20 14:32:51,136]    INFO         pbmc_1k_v3_fastqs/pbmc_1k_v3_S1_L002_R1_001.fastq.gz
+        [2020-11-20 14:32:51,136]    INFO         pbmc_1k_v3_fastqs/pbmc_1k_v3_S1_L002_R1_001.fastq.gz
     
-    [2020-11-20 14:32:51,136]    INFO         pbmc_1k_v3_fastqs/pbmc_1k_v3_S1_L002_R2_001.fastq.gz
+        [2020-11-20 14:32:51,136]    INFO         pbmc_1k_v3_fastqs/pbmc_1k_v3_S1_L002_R2_001.fastq.gz
     
-    [2020-11-20 14:36:33,477]    INFO Sorting BUS file ./output.bus to ./tmp/output.s.bus
+        [2020-11-20 14:36:33,477]    INFO Sorting BUS file ./output.bus to ./tmp/output.s.bus
     
-    [2020-11-20 14:36:57,118]    INFO Whitelist not provided
+        [2020-11-20 14:36:57,118]    INFO Whitelist not provided
     
-    [2020-11-20 14:36:57,118]    INFO Copying pre-packaged 10XV3 whitelist to .
+        [2020-11-20 14:36:57,118]    INFO Copying pre-packaged 10XV3 whitelist to .
     
-    [2020-11-20 14:36:57,675]    INFO Inspecting BUS file ./tmp/output.s.bus
+        [2020-11-20 14:36:57,675]    INFO Inspecting BUS file ./tmp/output.s.bus
     
-    [2020-11-20 14:37:07,641]    INFO Correcting BUS records in ./tmp/output.s.bus to ./tmp/output.s.c.bus with whitelist ./10xv3_whitelist.txt
+        [2020-11-20 14:37:07,641]    INFO Correcting BUS records in ./tmp/output.s.bus to ./tmp/output.s.c.bus with whitelist ./10xv3_whitelist.txt
     
-    [2020-11-20 14:37:29,264]    INFO Sorting BUS file ./tmp/output.s.c.bus to ./output.unfiltered.bus
+        [2020-11-20 14:37:29,264]    INFO Sorting BUS file ./tmp/output.s.c.bus to ./output.unfiltered.bus
     
-    [2020-11-20 14:37:47,478]    INFO Generating count matrix ./counts_unfiltered/cells_x_genes from BUS file ./output.unfiltered.bus
+        [2020-11-20 14:37:47,478]    INFO Generating count matrix ./counts_unfiltered/cells_x_genes from BUS file ./output.unfiltered.bus
     
-    [2020-11-20 14:37:59,662]    INFO Filtering with bustools
+        [2020-11-20 14:37:59,662]    INFO Filtering with bustools
     
-    [2020-11-20 14:37:59,662]    INFO Generating whitelist ./filter_barcodes.txt from BUS file ./output.unfiltered.bus
+        [2020-11-20 14:37:59,662]    INFO Generating whitelist ./filter_barcodes.txt from BUS file ./output.unfiltered.bus
     
-    [2020-11-20 14:37:59,790]    INFO Correcting BUS records in ./output.unfiltered.bus to ./tmp/output.unfiltered.c.bus with whitelist ./filter_barcodes.txt
+        [2020-11-20 14:37:59,790]    INFO Correcting BUS records in ./output.unfiltered.bus to ./tmp/output.unfiltered.c.bus with whitelist ./filter_barcodes.txt
     
-    [2020-11-20 14:38:14,344]    INFO Sorting BUS file ./tmp/output.unfiltered.c.bus to ./output.filtered.bus
+        [2020-11-20 14:38:14,344]    INFO Sorting BUS file ./tmp/output.unfiltered.c.bus to ./output.filtered.bus
     
-    [2020-11-20 14:38:30,918]    INFO Generating count matrix ./counts_filtered/cells_x_genes from BUS file ./output.filtered.bus
+        [2020-11-20 14:38:30,918]    INFO Generating count matrix ./counts_filtered/cells_x_genes from BUS file ./output.filtered.bus
 
 |
 

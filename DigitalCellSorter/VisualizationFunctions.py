@@ -61,14 +61,14 @@ class VisualizationFunctions:
 
         if self.safePlotting:
             try:
-              func(self, *args, **kwargs)
+              return func(self, *args, **kwargs)
 
             except Exception as exception:
                 if self.verbose >= 1:
                     print('Something went wrong while making plot: %s' % (func))
                     print('\tError message: %s\n' % (exception))
         else:
-            func(self, *args, **kwargs)
+            return func(self, *args, **kwargs)
 
       return internal
 
@@ -1993,6 +1993,8 @@ class VisualizationFunctions:
         fig = plt.figure(figsize=(8,8))
         ax = fig.add_axes([0.05,0.05,0.9,0.9])
 
+        ax.set_xlim([-3, 1]); ax.set_ylim([-2, 2])
+
         if axisOff:
             ax.axis('off')
             
@@ -2352,5 +2354,192 @@ class VisualizationFunctions:
 
         if attemptSavingHTML:
             plot_offline(fig, filename=os.path.join(self.saveDir, fileName + '.html'), auto_open=False)
+
+        return fig
+
+    @tryExcept
+    def makeViolinPlot(self, df_sel, genes, dimPanels, dimCategories, panelWidth = 5, panelHeight = 5, title = '{name} {gene}', exportData = True, xlabel = '$log(count+1)$', ylabel = '', addPoints = True, linesColor = 'black', linesWidth = 1.0, cmap = cm.jet, fontsize = 10, showMedians = True, showExtrema = True, violinWidths = 0.85, violinAlpha = 0.7, pointsColor = 'black', pointsSize = 1.0, pointsAlpha = 0.7, sharex = True, sharey = True, dpi = 300, extension = 'png', **kwargs):
+    
+        ''' Exloratory analysis of the numeric values distributions using matplotlib violinplot.
+
+            Parameters:
+                df_sel: pandas.DataFrame
+                    Table where rows are unique object identifiers, columns are [dimPanels, dimCategories, gene1, gene2, ...]
+                    Numeric columns should be without any missing values
+
+                genes: list
+                    List of genes names to plot, these should be a (sub)set of the df_sel columns
+
+                dimPanels: str
+                    Name of the categorical variable is for saparation into panels
+
+                dimCategories: str
+                    Name of the categorical variable is for saparation into categories within a panel
+
+                panelWidth: float, Default 5
+                    Width of a panel, including the tick labels
+
+                panelHeight: float, Default 5
+                    Height of a panel, including the tick labels
+
+                title: str, Default '{name} {gene}'
+                    Template for panel names
+
+                exportData: float, Default True
+                    Whether to export data summary into an excel file
+
+                xlabel: str, Default '$log(count+1)$'
+                    x-axis label
+
+                ylabel: str, Default ''
+                    y-axis label
+
+                addPoints: boolean, Default True
+                    Whehter to include scattered points on violins
+
+                linesColor: str, Default 'black' 
+                    Line color
+
+                linesWidth: float, Default 1.0
+                    Line width
+
+                cmap: matplotlib.colormap or callable, Default cm.jet
+                    Colormap or its string name
+
+                fontsize: float, Default 10
+                    Size of labels font
+
+                showMedians: boolean, Default True
+                    Whehter to display median
+
+                showExtrema: boolean, Default True
+                    Whehter to display max and min
+
+                violinWidths: float, Default 0.85
+                    Relative violin widths
+
+                violinAlpha: float, Default 0.7
+                    Transparency of the violins
+
+                pointsColor: str, Default 'black'
+                    Color of the points
+
+                pointsSize: float, Default 1.0
+                    Size of the points
+
+                pointsAlpha: float, Default 0.7
+                    Transparency of the points
+
+                sharex: boolean, Default True
+                     Whehter to share x-axis
+
+                sharey: boolean, Default True
+                     Whehter to share y-axis
+
+                dpi: float, Default 300
+                    Resolution of the figure
+
+                extension: str, Default 'png'
+                    Format extension of the figure
+
+            Returns:
+                None
+        
+            Usage:
+                N = 1000
+                data = pd.DataFrame({'Property A': (np.random.rand(N)>0.7)*3, 'Property B': np.random.rand(N)>0.3, 
+                                     'Numeric 1': np.random.rand(N)*3, 'Numeric 2': np.random.rand(N)*2,
+                                    'Numeric 3': np.random.rand(N)*1.5, 'Numeric 4': np.random.rand(N)*5})
+                makeViolinPlot(data, ['Numeric 1', 'Numeric 2'], dimPanels='Property A', dimCategories='Property B')
+        '''
+    
+        df_sel = df_sel.astype({dimPanels: str, dimCategories: str})
+        
+        panels = np.unique(df_sel[dimPanels].values)
+        allCategories = np.sort(df_sel[dimCategories].value_counts().index.values)
+        allCategories = np.array(allCategories, dtype=str)[::-1]
+    
+        n_rows, n_cols = len(genes), len(panels)
+
+        vmin, vmax = df_sel[genes].values.ravel().min(), 1.05 * df_sel[genes].values.ravel().max()
+        vmin -= 0.05 * (vmax - vmin)
+    
+        fig, ax = plt.subplots(n_rows, n_cols, figsize=(panelWidth*n_cols, panelHeight*n_rows), sharex=sharex, sharey=sharey)
+
+        for igene, gene in enumerate(genes):
+            for ind, panel in enumerate(panels):
+
+                if n_rows == 1 and n_cols == 1:
+                    axt = ax
+                elif n_rows == 1:
+                    axt = ax[ind % n_cols]
+                elif n_cols == 1:
+                    axt = ax[igene]
+                else:
+                    axt = ax[igene, ind % n_cols]
+
+                data = df_sel[df_sel[dimPanels]==panel].set_index(dimCategories)[gene].groupby(level=0).agg(list).reindex(allCategories).fillna(0.)
+            
+                vdata = [v if type(v) is list else [v] for v in data.values.tolist()]
+                parts = axt.violinplot(vdata, vert=False, showmedians=showMedians, showextrema=showExtrema, widths=violinWidths)
+
+                if addPoints:
+                    for i,v in enumerate(vdata):
+                        try:
+                            axt.scatter(v, 0.75*(np.random.rand(len(v)) - 0.5) + 1 + i, 
+                                        marker='o', color=pointsColor, 
+                                        s=pointsSize, zorder=-np.inf, alpha=pointsAlpha)
+                        except:
+                            pass
+
+                for obj in list(parts):
+                    try:
+                        parts[obj].set(color=linesColor, linewidth=linesWidth)
+                    except:
+                        pass
+
+                try:
+                    for ipc, pc in enumerate(parts['bodies']):
+                        pc.set_facecolor(cmap(ipc/len(parts['bodies'])))
+                        pc.set_edgecolor(linesColor)
+                        pc.set_alpha(violinAlpha)
+                except:
+                    pass
+                
+                axt.set_xlim([vmin, vmax])
+
+                if ind % n_cols == 0 or not sharey:
+                    axt.tick_params(axis='y', labelsize=fontsize, rotation=0)
+                    axt.get_yaxis().set_tick_params(direction='out')
+                    axt.yaxis.set_ticks_position('left')
+                    axt.set_yticks(np.arange(1, len(allCategories) + 1))
+                    axt.set_yticklabels(allCategories)
+                    axt.set_ylim(0.25, len(allCategories) + 0.75)
+
+                axt.tick_params(axis='x', labelsize=fontsize)          
+            
+                if xlabel != '':
+                    axt.set_xlabel(xlabel, fontsize=fontsize)
+            
+                if ylabel != '':
+                    axt.set_ylabel(ylabel, fontsize=fontsize)
+                
+                axt.set_title(title.format(name=panel, gene=gene))
+
+        fig.tight_layout()
+    
+        saveName = dimPanels + ' ' + dimCategories
+        self.saveFigure(fig, self.saveDir, saveName, extension=extension, dpi=dpi, close=False, **kwargs)
+    
+        if exportData:
+            dims = [dimCategories, dimPanels]       
+            df_temp = df_sel.astype({dim: str for dim in dims}).set_index(dims, append=True)[genes]
+            df_temp = pd.concat({'Fraction':(df_temp>0).astype(int).groupby(dims).mean().round(2).unstack(1),
+                  'Non-zero':(df_temp>0).astype(int).groupby(dims).sum().unstack(1),
+                  'Total':(~df_temp.fillna(0.).isna()).astype(int).groupby(dims).sum().unstack(1)}).unstack(0).fillna(0)
+        
+            df_temp.index.name = None
+            df_temp.columns.names = [None, None, None]
+            df_temp.to_excel(os.path.join(self.saveDir, saveName + '.xlsx'))
 
         return fig
