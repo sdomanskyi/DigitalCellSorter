@@ -31,7 +31,7 @@ From submodule `VisualizationFunctions`:
 
 **Example output:**
 
-.. thumbnail:: https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/output/violin_plot.png?raw=true
+.. thumbnail:: https://github.com/sdomanskyi/DigitalCellSorter/blob/master/docs/examples/violin_plot.png?raw=true
     :title: Example
     :alt: Cannot load this figure
     :align: center
