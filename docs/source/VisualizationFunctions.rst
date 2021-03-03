@@ -26,6 +26,7 @@ at the stage of post-processing.
    visFunctions/makeMarkerExpressionPlot
    visFunctions/makeTtestPlot
    visFunctions/makePlotOfNewMarkers
+   visFunctions/makeViolinPlot
 
 
 

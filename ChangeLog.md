@@ -1,3 +1,6 @@
+- 1.3.7.2
+   * Added documentation of the function makeViolinPlot
+
 - 1.3.7.1
    * Added makeViolinPlot visualization function enabling exploratory analysis of the numeric values distributions for comparison between categorical variables
 

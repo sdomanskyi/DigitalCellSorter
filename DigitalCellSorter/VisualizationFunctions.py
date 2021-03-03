@@ -57,20 +57,23 @@ class VisualizationFunctions:
 
     def tryExcept(func):
 
-      def internal(self, *args, **kwargs):
+        def internal(self, *args, **kwargs):
 
-        if self.safePlotting:
-            try:
-              return func(self, *args, **kwargs)
+            if self.safePlotting:
+                try:
+                    return func(self, *args, **kwargs)
 
-            except Exception as exception:
-                if self.verbose >= 1:
-                    print('Something went wrong while making plot: %s' % (func))
-                    print('\tError message: %s\n' % (exception))
-        else:
-            return func(self, *args, **kwargs)
+                except Exception as exception:
+                    if self.verbose >= 1:
+                        print('Something went wrong while making plot: %s' % (func))
+                        print('\tError message: %s\n' % (exception))
+            else:
+                return func(self, *args, **kwargs)
 
-      return internal
+        internal.__name__ = func.__name__
+        internal.__doc__ = func.__doc__
+
+        return internal
 
     def saveFigure(self, fig, saveDir, label = 'Figure', extension = 'png', dpi = 300, close = True, attemptSavingHTML = False):
 
@@ -150,7 +153,7 @@ class VisualizationFunctions:
     # MatPlotLib-powered figures
 
     @tryExcept
-    def makeHeatmapGeneExpressionPlot(self, df = None, genes = None, normalize = True, logScale=False, subtract = False, saveExcel = True, nameToAppend = 'heatmap', plotBy = 'cluster', figsize = (8, 4), convertGenes = False, orderGenes=False, orderClusters=False, dpi = 300, extension = 'png', fontsize = 10, labelsFontsize = 10, **kwargs):
+    def makeHeatmapGeneExpressionPlot(self, df = None, genes = None, normalize = True, logScale = False, subtract = False, saveExcel = True, nameToAppend = 'heatmap', plotBy = 'cluster', figsize = (8, 4), convertGenes = False, orderGenes = False, orderClusters = False, dpi = 300, extension = 'png', fontsize = 10, labelsFontsize = 10, **kwargs):
 
         '''Make heatmap gene expression plot from a provided gene expression matrix.
 
@@ -181,8 +184,8 @@ class VisualizationFunctions:
 
         if not genes is None:
             if type(genes) in [list, np.ndarray, tuple]:
-                isNegativeGenes = [True if gene[-1]=='-' else False for gene in genes]
-                genes = [gene[:-1] if gene[-1]=='-' else gene for gene in genes]
+                isNegativeGenes = [True if gene[-1] == '-' else False for gene in genes]
+                genes = [gene[:-1] if gene[-1] == '-' else gene for gene in genes]
 
                 if convertGenes:
                     genes = self.gnc.Convert(genes, 'alias', 'hugo', returnUnknownString=False)
@@ -191,8 +194,8 @@ class VisualizationFunctions:
             elif type(genes) in [dict]:
                 isNegativeGenes = dict()
                 for key in genes.keys():
-                    isNegativeGenes[key] = [True if gene[-1]=='-' else False for gene in genes[key]]
-                    genes[key] = [gene[:-1] if gene[-1]=='-' else gene for gene in genes[key]]
+                    isNegativeGenes[key] = [True if gene[-1] == '-' else False for gene in genes[key]]
+                    genes[key] = [gene[:-1] if gene[-1] == '-' else gene for gene in genes[key]]
 
                 if convertGenes:
                     for key in genes.keys():
@@ -322,7 +325,7 @@ class VisualizationFunctions:
             for label, value in zip(labelsListGenes, lengthListGenes):
                 currPosition += value
                 ax.axvline(x=currPosition - 0.5, c='k', lw=1)
-                ax.text(currPosition - 0.5*value - 0.5, df.shape[1], label, fontsize=labelsFontsize, c='k', ha='center', va='top')
+                ax.text(currPosition - 0.5 * value - 0.5, df.shape[1], label, fontsize=labelsFontsize, c='k', ha='center', va='top')
 
             df_temp = pd.DataFrame(index=df.columns[1:], columns=labelsListGenes)
             df_temp.index = pd.MultiIndex.from_tuples(df_temp.index).get_level_values(0)[::-1]
@@ -335,7 +338,7 @@ class VisualizationFunctions:
         ylabels[0] = 'Mean across all cells'
 
         ax.set_xticklabels(df.index, rotation=90, fontsize=fontsize)
-        ax.set_yticklabels(ylabels, rotation=0, fontsize=1.2*fontsize)
+        ax.set_yticklabels(ylabels, rotation=0, fontsize=1.2 * fontsize)
 
         ax.set_xlim([-0.5, df.shape[0] - 0.5])
         ax.set_ylim([-0.5, df.shape[1] - 0.5])
@@ -460,13 +463,13 @@ class VisualizationFunctions:
             clusterNames = list(votingResults.values())
             clusterIndices = list(votingResults.keys())
 
-            ax.set_yticklabels(['Mean'] + [str(clusterNames[i]) + ' (' + str(clusterIndices[i]) + ')' for i in ORDER], rotation=0, fontsize=6*fontscale)
+            ax.set_yticklabels(['Mean'] + [str(clusterNames[i]) + ' (' + str(clusterIndices[i]) + ')' for i in ORDER], rotation=0, fontsize=6 * fontscale)
             ax.set_xlim([-0.5,X_markers_cluster_means_transpose.shape[1] - 0.5])
             ax.set_ylim([-0.5,X_markers_cluster_means_transpose.shape[0] + 1 - 0.5])
 
         if True:
             ax2 = plt.subplot(gs[1])
-            fontsize = 5*fontscale
+            fontsize = 5 * fontscale
             cells_in_clusters = df_votingResults['# cells in cluster'].values.copy()[ORDER]
             numberOfCells = cells_in_clusters.sum()
 
@@ -506,8 +509,8 @@ class VisualizationFunctions:
             for i in range(0,len(xtickslabels),2):
                 xtickslabels[i] += " ─────────"
 
-            ax3.set_xticklabels(xtickslabels, rotation=90, fontsize=5*fontscale)
-            ax3.set_yticklabels(df_markers_weighted.index.values, rotation=0, fontsize=8*fontscale)
+            ax3.set_xticklabels(xtickslabels, rotation=90, fontsize=5 * fontscale)
+            ax3.set_yticklabels(df_markers_weighted.index.values, rotation=0, fontsize=8 * fontscale)
 
             ax3.set_xlim([-0.5, df_markers_weighted.shape[1] - 0.5])
             ax3.set_ylim([-0.5, df_markers_weighted.shape[0] - 0.5])
@@ -1811,12 +1814,12 @@ class VisualizationFunctions:
             return
 
         fig = plt.figure(figsize=(8,8))
-        ax = plt.subplot(111, polar=True, theta_direction=-1, theta_offset=0.5*np.pi)
+        ax = plt.subplot(111, polar=True, theta_direction=-1, theta_offset=0.5 * np.pi)
 
         attrs, attrs_names = read(os.path.join(trPath, 'attrs'))
         N = attrs.shape[1]
         df = pd.DataFrame(data=attrs[:N], index=attrs_names, 
-                          columns=['PC%s\n%s%%'%(i+1, np.int(100.*attrs[N][i])) for i in range(N)])
+                          columns=['PC%s\n%s%%' % (i + 1, np.int(100. * attrs[N][i])) for i in range(N)])
 
         wherePC = attrs[N] > 0.001
         df = df[df.columns[wherePC]]
@@ -1833,20 +1836,20 @@ class VisualizationFunctions:
         ax.set_xticks(angles)
 
         for i, celltype in enumerate(df.index):
-            values=df.loc[celltype].values.flatten().tolist()
+            values = df.loc[celltype].values.flatten().tolist()
             values.append(values[0])
 
-            color = cm.jet(i/len(attrs_names))
+            color = cm.jet(i / len(attrs_names))
 
             ax.plot(angles, values, color=color, linewidth=1.75, linestyle='solid', label=celltype)
             #ax.fill(angles, values, alpha=0.2, color=color, zorder=1)
             ax.fill_between(angles, 0, values, alpha=0.2, facecolor=color)
 
-            temp_texts = ax.text(angles[np.argmax(values)], values[np.argmax(values)], celltype, color=color, fontsize=12.*fontscale, ha='center', va='center')
+            temp_texts = ax.text(angles[np.argmax(values)], values[np.argmax(values)], celltype, color=color, fontsize=12. * fontscale, ha='center', va='center')
             temp_texts.set_path_effects([path_effects.Stroke(linewidth=1., foreground='k'), path_effects.Normal()])
 
         if plotTrLines:
-            trajectories = read(os.path.join(trPath, 'trajectories%s')%(trID))
+            trajectories = read(os.path.join(trPath, 'trajectories%s') % (trID))
 
             initial, final, typesNames, clusterNames = read(os.path.join(trPath, 'additional'))
         
@@ -1861,11 +1864,11 @@ class VisualizationFunctions:
             outId = final[clusterid]
 
             if self.verbose >= 3:
-                print('ClusterID: %s, Initial state: %s (%s), Final state: %s (%s)'%(clusterNames[clusterid], typesNames[inId], inId, typesNames[outId], outId))
+                print('ClusterID: %s, Initial state: %s (%s), Final state: %s (%s)' % (clusterNames[clusterid], typesNames[inId], inId, typesNames[outId], outId))
 
             suffix = clusterNames[clusterid]
 
-            fig.suptitle('Cluster %s: %s -> %s' % (clusterNames[clusterid], typesNames[inId] if inId!=-1 else 'Unknown', typesNames[outId] if outId!=-1 else 'Unknown'), fontsize=11, color='b')
+            fig.suptitle('Cluster %s: %s -> %s' % (clusterNames[clusterid], typesNames[inId] if inId != -1 else 'Unknown', typesNames[outId] if outId != -1 else 'Unknown'), fontsize=11, color='b')
 
             values = thisTr.T[0].tolist() + [thisTr.T[0][0]]
 
@@ -1874,7 +1877,7 @@ class VisualizationFunctions:
             for t in range(timeLimit):
                 values = thisTr.T[t].tolist() + [thisTr.T[t][0]]
 
-                if t==0:
+                if t == 0:
                     ax.plot(angles, values, 'o-', ms=4.0, color='b', alpha=1.0, clip_on=False)
 
                 ax.plot(angles, values, color='b', linewidth=0.5, alpha=0.04, linestyle='solid')
@@ -1890,8 +1893,8 @@ class VisualizationFunctions:
             suffix = 'attractors'
 
         for i, pc in enumerate(df.columns):
-            temp_texts = ax.text(angles[i], 1.15 * (vmax - vmin) + vmin, pc, color='k', fontsize=14*fontscale, ha='center', va='center')
-            temp_texts.set_path_effects([path_effects.Stroke(linewidth=0.5*fontscale, foreground='w'), path_effects.Normal()])
+            temp_texts = ax.text(angles[i], 1.15 * (vmax - vmin) + vmin, pc, color='k', fontsize=14 * fontscale, ha='center', va='center')
+            temp_texts.set_path_effects([path_effects.Stroke(linewidth=0.5 * fontscale, foreground='w'), path_effects.Normal()])
 
         ax.set_axisbelow(True)
 
@@ -1904,7 +1907,7 @@ class VisualizationFunctions:
         for label in ylabels:
             ax.text(label._x, label._y, label._text, zorder=np.inf)
 
-        self.saveFigure(fig, self.saveDir, self.dataName + '_polar_%s'%(suffix), extension=extension, dpi=dpi, **kwargs)
+        self.saveFigure(fig, self.saveDir, self.dataName + '_polar_%s' % (suffix), extension=extension, dpi=dpi, **kwargs)
 
         return fig
 
@@ -1993,7 +1996,8 @@ class VisualizationFunctions:
         fig = plt.figure(figsize=(8,8))
         ax = fig.add_axes([0.05,0.05,0.9,0.9])
 
-        ax.set_xlim([-3, 1]); ax.set_ylim([-2, 2])
+        ax.set_xlim([-3, 1])
+        ax.set_ylim([-2, 2])
 
         if axisOff:
             ax.axis('off')
@@ -2053,22 +2057,23 @@ class VisualizationFunctions:
             maskedArray = np.ma.array(grid.T, mask=np.isnan(grid.T,))
 
             im = ax.imshow(maskedArray[::-1], vmin=vmin, vmax=vmax, cmap=colormap, alpha=0.8,
-                        extent=[xmin, xmax, ymin, ymax], interpolation='quadric', zorder=-10**8, clip_on=False)
+                        extent=[xmin, xmax, ymin, ymax], interpolation='quadric', zorder=-10 ** 8, clip_on=False)
 
             data = scipy.ndimage.gaussian_filter(grid.T, 1.5)
-            xgrid = np.linspace(xmin, xmax, num=(ngrid+1))
-            ygrid = np.linspace(ymin, ymax, num=(ngrid+1))
+            xgrid = np.linspace(xmin, xmax, num=(ngrid + 1))
+            ygrid = np.linspace(ymin, ymax, num=(ngrid + 1))
 
             tempColormap = colormap
-            #tempColormap = matplotlib.colors.LinearSegmentedColormap.from_list('cmap', [(0.75, 0.75, 0.75), (0, 1, 1), (0, 0, 1), (1, 0, 0)], N=1000)
+            #tempColormap = matplotlib.colors.LinearSegmentedColormap.from_list('cmap', [(0.75,
+            #0.75, 0.75), (0, 1, 1), (0, 0, 1), (1, 0, 0)], N=1000)
 
-            ax.contour(xgrid, ygrid, data, levels=10, cmap=tempColormap, linewidths=1.0, zorder=-10**8+1)
-            ax.contour(xgrid, ygrid, data, levels=10, colors='k', linestyles='solid', linewidths=0.25, zorder=-10**8+2)
+            ax.contour(xgrid, ygrid, data, levels=10, cmap=tempColormap, linewidths=1.0, zorder=-10 ** 8 + 1)
+            ax.contour(xgrid, ygrid, data, levels=10, colors='k', linestyles='solid', linewidths=0.25, zorder=-10 ** 8 + 2)
     
         if plotAttractors:
             texts = []
 
-            ax.plot(attrs2D.T[0], attrs2D.T[1], '*', ms=14, color='k', alpha=1.0, zorder=-10**7, clip_on=False)
+            ax.plot(attrs2D.T[0], attrs2D.T[1], '*', ms=14, color='k', alpha=1.0, zorder=-10 ** 7, clip_on=False)
             for attr in range(attrs2D.T[0].shape[0]):
                 temp_texts = ax.text(attrs2D.T[0][attr], attrs2D.T[1][attr], attrs_names[attr], fontsize=fontsize, fontweight=550, ha='left',va='center', zorder=10 ** 10, clip_on=False)
                 temp_texts.set_path_effects([path_effects.Stroke(linewidth=2.5, foreground='white'), path_effects.Normal()])
@@ -2081,7 +2086,7 @@ class VisualizationFunctions:
 
             add_colorbar(fig, [vmax, vmin], cmap=colormap, fontsize=fontsize)
 
-        self.saveFigure(fig, self.saveDir, self.dataName + '_energy_landscape_PC%s_vs_PC%s'%(PCy, PCx), extension=extension, dpi=dpi, **kwargs)
+        self.saveFigure(fig, self.saveDir, self.dataName + '_energy_landscape_PC%s_vs_PC%s' % (PCy, PCx), extension=extension, dpi=dpi, **kwargs)
 
         return fig
     
@@ -2168,10 +2173,8 @@ class VisualizationFunctions:
                     colorscales[i] = dict(label=labels[i], colorscale=[[0, newColor], [1, newColor]])
 
         fig = go.Figure(data=[go.Sankey(valueformat = '', valuesuffix = '', textfont = dict(color = 'rgb(255,0,0)', size = nodeLabelsFontSize, family = 'Arial'),
-            node = dict(pad = 20, thickness = 40, line = dict(color = 'white', width = 0.0), label = nodeLabels, color = nodeColors,
-                        ), # hoverlabel=dict(bordercolor = 'yellow')
-            link = dict(source = sources, target = targets, value = values, label = labels, colorscales = colorscales, hoverinfo='all'),
-            )],) #line ={'color':'rgba(255,0,0,0.8)', 'width':0.1}
+            node = dict(pad = 20, thickness = 40, line = dict(color = 'white', width = 0.0), label = nodeLabels, color = nodeColors,), # hoverlabel=dict(bordercolor = 'yellow')
+            link = dict(source = sources, target = targets, value = values, label = labels, colorscales = colorscales, hoverinfo='all'),)],) #line ={'color':'rgba(255,0,0,0.8)', 'width':0.1}
 
         if not title is None:
             fig.update_layout(title_text=title, font_size=10)
@@ -2193,7 +2196,7 @@ class VisualizationFunctions:
         return fig
 
     @tryExcept
-    def HopfieldLandscapePlot3D(self, PCx = 0, PCy = 1, colorbar = True, fontsize = 12, plotMesh = True, plotAttractors = True, trPath = None, attemptSavingHTML=False, nameAppend = '', quality = 4, **kwargs):
+    def HopfieldLandscapePlot3D(self, PCx = 0, PCy = 1, colorbar = True, fontsize = 12, plotMesh = True, plotAttractors = True, trPath = None, attemptSavingHTML = False, nameAppend = '', quality = 4, **kwargs):
 
         '''Make heatmap plot of the attractors in their two principal components coordinates
 
@@ -2320,16 +2323,16 @@ class VisualizationFunctions:
                                                 'y': {'highlight': False}, 
                                                 'z': {'highlight': False}},))
 
-            fig.update_traces(contours_z=dict(show=True, width=3., highlightwidth=3., usecolormap=False, highlightcolor="limegreen", project=dict(x=True,y=True,z=True), highlight=True, color='grey', size=(vmax-vmin)/10.))
+            fig.update_traces(contours_z=dict(show=True, width=3., highlightwidth=3., usecolormap=False, highlightcolor="limegreen", project=dict(x=True,y=True,z=True), highlight=True, color='grey', size=(vmax - vmin) / 10.))
 
         annotations = []
         if plotAttractors:
             for i, point in enumerate(zip(attrs2D.T[0], attrs2D.T[1])):
-                fig.add_trace(go.Scatter3d(x=[point[0], point[0]], y=[point[1], point[1]], z=[vmin, 0.5*vmin],  mode='lines', hoverinfo='none', line=dict(width=2, color='blue'), showlegend=False))
+                fig.add_trace(go.Scatter3d(x=[point[0], point[0]], y=[point[1], point[1]], z=[vmin, 0.5 * vmin],  mode='lines', hoverinfo='none', line=dict(width=2, color='blue'), showlegend=False))
 
-                annotations.append(dict(showarrow=False, x=point[0], y=point[1], z=0.4*vmin, text=attrs_names[i], xanchor="center", xshift=10, opacity=1, font=dict(color='black', size=fontsize)))
+                annotations.append(dict(showarrow=False, x=point[0], y=point[1], z=0.4 * vmin, text=attrs_names[i], xanchor="center", xshift=10, opacity=1, font=dict(color='black', size=fontsize)))
 
-            fig.add_trace(go.Scatter3d(x=attrs2D.T[0], y=attrs2D.T[1], z=0. * attrs2D.T[0] + 0.5*vmin, mode='markers', 
+            fig.add_trace(go.Scatter3d(x=attrs2D.T[0], y=attrs2D.T[1], z=0. * attrs2D.T[0] + 0.5 * vmin, mode='markers', 
                                         hovertext=attrs_names,
                                         hoverinfo='text',
                                         marker=dict(size=5, color='blue'),
@@ -2342,7 +2345,7 @@ class VisualizationFunctions:
 
         fig.update_layout(scene_camera=dict(up=dict(x=0, y=0, z=2), center=dict(x=0, y=0, z=0), eye=dict(x=0, y=-0.25, z=1.25)))
 
-        fileName = self.dataName + '_energy_landscape_PC%s_vs_PC%s'%(PCy, PCx) + nameAppend
+        fileName = self.dataName + '_energy_landscape_PC%s_vs_PC%s' % (PCy, PCx) + nameAppend
 
         try:
             fig.write_image(os.path.join(self.saveDir, fileName + '.png'), width=700, height=700, scale=quality)
@@ -2358,14 +2361,14 @@ class VisualizationFunctions:
         return fig
 
     @tryExcept
-    def makeViolinPlot(self, df_sel, genes, dimPanels, dimCategories, panelWidth = 5, panelHeight = 5, title = '{name} {gene}', exportData = True, xlabel = '$log(count+1)$', ylabel = '', addPoints = True, linesColor = 'black', linesWidth = 1.0, cmap = cm.jet, fontsize = 10, showMedians = True, showExtrema = True, violinWidths = 0.85, violinAlpha = 0.7, pointsColor = 'black', pointsSize = 1.0, pointsAlpha = 0.7, sharex = True, sharey = True, dpi = 300, extension = 'png', **kwargs):
+    def makeViolinPlot(self, df_sel, genes, dimPanels, dimCategories, panelWidth = 5, panelHeight = 5, title = '{name} {gene}', exportData = True, xlabel = '$log(count+1)$', ylabel = '', addPoints = True, linesColor = 'black', linesWidth = 1.0, cmap = cm.jet, fontsize = 10, showMedians = True, showExtrema = True, violinWidths = 0.85, violinAlpha = 0.9, pointsColor = 'black', pointsSize = 1.0, pointsAlpha = 0.5, sharex = True, sharey = True, dpi = 300, extension = 'png', **kwargs):
     
         ''' Exloratory analysis of the numeric values distributions using matplotlib violinplot.
 
             Parameters:
                 df_sel: pandas.DataFrame
                     Table where rows are unique object identifiers, columns are [dimPanels, dimCategories, gene1, gene2, ...]
-                    Numeric columns should be without any missing values
+                        Numeric columns should be without any missing values
 
                 genes: list
                     List of genes names to plot, these should be a (sub)set of the df_sel columns
@@ -2446,11 +2449,7 @@ class VisualizationFunctions:
                 None
         
             Usage:
-                N = 1000
-                data = pd.DataFrame({'Property A': (np.random.rand(N)>0.7)*3, 'Property B': np.random.rand(N)>0.3, 
-                                     'Numeric 1': np.random.rand(N)*3, 'Numeric 2': np.random.rand(N)*2,
-                                    'Numeric 3': np.random.rand(N)*1.5, 'Numeric 4': np.random.rand(N)*5})
-                makeViolinPlot(data, ['Numeric 1', 'Numeric 2'], dimPanels='Property A', dimCategories='Property B')
+                DCS.makeViolinPlot(data, ['Numeric 1', 'Numeric 2'], dimPanels='Property A', dimCategories='Property B')
         '''
     
         df_sel = df_sel.astype({dimPanels: str, dimCategories: str})
@@ -2464,7 +2463,7 @@ class VisualizationFunctions:
         vmin, vmax = df_sel[genes].values.ravel().min(), 1.05 * df_sel[genes].values.ravel().max()
         vmin -= 0.05 * (vmax - vmin)
     
-        fig, ax = plt.subplots(n_rows, n_cols, figsize=(panelWidth*n_cols, panelHeight*n_rows), sharex=sharex, sharey=sharey)
+        fig, ax = plt.subplots(n_rows, n_cols, figsize=(panelWidth * n_cols, panelHeight * n_rows), sharex=sharex, sharey=sharey)
 
         for igene, gene in enumerate(genes):
             for ind, panel in enumerate(panels):
@@ -2478,7 +2477,7 @@ class VisualizationFunctions:
                 else:
                     axt = ax[igene, ind % n_cols]
 
-                data = df_sel[df_sel[dimPanels]==panel].set_index(dimCategories)[gene].groupby(level=0).agg(list).reindex(allCategories).fillna(0.)
+                data = df_sel[df_sel[dimPanels] == panel].set_index(dimCategories)[gene].groupby(level=0).agg(list).reindex(allCategories).fillna(0.)
             
                 vdata = [v if type(v) is list else [v] for v in data.values.tolist()]
                 parts = axt.violinplot(vdata, vert=False, showmedians=showMedians, showextrema=showExtrema, widths=violinWidths)
@@ -2486,7 +2485,7 @@ class VisualizationFunctions:
                 if addPoints:
                     for i,v in enumerate(vdata):
                         try:
-                            axt.scatter(v, 0.75*(np.random.rand(len(v)) - 0.5) + 1 + i, 
+                            axt.scatter(v, 0.75 * (np.random.rand(len(v)) - 0.5) + 1 + i, 
                                         marker='o', color=pointsColor, 
                                         s=pointsSize, zorder=-np.inf, alpha=pointsAlpha)
                         except:
@@ -2500,7 +2499,7 @@ class VisualizationFunctions:
 
                 try:
                     for ipc, pc in enumerate(parts['bodies']):
-                        pc.set_facecolor(cmap(ipc/len(parts['bodies'])))
+                        pc.set_facecolor(cmap(ipc / len(parts['bodies'])))
                         pc.set_edgecolor(linesColor)
                         pc.set_alpha(violinAlpha)
                 except:
@@ -2515,14 +2514,15 @@ class VisualizationFunctions:
                     axt.set_yticks(np.arange(1, len(allCategories) + 1))
                     axt.set_yticklabels(allCategories)
                     axt.set_ylim(0.25, len(allCategories) + 0.75)
+                
+                    if ylabel != '':
+                        axt.set_ylabel(ylabel, fontsize=fontsize)
+                
+                if (igene == (len(genes) - 1)) or not sharex:
+                    axt.tick_params(axis='x', labelsize=fontsize)          
 
-                axt.tick_params(axis='x', labelsize=fontsize)          
-            
-                if xlabel != '':
-                    axt.set_xlabel(xlabel, fontsize=fontsize)
-            
-                if ylabel != '':
-                    axt.set_ylabel(ylabel, fontsize=fontsize)
+                    if xlabel != '':
+                        axt.set_xlabel(xlabel, fontsize=fontsize)
                 
                 axt.set_title(title.format(name=panel, gene=gene))
 
@@ -2534,8 +2534,8 @@ class VisualizationFunctions:
         if exportData:
             dims = [dimCategories, dimPanels]       
             df_temp = df_sel.astype({dim: str for dim in dims}).set_index(dims, append=True)[genes]
-            df_temp = pd.concat({'Fraction':(df_temp>0).astype(int).groupby(dims).mean().round(2).unstack(1),
-                  'Non-zero':(df_temp>0).astype(int).groupby(dims).sum().unstack(1),
+            df_temp = pd.concat({'Fraction':(df_temp > 0).astype(int).groupby(dims).mean().round(2).unstack(1),
+                  'Non-zero':(df_temp > 0).astype(int).groupby(dims).sum().unstack(1),
                   'Total':(~df_temp.fillna(0.).isna()).astype(int).groupby(dims).sum().unstack(1)}).unstack(0).fillna(0)
         
             df_temp.index.name = None
