@@ -311,7 +311,8 @@ class DigitalCellSorter(VisualizationFunctions):
                 excludedFromQC = None, countDepthPrecutQC = 500, numberOfGenesPrecutQC = 250, precutQC = False, minSubclusterSize = 25,
                 thresholdForUnknown_pDCS = 0., thresholdForUnknown_ratio = 0., thresholdForUnknown_Hopfield = 0., thresholdForUnknown = 0.2, 
                 layout = 'TSNE', safePlotting = True, HopfieldTemperature = 0.1, annotationMethod = 'ratio-pDCS-Hopfield',
-                useNegativeMarkers = True, removeLowQualityScores = True, updateConversionDictFile = True, verbose = 1):
+                useNegativeMarkers = True, removeLowQualityScores = True, updateConversionDictFile = True, verbose = 1,
+                random_state = None):
 
         '''Initialization function that is automatically called when an instance on Digital Cell Sorter is created'''
 
@@ -324,6 +325,7 @@ class DigitalCellSorter(VisualizationFunctions):
         self.dataName = dataName
         self.saveDir = saveDir
         self.safePlotting = safePlotting
+        self.random_state = random_state
 
         if not df_expr is None:
             self.prepare(df_expr)
@@ -799,7 +801,7 @@ class DigitalCellSorter(VisualizationFunctions):
 
         if self.verbose >= 2:
             print('Performing PC projection from %s to %s features...' % (self._df_expr.shape[0], self.nComponentsPCA), flush=True)
-        _PCA = PCA(n_components=self.nComponentsPCA)
+        _PCA = PCA(n_components=self.nComponentsPCA, random_state=self.random_state)
 
         idx = np.argsort(np.var(self._df_expr.values.T, axis=0) / np.mean(self._df_expr.values.T, axis=0))[-2000:]
         X_pca = _PCA.fit_transform(self._df_expr.values.T[:, idx]).T
@@ -854,7 +856,7 @@ class DigitalCellSorter(VisualizationFunctions):
                     self.layout = 'PCA'
 
                 if self.layout == 'UMAP':
-                    X_projection2 = umap.UMAP(random_state=42).fit_transform(X_pca.T).T
+                    X_projection2 = umap.UMAP(random_state=self.random_state).fit_transform(X_pca.T).T
 
             elif self.layout == 'PHATE':
                 if self.verbose >= 1:
@@ -981,7 +983,7 @@ class DigitalCellSorter(VisualizationFunctions):
             
                     if len(cellsOfCluster) >= self.minSizeForFineClustering:
                         try:
-                            model = SpectralCoclustering(n_clusters=self.nFineClusters, random_state=0)
+                            model = SpectralCoclustering(n_clusters=self.nFineClusters, random_state=self.random_state)
                             model.fit(subData.T)
                             tempCellClusterIndex = np.zeros((subData.T.shape[0],))
                             tempCellClusterIndex[:] = np.nan

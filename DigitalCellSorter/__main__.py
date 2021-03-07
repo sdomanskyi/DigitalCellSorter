@@ -12,7 +12,7 @@ if __name__ == '__main__':
         Peripheral blood mononuclear cells (PBMCs) from a healthy donor - Manual (channel 1)
         Single Cell Gene Expression Dataset by Cell Ranger 3.1.0
         PBMCs isolated and cryopreserved by AllCells. PBMCs are primary cells with relatively small amounts of RNA (~1pg RNA/cell).
-        Libraries were prepared following the Chromium Single Cell 3ʹ Reagent Kits v3.1 User Guide (CG000204 RevD). 
+        Libraries were prepared following the Chromium Single Cell 3' Reagent Kits v3.1 User Guide (CG000204 RevD). 
         8 libraries were prepared on 1 chip. This is channel 1 of the chip.
         5000 cells targeted, 4339 cells detected
         Sequenced on Illumina NovaSeq with approximately 52296 reads per cell
@@ -38,7 +38,7 @@ if __name__ == '__main__':
             df_data = pd.read_pickle(filePath)
 
         # Set up a copy of Digital Cell Sorter
-        DCS = DigitalCellSorter.DigitalCellSorter(dataName='PBMC5k', geneListFileName='CIBERSORT_LM22_14', verbose=2)
+        DCS = DigitalCellSorter.DigitalCellSorter(dataName='PBMC5k', geneListFileName='CIBERSORT_LM22_14', verbose=2, random_state=42)
         DCS.saveDir = 'output demo 5k'
 
         # Process the data, annotate cell types and make plots
