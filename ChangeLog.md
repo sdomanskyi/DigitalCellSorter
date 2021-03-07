@@ -1,4 +1,4 @@
-- 1.3.7.3
+- 1.3.7.3-4
    * Added option of the fixed random seed (option *random_state*) for the whole prcessing pipeline
 
 - 1.3.7.2
