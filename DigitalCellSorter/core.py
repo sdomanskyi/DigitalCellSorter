@@ -123,7 +123,7 @@ def readMTXdata(dataDir, origin, fileMatrix = None, fileBarcodes = None, fileGen
 
     elif origin == 'cellranger':
         if headerRows is None:
-            headerRows = [0, 1]
+            headerRows = [0, 1, 2]
 
         genes_level = 1
 
@@ -136,7 +136,8 @@ def readMTXdata(dataDir, origin, fileMatrix = None, fileBarcodes = None, fileGen
         if fileGenes is None:
             fileGenes='features.tsv.gz'
 
-    df_expr = pd.read_csv(os.path.join(dataDir, fileMatrix), delimiter=' ', index_col=[0,1], header=None, skiprows=headerRows)[2].astype(int).unstack(genes_level, fill_value=0)
+    df_expr = pd.read_csv(os.path.join(dataDir, fileMatrix), delimiter=' ', index_col=[0,1], header=None, skiprows=headerRows)[2].astype(int)
+    df_expr = df_expr.unstack(genes_level, fill_value=0)
     df_expr.index = pd.read_csv(os.path.join(dataDir, fileGenes), delimiter='\t', index_col=None, header=None)[0].loc[df_expr.index - 1].values
     df_expr.columns = pd.read_csv(os.path.join(dataDir, fileBarcodes), delimiter='\t', index_col=0, header=None).index
 

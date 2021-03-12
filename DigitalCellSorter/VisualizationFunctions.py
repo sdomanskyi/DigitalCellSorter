@@ -24,6 +24,8 @@ from adjustText import adjust_text
 
 from .GenericFunctions import read, write
 
+np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
+
 class VisualizationFunctions:
 
     '''Class of visualization functions for DigitalCellSorter'''
@@ -2361,7 +2363,7 @@ class VisualizationFunctions:
         return fig
 
     @tryExcept
-    def makeViolinPlot(self, df_sel, genes, dimPanels, dimCategories, panelWidth = 5, panelHeight = 5, title = '{name} {gene}', exportData = True, xlabel = '$log(count+1)$', ylabel = '', addPoints = True, linesColor = 'black', linesWidth = 1.0, cmap = cm.jet, fontsize = 10, showMedians = True, showExtrema = True, violinWidths = 0.85, violinAlpha = 0.9, pointsColor = 'black', pointsSize = 1.0, pointsAlpha = 0.5, sharex = True, sharey = True, dpi = 300, extension = 'png', **kwargs):
+    def makeViolinPlot(self, df_sel, genes, dimPanels, dimCategories, delimiterIn = '|', delimiterOut = ' ', panelWidth = 5, panelHeight = 5, title = '{name} {gene}', exportData = True, xlabel = '$log(count+1)$', ylabel = '', addPoints = True, linesColor = 'black', linesWidth = 1.0, cmap = cm.jet, fontsize = 10, showMedians = True, showExtrema = True, showFractions = True, showMean = True, meanMarkerSize = 7., meanMarkerColor = 'white', meanMarkerShape = 'o', excludeZeroValues = False, violinWidths = 0.85, violinAlpha = 0.9, pointsColor = 'black', pointsSize = 1.0, pointsAlpha = 0.5, pointsPushBack = True, sharex = True, sharey = True, dpi = 300, extension = 'png', **kwargs):
     
         ''' Exloratory analysis of the numeric values distributions using matplotlib violinplot.
 
@@ -2374,10 +2376,10 @@ class VisualizationFunctions:
                     List of genes names to plot, these should be a (sub)set of the df_sel columns
 
                 dimPanels: str
-                    Name of the categorical variable is for saparation into panels
+                    Name of the categorical variable is for saparation into panels. Option 'All' can be used too
 
                 dimCategories: str
-                    Name of the categorical variable is for saparation into categories within a panel
+                    Name of the categorical variable is for saparation into categories within a panel. Option 'All' can be used too
 
                 panelWidth: float, Default 5
                     Width of a panel, including the tick labels
@@ -2418,6 +2420,9 @@ class VisualizationFunctions:
                 showExtrema: boolean, Default True
                     Whehter to display max and min
 
+                excludeZeroValues: boolean, Default False
+                    If True then zeros and missing values are not used in calculation of the probability densities
+
                 violinWidths: float, Default 0.85
                     Relative violin widths
 
@@ -2432,6 +2437,9 @@ class VisualizationFunctions:
 
                 pointsAlpha: float, Default 0.7
                     Transparency of the points
+
+                pointsPushBack: boolean, Default True
+                    If False then points will be drawn in front of all other objects
 
                 sharex: boolean, Default True
                      Whehter to share x-axis
@@ -2452,7 +2460,33 @@ class VisualizationFunctions:
                 DCS.makeViolinPlot(data, ['Numeric 1', 'Numeric 2'], dimPanels='Property A', dimCategories='Property B')
         '''
     
+        if dimPanels == 'All' or dimCategories == 'All':
+            df_sel['All'] = ['All'] * df_sel.shape[0]
+
+        for dim in [dimPanels, dimCategories]:
+            if not dim in df_sel.columns:
+                if delimiterIn in dim:
+                    cols = dim.split(delimiterIn)
+
+                    for col in cols:
+                        if not col in df_sel.columns:
+                            print('Column %s not found' % col)
+
+                            return
+
+                    df_sel = df_sel.astype({col: str for col in cols})
+
+                    df_sel[dim] = df_sel[cols[0]].copy()
+                    for col in cols[1:]:
+                        df_sel[dim] += delimiterOut + df_sel[col]
+                else:
+                    print('Column %s not found' % dim)
+
+                    return
+
         df_sel = df_sel.astype({dimPanels: str, dimCategories: str})
+
+        df_sel = df_sel.fillna(0.)
         
         panels = np.unique(df_sel[dimPanels].values)
         allCategories = np.sort(df_sel[dimCategories].value_counts().index.values)
@@ -2478,16 +2512,43 @@ class VisualizationFunctions:
                     axt = ax[igene, ind % n_cols]
 
                 data = df_sel[df_sel[dimPanels] == panel].set_index(dimCategories)[gene].groupby(level=0).agg(list).reindex(allCategories).fillna(0.)
-            
                 vdata = [v if type(v) is list else [v] for v in data.values.tolist()]
-                parts = axt.violinplot(vdata, vert=False, showmedians=showMedians, showextrema=showExtrema, widths=violinWidths)
+
+                if excludeZeroValues:
+                    pvdata = [np.array(v)[np.array(v)!=0].tolist() for v in vdata]
+                    pvdata = [v if len(v)>0 else [0] for v in pvdata]
+                else:
+                    pvdata = vdata
+
+                parts = axt.violinplot(pvdata, vert=False, showmedians=showMedians, showextrema=showExtrema, widths=violinWidths)
 
                 if addPoints:
-                    for i,v in enumerate(vdata):
+                    for i, v in enumerate(vdata):
                         try:
                             axt.scatter(v, 0.75 * (np.random.rand(len(v)) - 0.5) + 1 + i, 
                                         marker='o', color=pointsColor, 
-                                        s=pointsSize, zorder=-np.inf, alpha=pointsAlpha)
+                                        s=pointsSize, zorder=-np.inf if pointsPushBack else np.inf, alpha=pointsAlpha)
+                        except:
+                            pass
+
+                if showFractions:
+                    for i, v in enumerate(vdata):
+                        try:
+                            v = np.array(v)
+                            nz = len(v[v!=0])
+
+                            if nz > 0:
+                                axt.text(0.975*vmax, 1 + i, '%s%%\n%s' % (np.round(100.*nz/len(v), 1), nz), va='center', ha='right', fontsize=fontsize).set_path_effects([path_effects.Stroke(linewidth=3, foreground='white'),path_effects.Normal()])
+                        except:
+                            pass
+
+                if showMean:
+                    for i, v in enumerate(vdata):
+                        try:
+                            m = np.array(v).mean()
+
+                            if m > 0:
+                                axt.plot([m], [1 + i], meanMarkerShape, ms=meanMarkerSize, markerfacecolor=meanMarkerColor, markeredgecolor='black')
                         except:
                             pass
 
@@ -2524,12 +2585,13 @@ class VisualizationFunctions:
                     if xlabel != '':
                         axt.set_xlabel(xlabel, fontsize=fontsize)
                 
-                axt.set_title(title.format(name=panel, gene=gene))
+                axt.set_title(title.format(name=panel, gene=gene) if panel!='All' else gene)
 
         fig.tight_layout()
     
         saveName = dimPanels + ' ' + dimCategories
-        self.saveFigure(fig, self.saveDir, saveName, extension=extension, dpi=dpi, close=False, **kwargs)
+        saveName = saveName.replace(delimiterIn, '_')
+        self.saveFigure(fig, self.saveDir, saveName, extension=extension, dpi=dpi, **kwargs)
     
         if exportData:
             dims = [dimCategories, dimPanels]       
