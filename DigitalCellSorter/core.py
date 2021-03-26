@@ -837,7 +837,7 @@ class DigitalCellSorter(VisualizationFunctions):
                                 print(exception)
                                 print('FI-tSNE package could not be imported. Install the package following \
                                 instructions of DigitalCellSorter installation on GitHub. Defaulting to PCA layout')
-                                self.layout = 'PCA'
+                            self.layout = 'PCA'
 
                         if self.layout == 'TSNE':
                             X_projection2 = fitsne.FItSNE(np.array(X_pca.T, order='C')).T

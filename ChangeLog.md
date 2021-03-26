@@ -1,3 +1,6 @@
+- 1.3.7.6
+   * Minor bug fix of fail-safe fitsne package import
+
 - 1.3.7.5
    * Upgraded function makeViolinPlot to enable combinations of columns
 
