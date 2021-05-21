@@ -17,10 +17,12 @@ Welcome to DigitalCellSorter's documentation!
    :target: https://doi.org/10.5281/zenodo.2533377
 
 
-Identification of hematological cell types from heterogeneous single cell RNA-seq data.
+Single cell RNA-seq data analysis toolkit.
+
+Digital Cell Sorter (DCS): a cell type identification, anomaly detection, and Hopfield landscapes toolkit for single-cell transcriptomics. Sergii Domanskyi, Alex Hakansson, Thomas Bertus, Giovanni Paternostro & Carlo Piermarocchi, *PeerJ*, 9:e10670 (**2021**). https://doi.org/10.7717/peerj.10670
 
 Polled Digital Cell Sorter (p-DCS): Automatic identification of hematological cell types from single cell RNA-sequencing clusters.
-Sergii Domanskyi, Anthony Szedlak, Nathaniel T Hawkins, Jiayin Wang, Giovanni Paternostro & Carlo Piermarocchi, *BMC Bioinformatics* volume 20, Article number: 369 (**2019**) https://doi.org/10.1186/s12859-019-2951-x
+Sergii Domanskyi, Anthony Szedlak, Nathaniel T Hawkins, Jiayin Wang, Giovanni Paternostro & Carlo Piermarocchi, *BMC Bioinformatics* volume 20, Article number: 369 (**2019**). https://doi.org/10.1186/s12859-019-2951-x
 
 .. toctree::
    :maxdepth: 4

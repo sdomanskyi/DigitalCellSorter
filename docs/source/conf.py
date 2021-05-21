@@ -46,7 +46,7 @@ def skip(app, what, name, obj, skip, options):
 # -- Project information -----------------------------------------------------
 
 project = 'DigitalCellSorter'
-copyright = '2020, S. Domanskyi, A. Szedlak, N. T Hawkins, J. Wang, T. Bertus, A. Hakansson, G. Paternostro, C. Piermarocchi'
+copyright = '2021, S. Domanskyi, A. Szedlak, N. T Hawkins, J. Wang, T. Bertus, A. Hakansson, G. Paternostro, C. Piermarocchi'
 author = 'S. Domanskyi, A. Szedlak, N. T Hawkins, J. Wang, T. Bertus, A. Hakansson, G. Paternostro, C. Piermarocchi'
 
 # The short X.Y version
