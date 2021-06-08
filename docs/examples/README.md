@@ -36,16 +36,24 @@ Create a variable to point to where the data will be downloaded and extracted:
 
     extractPath = os.path.join(here, 'data', os.path.splitext(os.path.basename(url))[0])
 
-Import a module from DigitalCellSorter and call a function to download and unpack the data:
+Import a module from DigitalCellSorter necessary to unpack the data:
 
     import DigitalCellSorter.ReadPrepareDataHCA as prep
 
-    prep.getHCAdataByURL(url, extractPath)
-    
-Call function recordFilesOfIndividualDonors to load the data from HCA Data Portal. 
-Note that this data file and the individual files are large and will take up to 4Gb of disk space:
+Download and read one dataset, the file will be downloaded from github if not found locally:
 
-    id = prep.recordFilesOfIndividualDonors(extractPath, organName='bone marrow')[0]
+    id = '085e737d-adb5-4597-bd54-5ebeda170038'
+
+    try:
+        if not os.path.exists(extractPath):
+            os.makedirs(extractPath)
+
+        if not os.path.isfile(os.path.join(extractPath, 'dfDonorID %s.h5' % id)):
+            print('Downloading 110 Mb data file (50000 cells)')
+            urllib.request.urlretrieve('https://github.com/sdomanskyi/DigitalCellSorter/raw/master/data/dfDonorID %s.h5' % id, extractPath)
+    except Exception as exception:
+        print('Could not download the file\n', exception)
+        exit()
 
 Load gene expression data from h5 file:
 
@@ -55,11 +63,10 @@ Load gene expression data from h5 file:
 
 ## Main cell types
 
-In your script import the package and create an instance of class ```DigitalCellSorter```. 
-Here, for simplicity, we use Default parameter values:
+In your script import the package and create an instance of class ```DigitalCellSorter```:
 
 	import DigitalCellSorter
-	DCS = DigitalCellSorter.DigitalCellSorter()
+	DCS = DigitalCellSorter.DigitalCellSorter(geneNamesType = 'ensembl')
 
 Let's modify some of the ```DCS``` attributes:
 
