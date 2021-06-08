@@ -50,7 +50,8 @@ Download and read one dataset, the file will be downloaded from github if not fo
 
         if not os.path.isfile(os.path.join(extractPath, 'dfDonorID %s.h5' % id)):
             print('Downloading 110 Mb data file (50000 cells)')
-            urllib.request.urlretrieve('https://github.com/sdomanskyi/DigitalCellSorter/raw/master/data/dfDonorID %s.h5' % id, extractPath)
+            temp = 'https://github.com/sdomanskyi/DigitalCellSorter/raw/master/data/dfDonorID %s.h5' % id
+            urllib.request.urlretrieve(temp.replace(' ', '%20'), os.path.join(extractPath, 'dfDonorID %s.h5' % id))
     except Exception as exception:
         print('Could not download the file\n', exception)
         exit()
